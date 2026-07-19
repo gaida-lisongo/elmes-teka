@@ -1,6 +1,19 @@
 import { Schema, model, models, type Model, type Types } from "mongoose";
 
+export type StoreStatus = "PENDING_PAYMENT" | "ACTIVE" | "INACTIVE" | "ARCHIVED";
 export type StoreAmountStatus = "PENDING" | "ACTIVE" | "CLOSED" | "CANCELLED";
+
+export type PaymentStatus = "PENDING" | "PAID" | "FAILED";
+export type PaymentProvider = "FLEXPAY";
+
+export interface IStorePayment {
+  amount: number;
+  currency: "USD" | "CDF";
+  orderNumber: string;
+  provider: PaymentProvider;
+  status: PaymentStatus;
+  paidAt?: Date | null;
+}
 
 export interface IStoreCoordinate {
   title: string;
@@ -20,6 +33,7 @@ export interface IStorePhoto {
 }
 
 export interface IStore {
+  tenantId: Types.ObjectId;
   designation: string;
   description: string;
   coordonnes: IStoreCoordinate[];
@@ -27,6 +41,8 @@ export interface IStore {
   reference: string;
   caisses: IStoreAmount[];
   photos?: IStorePhoto[];
+  status: StoreStatus;
+  payment?: IStorePayment | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -95,8 +111,52 @@ const StorePhotoSchema = new Schema<IStorePhoto>(
   { _id: false }
 );
 
+const StorePaymentSchema = new Schema<IStorePayment>(
+  {
+    amount: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    currency: {
+      type: String,
+      required: true,
+      enum: ["USD", "CDF"],
+      uppercase: true,
+    },
+    orderNumber: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    provider: {
+      type: String,
+      required: true,
+      enum: ["FLEXPAY"],
+      default: "FLEXPAY",
+    },
+    status: {
+      type: String,
+      required: true,
+      enum: ["PENDING", "PAID", "FAILED"],
+      default: "PENDING",
+    },
+    paidAt: {
+      type: Date,
+      default: null,
+    },
+  },
+  { _id: false }
+);
+
 const StoreSchema = new Schema<IStore>(
   {
+    tenantId: {
+      type: Schema.Types.ObjectId,
+      ref: "Tenant",
+      required: true,
+      index: true,
+    },
     designation: {
       type: String,
       required: true,
@@ -133,6 +193,16 @@ const StoreSchema = new Schema<IStore>(
       type: [StorePhotoSchema],
       default: [],
     },
+    status: {
+      type: String,
+      enum: ["PENDING_PAYMENT", "ACTIVE", "INACTIVE", "ARCHIVED"],
+      default: "PENDING_PAYMENT",
+      index: true,
+    },
+    payment: {
+      type: StorePaymentSchema,
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -140,7 +210,9 @@ const StoreSchema = new Schema<IStore>(
   }
 );
 
-StoreSchema.index({ designation: 1 });
+StoreSchema.index({ tenantId: 1, designation: 1 });
+StoreSchema.index({ tenantId: 1, status: 1 });
+StoreSchema.index({ reference: 1, "payment.orderNumber": 1 });
 
 const Store =
   (models.Store as Model<IStore>) || model<IStore>("Store", StoreSchema);

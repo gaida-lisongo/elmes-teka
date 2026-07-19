@@ -1,4 +1,3 @@
-import GridShape from "@/components/common/GridShape";
 import ThemeTogglerTwo from "@/components/common/ThemeTogglerTwo";
 
 import { ThemeProvider } from "@/context/ThemeContext";
@@ -17,11 +16,9 @@ export default function AuthLayout({
         <div className="relative flex lg:flex-row w-full h-screen justify-center flex-col  dark:bg-gray-900 sm:p-0">
           {children}
           <div className="lg:w-1/2 w-full h-full bg-brand-950 dark:bg-white/5 lg:grid items-center hidden">
-            <div className="relative items-center justify-center  flex z-1">
-              {/* <!-- ===== Common Grid Shape Start ===== --> */}
-              <GridShape />
-              <div className="flex flex-col items-center max-w-xs">
-                <Link href="/" className="block mb-4">
+            <div className="relative flex h-full items-center justify-center px-12">
+              <div className="max-w-lg">
+                <Link href="/" className="mb-8 inline-flex">
                   <Image
                     width={231}
                     height={48}
@@ -29,9 +26,26 @@ export default function AuthLayout({
                     alt="Logo"
                   />
                 </Link>
-                <p className="text-center text-gray-400 dark:text-white/60">
-                  Free and Open-Source Tailwind CSS Admin Dashboard Template
+                <p className="mb-3 text-sm font-medium uppercase tracking-[0.12em] text-brand-200">
+                  CRM made in Congo
                 </p>
+                <h2 className="text-3xl font-semibold text-white">
+                  ELMES-TEKA
+                </h2>
+                <p className="mt-4 text-base leading-7 text-gray-300 dark:text-white/70">
+                  Une plateforme de gestion commerciale adaptee aux TPE, PME et activites informelles congolaises.
+                </p>
+                <ul className="mt-8 space-y-4 text-sm text-gray-300 dark:text-white/70">
+                  <li className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3">
+                    Supervision des boutiques et des vendeurs.
+                  </li>
+                  <li className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3">
+                    Suivi des ventes, commandes, depenses et clients.
+                  </li>
+                  <li className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3">
+                    Gestion des stocks et preparation simplifiee des donnees comptables.
+                  </li>
+                </ul>
               </div>
             </div>
           </div>

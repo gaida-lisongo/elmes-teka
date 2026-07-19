@@ -1,12 +1,19 @@
 import SignUpForm from "@/components/auth/SignUpForm";
+import { getAdminShellAccount } from "@/lib/auth/admin-shell";
 import { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Next.js SignUp Page | TailAdmin - Next.js Dashboard Template",
-  description: "This is Next.js SignUp Page TailAdmin Dashboard Template",
-  // other metadata
+  title: "Inscription entrepreneur | ELMES-TEKA",
+  description: "Creation d'un compte entrepreneur ELMES-TEKA.",
 };
 
-export default function SignUp() {
+export default async function SignUp() {
+  const shell = await getAdminShellAccount();
+
+  if (shell) {
+    redirect("/");
+  }
+
   return <SignUpForm />;
 }

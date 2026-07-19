@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model } from "mongoose";
+import { Schema, model, models, type Model, type Types } from "mongoose";
 
 export type ProductStatus = "ACTIVE" | "INACTIVE" | "ARCHIVED";
 
@@ -18,6 +18,7 @@ export interface IProductDescription {
 }
 
 export interface IProduct {
+  tenantId: Types.ObjectId;
   designation: string;
   categorie: string;
   photos?: IProductPhoto[];
@@ -83,6 +84,12 @@ const ProductDescriptionSchema = new Schema<IProductDescription>(
 
 const ProductSchema = new Schema<IProduct>(
   {
+    tenantId: {
+      type: Schema.Types.ObjectId,
+      ref: "Tenant",
+      required: true,
+      index: true,
+    },
     designation: {
       type: String,
       required: true,
@@ -135,6 +142,9 @@ const ProductSchema = new Schema<IProduct>(
 );
 
 ProductSchema.index({ categorie: 1, status: 1 });
+ProductSchema.index({ tenantId: 1, status: 1 });
+ProductSchema.index({ tenantId: 1, designation: 1 });
+ProductSchema.index({ tenantId: 1, code: 1 }, { unique: true });
 
 const Product =
   (models.Product as Model<IProduct>) || model<IProduct>("Product", ProductSchema);

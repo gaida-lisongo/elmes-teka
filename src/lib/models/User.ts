@@ -30,6 +30,7 @@ export interface IUser {
   secure: string;
   matricule: string;
   status: AccountStatus;
+  photo?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,7 +66,8 @@ export interface ITenant {
 
 export interface ISaler {
   userId: Types.ObjectId;
-  storeId: Types.ObjectId;
+  tenantId: Types.ObjectId;
+  storeId?: Types.ObjectId | null;
   status: AccountStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -179,6 +181,12 @@ const UserSchema = new Schema<IUser>(
       enum: ["PENDING", "ACTIVE", "SUSPENDED", "INACTIVE"],
       default: "ACTIVE",
       index: true,
+    },
+
+    photo: {
+      type: String,
+      default: null,
+      trim: true,
     },
   },
   {
@@ -344,10 +352,17 @@ const SalerSchema = new Schema<ISaler>(
       index: true,
     },
 
+    tenantId: {
+      type: Schema.Types.ObjectId,
+      ref: "Tenant",
+      required: true,
+      index: true,
+    },
+
     storeId: {
       type: Schema.Types.ObjectId,
       ref: "Store",
-      required: true,
+      default: null,
       index: true,
     },
 
@@ -363,6 +378,13 @@ const SalerSchema = new Schema<ISaler>(
     versionKey: false,
   }
 );
+
+/*
+ * Index pour la recherche multi-tenant
+ */
+SalerSchema.index({ tenantId: 1, status: 1 });
+SalerSchema.index({ tenantId: 1, storeId: 1 });
+SalerSchema.index({ tenantId: 1, userId: 1 }, { unique: true });
 
 /*
  * Recherche rapide de tous les vendeurs actifs d'une boutique.

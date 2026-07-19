@@ -94,6 +94,8 @@ export class SmsNotifier {
         cache: "no-store",
       });
       const payload = await response.json().catch(() => ({}));
+      console.log("Sending Payload :", payload);
+      
       const providerRequestId = response.headers.get("x-request-id") ?? requestId;
       if (!response.ok) return { success: false, status: response.status, requestId: providerRequestId, error: payload.error ?? payload.message ?? "Coussema a refuse la requete.", data: payload };
       return { success: true, status: response.status, requestId: providerRequestId, data: payload };

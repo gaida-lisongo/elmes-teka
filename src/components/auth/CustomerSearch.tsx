@@ -178,6 +178,21 @@ export default function CustomerSearch({
         onKeyDown={handleKeyDown}
       />
 
+      {/* Bouton permanent pour creer un nouveau client */}
+      <button
+        type="button"
+        onClick={() => {
+          setShowCreate(!showCreate);
+          setNewPhone("");
+          setNewName("");
+          setNewEmail("");
+          setMessage("");
+        }}
+        className="mt-2 text-sm font-medium text-brand-500 hover:text-brand-600"
+      >
+        + Creer un nouveau client
+      </button>
+
       {(isOpen || isLoading || message) && (
         <div className="absolute z-40 mt-2 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-theme-lg dark:border-gray-800 dark:bg-gray-900">
           {isLoading && (
@@ -216,23 +231,6 @@ export default function CustomerSearch({
           {!isLoading && message && results.length === 0 && (
             <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
               {message}
-            </div>
-          )}
-          {!isLoading && !message && results.length === 0 && query.trim().length >= 2 && (
-            <div className="border-t border-gray-100 p-3 dark:border-gray-700">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCreate(true);
-                  setNewPhone("");
-                  setNewName("");
-                  setNewEmail("");
-                  setMessage("");
-                }}
-                className="w-full text-left text-sm font-medium text-brand-500 hover:text-brand-600"
-              >
-                + Creer un nouveau client
-              </button>
             </div>
           )}
         </div>

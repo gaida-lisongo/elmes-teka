@@ -13,7 +13,7 @@ import {
   TrashBinIcon,
   CloseLineIcon,
   BoxCubeIcon,
-  CheckCircleIcon,
+  DollarLineIcon,
 } from "@/icons";
 import {
   createSupplyRequest,

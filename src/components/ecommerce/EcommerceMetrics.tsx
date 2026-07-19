@@ -2,37 +2,48 @@ import { BoxIconLine, DollarLineIcon } from "@/icons";
 import type { DashboardData } from "@/lib/dashboard/types";
 import type { ReactNode } from "react";
 
-const format = (totals: Array<{ currency: string; amount: number }>) =>
-  totals.length
-    ? totals
-        .map(
-          (item) => `${item.currency} ${item.amount.toLocaleString("fr-FR")}`,
-        )
-        .join(" · ")
-    : "USD 0 · CDF 0";
+function formatAmount(amount: number, currency: string) {
+  if (currency === "USD") return `$${amount.toFixed(2)}`;
+  return `${amount.toLocaleString("fr-FR")} FC`;
+}
 
 export function EcommerceMetrics({
   metrics,
 }: {
   metrics: DashboardData["metrics"];
 }) {
+  const revenueUSD =
+    metrics.revenue.totals.find((t) => t.currency === "USD")?.amount ?? 0;
+  const revenueCDF =
+    metrics.revenue.totals.find((t) => t.currency === "CDF")?.amount ?? 0;
+  const expensesCDF =
+    metrics.expenses.totals.find((t) => t.currency === "CDF")?.amount ?? 0;
+
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 md:gap-6">
       <Metric
         icon={
           <DollarLineIcon className="size-6 text-gray-800 dark:text-white/90" />
         }
-        label="Chiffre d’affaires"
-        value={format(metrics.revenue.totals)}
-        detail={`${metrics.revenue.transactionCount} transaction(s) valide(s)`}
+        label="Chiffre d'affaires (CDF)"
+        value={formatAmount(revenueCDF, "CDF")}
+        detail={`${metrics.revenue.transactionCount} transaction(s)`}
+      />
+      <Metric
+        icon={
+          <DollarLineIcon className="size-6 text-gray-800 dark:text-white/90" />
+        }
+        label="Chiffre d'affaires (USD)"
+        value={formatAmount(revenueUSD, "USD")}
+        detail={`${metrics.revenue.transactionCount} transaction(s)`}
       />
       <Metric
         icon={
           <BoxIconLine className="size-6 text-gray-800 dark:text-white/90" />
         }
-        label="Charges"
-        value={format(metrics.expenses.totals)}
-        detail={`${metrics.expenses.expenseCount} dépense(s) approuvée(s)`}
+        label="Depenses (CDF)"
+        value={formatAmount(expensesCDF, "CDF")}
+        detail={`${metrics.expenses.expenseCount} depense(s)`}
       />
     </div>
   );

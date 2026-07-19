@@ -11,7 +11,8 @@ cloudinary.config({
 type UploadFolder =
   | "elmes-teka/users"
   | "elmes-teka/tenants/logos"
-  | "elmes-teka/tenants/documents";
+  | "elmes-teka/tenants/documents"
+  | "elmes-teka/stores/photos";
 
 type UploadResponse =
   | { success: true; url: string; publicId: string }
@@ -21,6 +22,7 @@ const maxFileSizes: Record<UploadFolder, number> = {
   "elmes-teka/users": 3 * 1024 * 1024,
   "elmes-teka/tenants/logos": 3 * 1024 * 1024,
   "elmes-teka/tenants/documents": 8 * 1024 * 1024,
+  "elmes-teka/stores/photos": 5 * 1024 * 1024,
 };
 
 const allowedTypes = new Set([
@@ -35,7 +37,8 @@ function resolveFolder(value: FormDataEntryValue | null): UploadFolder {
   if (
     value === "elmes-teka/users" ||
     value === "elmes-teka/tenants/logos" ||
-    value === "elmes-teka/tenants/documents"
+    value === "elmes-teka/tenants/documents" ||
+    value === "elmes-teka/stores/photos"
   ) {
     return value;
   }

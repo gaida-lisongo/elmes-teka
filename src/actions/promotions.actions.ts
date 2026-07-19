@@ -179,7 +179,34 @@ export async function sendPromotionSmsToCustomers(input: { promotionId: string; 
     for (let index = 0; index < eligible.length; index += 10) {
       const batch = eligible.slice(index, index + 10);
       const sent = await Promise.all(batch.map(async (customer) => {
-        try { const personalized = template.replaceAll("{{name}}", customer.name).replaceAll("{{promotion}}", promotion.designation).replaceAll("{{code}}", promotion.code).replaceAll("{{reduction}}", String(promotion.reduction)); const normalizedPhone = smsNotifier.normalizePhone(customer.phone); const response = await smsNotifier.send_simple({ phone: normalizedPhone, message: personalized, clientReference: `promo-${promotion._id}-${customer._id}` }); const delivered = response.success && response.data?.success === true && response.data?.status === "sent"; const accepted = response.success && response.data?.success === true && ["accepted", "sent"].includes(response.data?.status); return { customerId: customer._id.toString(), delivered, accepted, phone: normalizedPhone, message: delivered ? "SMS envoye." : accepted ? "SMS accepte, livraison non confirmee." : response.error ?? "Echec SMS." }; } catch (error: any) { return { customerId: customer._id.toString(), delivered: false, accepted: false, phone: "00000000000", message: error.message || "Numero invalide." }; }
+        try { 
+          const personalized = template.replaceAll("{{name}}", customer.name).replaceAll("{{promotion}}", promotion.designation).replaceAll("{{code}}", promotion.code).replaceAll("{{reduction}}", String(promotion.reduction)); 
+          const normalizedPhone = smsNotifier.normalizePhone(customer.phone); 
+          const response = await smsNotifier.send_simple({ 
+            phone: normalizedPhone, 
+            message: personalized, 
+            clientReference: `promo-${promotion._id}-${customer._id}` 
+          }); 
+          console.log("Result message : ", response);
+
+          const delivered = response.success && response.data?.success === true && response.data?.status === "sent"; 
+          const accepted = response.success && response.data?.success === true && ["accepted", "sent"].includes(response.data?.status); 
+          return { 
+            customerId: customer._id.toString(), 
+            delivered, 
+            accepted, 
+            phone: normalizedPhone, 
+            message: delivered ? "SMS envoye." : accepted ? "SMS accepte, livraison non confirmee." : response.error ?? "Echec SMS." 
+          }; 
+          } catch (error: any) { 
+            return { 
+              customerId: customer._id.toString(), 
+              delivered: false, 
+              accepted: false, 
+              phone: "00000000000", 
+              message: error.message || "Numero invalide." 
+            }; 
+          }
       }));
       results.push(...sent.map((item) => ({ customerId: item.customerId, success: item.delivered, phone: `${item.phone.slice(0, 5)}****${item.phone.slice(-2)}`, message: item.message })));
       const successfulIds = sent.filter((item) => item.delivered).map((item) => objectId(item.customerId));

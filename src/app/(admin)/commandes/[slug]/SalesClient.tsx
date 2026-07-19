@@ -409,7 +409,15 @@ export default function SalesClient({
   const confirmedItems = items.filter((x) => x.status !== "CANCELLED");
   const cancelledItems = items.filter((x) => x.status === "CANCELLED");
 
-  // Revenue with conversion
+  // Revenue by currency (raw, no conversion)
+  const revenueUSD = confirmedItems
+    .filter((x) => x.currency === "USD")
+    .reduce((s, x) => s + x.totalAmount, 0);
+  const revenueCDF = confirmedItems
+    .filter((x) => x.currency === "CDF")
+    .reduce((s, x) => s + x.totalAmount, 0);
+
+  // Revenue with conversion for unified display
   const revenueConverted = confirmedItems.reduce((s, x) => {
     const c = convertAmount(x.totalAmount, x.currency);
     return s + c.amount;
@@ -453,13 +461,17 @@ export default function SalesClient({
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Metric label="Ventes" value={data?.total ?? 0} />
-              <Metric
-                label="Chiffre d'affaires"
-                value={formatCurrency(revenueConverted, revenueCurrency)}
-              />
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              <Metric label="Transactions" value={confirmedItems.length} />
               <Metric label="Annulees" value={cancelledItems.length} />
+              <Metric
+                label="CA (USD)"
+                value={formatCurrency(revenueUSD, "USD")}
+              />
+              <Metric
+                label="CA (CDF)"
+                value={formatCurrency(revenueCDF, "CDF")}
+              />
               <Metric
                 label="Panier moyen"
                 value={

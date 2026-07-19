@@ -29,6 +29,8 @@ export default async function DashboardPage({
     productsPage: Number(params.productsPage) || 1,
     productSearch: params.productSearch,
   });
+  const taux = Number(process.env.TAUX) || 0;
+  const exchange = Number(process.env.EXCHANGE) || 0;
   return (
     <div className="grid grid-cols-12 gap-4 md:gap-6">
       <div className="col-span-12 space-y-6 xl:col-span-7">
@@ -44,6 +46,8 @@ export default async function DashboardPage({
           balances={data.balances}
           exercises={data.exercises}
           selected={data.selectedTargetExercise}
+          taux={taux}
+          exchange={exchange}
         />
       </div>
       <div className="col-span-12">

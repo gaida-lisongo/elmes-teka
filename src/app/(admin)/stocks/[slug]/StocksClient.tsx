@@ -310,6 +310,27 @@ export default function StocksClient({
                       )}
                     </div>
 
+                    {/* Estimated value */}
+                    {(() => {
+                      const val = x.products.reduce((sum, p) => {
+                        const prod = products.find((pp) => pp.id === p.id);
+                        const price = prod?.price?.[0];
+                        if (!price) return sum;
+                        if (price.currency === "CDF") return sum + p.qte * price.amount;
+                        if (price.currency === "USD" && taux > 0)
+                          return sum + p.qte * Math.round(price.amount * taux);
+                        return sum;
+                      }, 0);
+                      return val > 0 ? (
+                        <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
+                          <DollarLineIcon className="h-3 w-3" />
+                          <span>
+                            Valeur estimee : ~{formatCurrency(val, "CDF")}
+                          </span>
+                        </div>
+                      ) : null;
+                    })()}
+
                     {/* Description */}
                     {x.description && (
                       <p className="mt-2 text-xs italic text-gray-400 line-clamp-2">

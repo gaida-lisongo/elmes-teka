@@ -193,6 +193,15 @@ export default function ExpensesClient({
 
   /* ---- computed ---- */
   const items: ExpenseItem[] = data?.items ?? [];
+
+  // Raw totals by currency
+  const totalCDF = items
+    .filter((x) => x.currency === "CDF")
+    .reduce((s, x) => s + x.totalAmount, 0);
+  const totalUSD = items
+    .filter((x) => x.currency === "USD")
+    .reduce((s, x) => s + x.totalAmount, 0);
+
   const totalConverted = items.reduce((s, x) => {
     const c = convertAmount(x.totalAmount, x.currency);
     return s + c.amount;
@@ -231,11 +240,15 @@ export default function ExpensesClient({
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               <Metric label="Depenses" value={data?.total ?? 0} />
               <Metric
-                label="Total"
-                value={formatCurrency(totalConverted, displayCur)}
+                label="Total (USD)"
+                value={formatCurrency(totalUSD, "USD")}
+              />
+              <Metric
+                label="Total (CDF)"
+                value={formatCurrency(totalCDF, "CDF")}
               />
               <Metric
                 label="En attente"

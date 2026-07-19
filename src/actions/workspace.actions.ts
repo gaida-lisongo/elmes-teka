@@ -489,7 +489,12 @@ export async function listExpenses(
         items: items.map((d) => ({
           id: d._id.toString(),
           reference: d.reference,
-          lines: d.depenses,
+          lines: d.depenses.map((l: any) => ({
+            libelle: l.libelle,
+            amount: l.amount,
+            observation: l.observation ?? "",
+            status: l.status,
+          })),
           totalAmount: d.totalAmount,
           currency: d.currency,
           status: d.status,

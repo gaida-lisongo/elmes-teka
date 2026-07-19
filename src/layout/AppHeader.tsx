@@ -67,7 +67,7 @@ const AppHeader: React.FC = () => {
             )}
           </button>
 
-          <Link href="/" className="lg:hidden">
+          <Link href="/" prefetch={false} className="lg:hidden">
             <Image
               width={154}
               height={32}

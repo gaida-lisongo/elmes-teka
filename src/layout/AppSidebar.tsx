@@ -193,6 +193,7 @@ const AppSidebar: React.FC<{ menuApp?: MenuAppSection[] }> = ({
             nav.path && (
               <Link
                 href={nav.path}
+                prefetch={nav.path === "/" ? false : undefined}
                 className={`menu-item group ${
                   isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
                 }`}
@@ -356,7 +357,7 @@ const AppSidebar: React.FC<{ menuApp?: MenuAppSection[] }> = ({
           !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
         }`}
       >
-        <Link href="/">
+        <Link href="/" prefetch={false}>
           {isExpanded || isHovered || isMobileOpen ? (
             <>
               <Image

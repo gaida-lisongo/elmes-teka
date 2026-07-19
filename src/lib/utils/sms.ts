@@ -127,6 +127,7 @@ export class SmsNotifier {
       to: this.normalizePhone(input.phone),
       senderId: config.senderId,
       message: input.message.trim().slice(0, 1530),
+      ...(input.clientReference ? { clientReference: input.clientReference.slice(0, 128) } : {}),
     }, true);
   }
 

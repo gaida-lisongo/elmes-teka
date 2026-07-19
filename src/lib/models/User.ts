@@ -140,7 +140,6 @@ const UserSchema = new Schema<IUser>(
       type: String,
       required: true,
       trim: true,
-      index: true,
     },
 
     boutique: {
@@ -154,7 +153,6 @@ const UserSchema = new Schema<IUser>(
       required: true,
       trim: true,
       lowercase: true,
-      index: true,
     },
 
     /*

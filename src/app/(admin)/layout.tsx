@@ -24,10 +24,7 @@ export default async function AdminLayout({
   const annees = shell.account.tenantId
     ? await Annee.find({
         tenantId: shell.account.tenantId,
-        status: { $in: ["ACTIVE", null] },
-        ...(shell.account.type === "SALER"
-          ? { "provider.status": "PAID" }
-          : {}),
+        status: "ACTIVE",
       })
         .select("_id debut fin slug")
         .sort({ debut: -1 })
@@ -97,12 +94,7 @@ export default async function AdminLayout({
           name: formatAnneeLabel(annee.debut, annee.fin),
           path: `/stocks/${annee.slug}`,
         })),
-      },
-      {
-        icon: "user",
-        name: "Profil",
-        path: "/profile",
-      },
+      }
     ],
   };
 

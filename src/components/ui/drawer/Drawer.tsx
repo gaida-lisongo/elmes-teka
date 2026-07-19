@@ -10,6 +10,7 @@ export interface DrawerProps {
   description?: string;
   children: React.ReactNode;
   className?: string;
+  size?: "lg" | "xl";
 }
 
 export default function Drawer({
@@ -19,6 +20,7 @@ export default function Drawer({
   description,
   children,
   className = "",
+  size = "lg",
 }: DrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
 
@@ -47,6 +49,8 @@ export default function Drawer({
 
   if (!isOpen) return null;
 
+  const sizeClass = size === "xl" ? "max-w-[1024px]" : "max-w-[640px]";
+
   return (
     <div className="fixed inset-0 z-[99999] flex">
       {/* Overlay */}
@@ -58,7 +62,7 @@ export default function Drawer({
       {/* Drawer panel */}
       <div
         ref={drawerRef}
-        className={`fixed right-0 top-0 h-full w-full max-w-[640px] overflow-y-auto bg-white shadow-xl transition-transform duration-300 ease-in-out dark:bg-gray-900 ${className}`}
+        className={`fixed right-0 top-0 h-full w-full ${sizeClass} overflow-y-auto bg-white shadow-xl transition-transform duration-300 ease-in-out dark:bg-gray-900 ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

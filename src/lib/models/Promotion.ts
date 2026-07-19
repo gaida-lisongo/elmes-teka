@@ -26,6 +26,7 @@ export interface IPromotion {
   commandes: number;
   credits: number;
   recharges: IPromotionRecharge[];
+  smsStats: { sent: number; failed: number; skipped: number; lastSentAt?: Date | null };
   photo?: IPromotionPhoto | null;
   status: "ACTIVE" | "INACTIVE" | "ARCHIVED";
   createdAt: Date;
@@ -95,6 +96,12 @@ const PromotionSchema = new Schema<IPromotion>(
     commandes: { type: Number, required: true, min: 1, default: 1 },
     credits: { type: Number, required: true, min: 0, default: 0 },
     recharges: { type: [PromotionRechargeSchema], default: [] },
+    smsStats: {
+      sent: { type: Number, min: 0, default: 0 },
+      failed: { type: Number, min: 0, default: 0 },
+      skipped: { type: Number, min: 0, default: 0 },
+      lastSentAt: { type: Date, default: null },
+    },
     photo: {
       type: PromotionPhotoSchema,
       default: null,

@@ -4117,8 +4117,77 @@ le test doit être en GET et non en POST et voici la reponse => {
 ###############################################################################
 curl -X POST "http://localhost:3000/api/sms/test/contact" \
   -H "Content-Type: application/json" \
-  -d '{ \
-    "name": "Nathan Lisongo", \
-    "phone": "24381642045", \
-    "promotionCode": "PROMO-VIP" \
+  -d '{
+    "name": "Jean Client",
+    "phone": "243XXXXXXXXX",
+    "promotionCode": "PROMO-VIP"
   }'
+  ##############################################
+  regarde le travail que tu as fait l'app est mort: 
+✓ Starting...
+✓ Ready in 1558ms
+○ Compiling /signin ...
+🔹 [MongoDB] Nouvelle connexion établie avec succès.
+(node:8088) [MONGOOSE] Warning: mongoose: Duplicate schema index on {"email":1} for model "User". This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8088) [MONGOOSE] Warning: mongoose: Duplicate schema index on {"telephone":1} for model "User". This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+ GET /signin 307 in 53s (compile: 29.0s, render: 23.6s)
+ GET / 307 in 17.2s (compile: 2.3s, render: 14.8s)
+ GET /signin 307 in 999ms (compile: 6ms, render: 993ms)
+ GET / 307 in 1781ms (compile: 21ms, render: 1760ms)
+ GET /signin 307 in 1029ms (compile: 5ms, render: 1025ms)
+ GET / 307 in 2.4s (compile: 12ms, render: 2.4s)
+ GET /signin 307 in 2.0s (compile: 5ms, render: 2.0s)
+ GET / 307 in 1568ms (compile: 14ms, render: 1554ms)
+ GET /signin 307 in 1285ms (compile: 7ms, render: 1278ms)
+ GET / 307 in 1992ms (compile: 13ms, render: 1978ms)
+ GET /signin 307 in 2.6s (compile: 6ms, render: 2.6s)
+ GET / 307 in 2.0s (compile: 13ms, render: 1989ms)
+ GET /signin 307 in 1328ms (compile: 4ms, render: 1325ms)
+ GET / 307 in 3.0s (compile: 11ms, render: 2.9s)
+ GET /signin 307 in 1374ms (compile: 4ms, render: 1370ms)
+ GET / 307 in 10.4s (compile: 12ms, render: 10.4s)
+ GET /signin 307 in 2.3s (compile: 4ms, render: 2.3s)
+ GET / 307 in 2.3s (compile: 17ms, render: 2.3s)
+ GET /signin 307 in 1770ms (compile: 5ms, render: 1765ms)
+ GET / 307 in 3.3s (compile: 18ms, render: 3.3s)
+ GET / 307 in 1702ms (compile: 25ms, render: 1676ms)
+ GET /signin 307 in 1039ms (compile: 4ms, render: 1035ms)
+ GET / 307 in 2.3s (compile: 15ms, render: 2.3s)
+ GET /signin 307 in 2.3s (compile: 4ms, render: 2.3s)
+ GET / 307 in 1576ms (compile: 18ms, render: 1558ms)
+ GET /signin 307 in 3.7s (compile: 4ms, render: 3.7s)
+ GET / 307 in 1240ms (compile: 13ms, render: 1226ms)
+ GET /signin 307 in 953ms (compile: 5ms, render: 948ms)
+ GET / 307 in 1468ms (compile: 13ms, render: 1455ms)
+ GET /signin 307 in 982ms (compile: 4ms, render: 978ms)
+ GET / 307 in 1797ms (compile: 11ms, render: 1786ms)
+ GET /signin 307 in 1121ms (compile: 4ms, render: 1117ms)
+ GET / 307 in 2.3s (compile: 12ms, render: 2.3s)
+ GET /signin 307 in 1328ms (compile: 4ms, render: 1325ms)
+ GET / 307 in 1530ms (compile: 11ms, render: 1519ms)
+ GET /signin 307 in 945ms (compile: 4ms, render: 941ms)
+
+
+
+##############################
+mais toutes les pages du vendeur reviennet
+  systématiquent sur la page racine qu'est ce qui se
+  passe, regle se problème, car je dois finir le developpeent de l'application dans 15minutes:
+ POST /signin 200 in 3.7s (compile: 5ms, render: 3.7s) GET / 200 in 1361ms (compile: 13ms, render: 1348ms)
+ GET / 200 in 1273ms (compile: 12ms, render: 1261ms)
+ GET /stocks/2024-2025 200 in 2.0s (compile: 41ms, render: 1971ms)
+ GET / 200 in 2.6s (compile: 18ms, render: 2.6s)
+ GET / 200 in 944ms (compile: 12ms, render: 932ms)
+ GET /depenses/2024-2025 200 in 3.9s (compile: 2.3s, render: 1608ms)
+ GET / 200 in 940ms (compile: 17ms, render: 923ms)
+ GET / 200 in 3.8s (compile: 30ms, render: 3.8s)
+ GET /commandes/2025-2026 200 in 4.0s (compile: 2.8s, render: 1111ms)
+ GET / 200 in 1386ms (compile: 26ms, render: 1360ms)
+ GET / 200 in 1434ms (compile: 22ms, render: 1413ms)
+ GET / 200 in 3.1s (compile: 14ms, render: 3.1s)
+ GET / 200 in 1257ms (compile: 16ms, render: 1241ms)
+⚠ Cross origin request detected from 172.20.10.2 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ POST / 200 in 513ms (compile: 15ms, render: 498ms)
+ GET /agents 200 in 1717ms (compile: 727ms, render: 990ms)

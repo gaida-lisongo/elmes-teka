@@ -25,7 +25,6 @@ export interface IDepense {
 
 const DepenseItemSchema = new Schema<IDepenseItem>(
   {
-    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
     libelle: {
       type: String,
       required: true,
@@ -54,6 +53,7 @@ const DepenseItemSchema = new Schema<IDepenseItem>(
 
 const DepenseSchema = new Schema<IDepense>(
   {
+    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
     depenses: {
       type: [DepenseItemSchema],
       required: true,
@@ -100,6 +100,7 @@ DepenseSchema.index({ shopId: 1, reference: 1 }, { unique: true });
 DepenseSchema.index({ anneeId: 1, shopId: 1, createdAt: -1 });
 DepenseSchema.index({ agentId: 1, createdAt: -1 });
 DepenseSchema.index({ tenantId: 1, shopId: 1, anneeId: 1, createdAt: -1 });
+DepenseSchema.index({ tenantId: 1, shopId: 1, anneeId: 1, status: 1, createdAt: -1 });
 DepenseSchema.index({ tenantId: 1, reference: 1 }, { unique: true });
 
 const Depense =

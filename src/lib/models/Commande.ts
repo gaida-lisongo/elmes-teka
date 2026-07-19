@@ -145,6 +145,8 @@ CommandeSchema.index({ shopId: 1, reference: 1 }, { unique: true });
 CommandeSchema.index({ anneeId: 1, shopId: 1, createdAt: -1 });
 CommandeSchema.index({ clientId: 1, createdAt: -1 });
 CommandeSchema.index({ tenantId: 1, shopId: 1, anneeId: 1, createdAt: -1 });
+CommandeSchema.index({ tenantId: 1, shopId: 1, anneeId: 1, status: 1, createdAt: -1 });
+CommandeSchema.index({ tenantId: 1, "commandes.product": 1, status: 1 });
 CommandeSchema.index({ tenantId: 1, clientId: 1, createdAt: -1 });
 CommandeSchema.index({ tenantId: 1, reference: 1 }, { unique: true });
 CommandeSchema.index({ tenantId: 1, agentId: 1, createdAt: -1 });

@@ -4089,3 +4089,36 @@ Signaler les migrations, historiques existants, limites PDF, limites Pusher et d
 ## 20. Commandes non exécutées
 
 Confirmer explicitement qu’aucun build, lint ou test n’a été lancé.
+##########
+non pas besoin de sender_id dans un envoi simple voici un exemple =>
+const response = await fetch('https://api.coussema.com/v1/sms/send', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer VOTRE_CLE_API',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    to: '243837509125',
+    message: 'Votre code de vérification est 1234.'
+  })
+});
+
+le test doit être en GET et non en POST et voici la reponse => {
+  "success": false,
+  "status": 400,
+  "requestId": "d7d976e0-ca26-4ad5-a277-006cb2f38655",
+  "error": "Invalid SenderId: ce Sender ID n’est pas autorisé pour cette organisation.",
+  "data": {
+    "error": "Invalid SenderId: ce Sender ID n’est pas autorisé pour cette organisation.",
+    "code": "sender_id_missing",
+    "requestId": "d7d976e0-ca26-4ad5-a277-006cb2f38655"
+  }
+}
+###############################################################################
+curl -X POST "http://localhost:3000/api/sms/test/contact" \
+  -H "Content-Type: application/json" \
+  -d '{ \
+    "name": "Nathan Lisongo", \
+    "phone": "24381642045", \
+    "promotionCode": "PROMO-VIP" \
+  }'

@@ -316,10 +316,6 @@ export default function StoresClient({
     if (newData.success) setData(newData.data);
     router.refresh();
   };
-    setActionLoading(false);
-    if (res.success) router.refresh();
-    else setActionMessage(res.message);
-  };
 
   /* ─── View detail ─── */
   const handleView = async (store: any) => {

@@ -84,7 +84,7 @@ export default async function AdminLayout({
         name: "Marchandises",
         subItems: annees.map((annee) => ({
           name: formatAnneeLabel(annee.debut, annee.fin),
-          path: `/stock/${annee.slug}`,
+          path: `/stocks/${annee.slug}`,
         })),
       },
     ],

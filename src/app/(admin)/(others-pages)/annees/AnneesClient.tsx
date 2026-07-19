@@ -153,12 +153,13 @@ export default function AnneesClient({
   const handleCreate = async () => {
     setActionLoading(true);
     setFormErrors({});
+    setActionMessage("");
     const res = await createAnnee(formData);
     setActionLoading(false);
     if (res.success) {
       setCreateDrawerOpen(false);
       setFormData({ debut: "", fin: "" });
-      router.refresh();
+      await refreshData();
     } else {
       if (res.errors) setFormErrors(res.errors);
       setActionMessage(res.message);
@@ -170,13 +171,14 @@ export default function AnneesClient({
     if (!editId) return;
     setActionLoading(true);
     setFormErrors({});
+    setActionMessage("");
     const res = await updateAnnee(editId, formData);
     setActionLoading(false);
     if (res.success) {
       setEditDrawerOpen(false);
       setEditId(null);
       setFormData({ debut: "", fin: "" });
-      router.refresh();
+      await refreshData();
     } else {
       if (res.errors) setFormErrors(res.errors);
       setActionMessage(res.message);
@@ -187,15 +189,28 @@ export default function AnneesClient({
   const handleDeleteConfirm = async () => {
     if (!anneeToDelete) return;
     setActionLoading(true);
+    setActionMessage("");
     const res = await deleteAnnee(anneeToDelete);
     setActionLoading(false);
     if (res.success) {
       setDeleteModalOpen(false);
       setAnneeToDelete(null);
-      router.refresh();
+      await refreshData();
     } else {
       setActionMessage(res.message);
     }
+  };
+
+  /* ─── SPA refresh ─── */
+  const refreshData = async () => {
+    const { getAnnees, getAnneeMetrics } = await import("@/actions/annees.actions");
+    const [newMetrics, newData] = await Promise.all([
+      getAnneeMetrics(),
+      getAnnees(currentPage, currentLimit),
+    ]);
+    if (newMetrics.success) setMetrics(newMetrics.data);
+    if (newData.success) setData(newData.data);
+    router.refresh();
   };
 
   /* ─── Export ─── */

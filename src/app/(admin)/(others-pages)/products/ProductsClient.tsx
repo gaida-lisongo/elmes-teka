@@ -171,13 +171,14 @@ export default function ProductsClient({
   const handleCreate = async () => {
     setActionLoading(true);
     setFormErrors({});
+    setActionMessage("");
     const res = await createProduct(formData);
     setActionLoading(false);
     if (res.success) {
       setCreateDrawerOpen(false);
       setCreateStep(1);
       setFormData({ designation: "", categorie: "", code: "", price: [{ amount: 0, currency: "CDF" }], photos: [], description: [] });
-      router.refresh();
+      await refreshData();
     } else {
       if (res.errors) setFormErrors(res.errors);
       setActionMessage(res.message);
@@ -189,12 +190,13 @@ export default function ProductsClient({
     if (!editId) return;
     setActionLoading(true);
     setFormErrors({});
+    setActionMessage("");
     const res = await updateProduct(editId, formData);
     setActionLoading(false);
     if (res.success) {
       setEditDrawerOpen(false);
       setEditId(null);
-      router.refresh();
+      await refreshData();
     } else {
       if (res.errors) setFormErrors(res.errors);
       setActionMessage(res.message);
@@ -204,9 +206,10 @@ export default function ProductsClient({
   /* ─── Archive ─── */
   const handleArchive = async (id: string) => {
     setActionLoading(true);
+    setActionMessage("");
     const res = await archiveProduct(id);
     setActionLoading(false);
-    if (res.success) router.refresh();
+    if (res.success) await refreshData();
     else setActionMessage(res.message);
   };
 
@@ -214,15 +217,28 @@ export default function ProductsClient({
   const handleDeleteConfirm = async () => {
     if (!productToDelete) return;
     setActionLoading(true);
+    setActionMessage("");
     const res = await deleteProduct(productToDelete);
     setActionLoading(false);
     if (res.success) {
       setDeleteModalOpen(false);
       setProductToDelete(null);
-      router.refresh();
+      await refreshData();
     } else {
       setActionMessage(res.message);
     }
+  };
+
+  /* ─── SPA refresh ─── */
+  const refreshData = async () => {
+    const { getProducts, getProductMetrics } = await import("@/actions/products.actions");
+    const [newMetrics, newData] = await Promise.all([
+      getProductMetrics(),
+      getProducts(currentPage, currentLimit, currentSearch, currentStatus),
+    ]);
+    if (newMetrics.success) setMetrics(newMetrics.data);
+    if (newData.success) setData(newData.data);
+    router.refresh();
   };
 
   /* ─── Export ─── */

@@ -48,11 +48,6 @@ export default async function AdminLayout({
         path: "/agents",
       },
       {
-        icon: "calendar",
-        name: "Exercices",
-        path: "/annees",
-      },
-      {
         icon: "page",
         name: "Articles",
         path: "/products",

@@ -10,6 +10,7 @@ import {
   assignSalerToStore,
   removeSalerFromStore,
   updateSalerStatus,
+  updateSalerUser,
   deleteSaler,
 } from "@/actions/agents.actions";
 import { searchUsers } from "@/actions/auth.actions";
@@ -202,11 +203,12 @@ export default function AgentsClient({
   const handleSearchUser = async (userId: string) => {
     setSelectedUserId(userId);
     setActionLoading(true);
+    setActionMessage("");
     const res = await createSalerFromUser(userId);
     setActionLoading(false);
     if (res.success) {
       setCreateDrawerOpen(false);
-      router.refresh();
+      await refreshData();
     } else {
       setActionMessage(res.message);
     }
@@ -215,13 +217,14 @@ export default function AgentsClient({
   const handleCreateNewUser = async () => {
     setActionLoading(true);
     setFormErrors({});
+    setActionMessage("");
     const res = await createSalerWithUser(newUserForm);
     setActionLoading(false);
     if (res.success) {
       setCreateDrawerOpen(false);
       setCreateStep("search");
       setNewUserForm({ pseudo: "", telephone: "", email: "", password: "", photo: "" });
-      router.refresh();
+      await refreshData();
     } else {
       if (res.errors) setFormErrors(res.errors);
       setActionMessage(res.message);
@@ -232,11 +235,12 @@ export default function AgentsClient({
   const handleAssign = async () => {
     if (!selectedAgent || !assignStoreId) return;
     setActionLoading(true);
+    setActionMessage("");
     const res = await assignSalerToStore(selectedAgent.id, assignStoreId);
     setActionLoading(false);
     if (res.success) {
       setAssignDrawerOpen(false);
-      router.refresh();
+      await refreshData();
     } else {
       setActionMessage(res.message);
     }
@@ -245,35 +249,67 @@ export default function AgentsClient({
   /* ─── Remove store ─── */
   const handleRemoveStore = async (salerId: string) => {
     setActionLoading(true);
+    setActionMessage("");
     const res = await removeSalerFromStore(salerId);
     setActionLoading(false);
-    if (res.success) router.refresh();
+    if (res.success) await refreshData();
     else setActionMessage(res.message);
   };
 
   /* ─── Toggle status ─── */
   const handleToggleStatus = async (salerId: string, current: string) => {
     setActionLoading(true);
+    setActionMessage("");
     const newStatus = current === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
     const res = await updateSalerStatus(salerId, newStatus);
     setActionLoading(false);
-    if (res.success) router.refresh();
+    if (res.success) await refreshData();
     else setActionMessage(res.message);
+  };
+
+  /* ─── Edit agent info ─── */
+  const [editForm, setEditForm] = useState({ pseudo: "", telephone: "", email: "" });
+  const handleEditSave = async () => {
+    if (!selectedAgent) return;
+    setActionLoading(true);
+    setActionMessage("");
+    const res = await updateSalerUser(selectedAgent.id, selectedAgent.userId, editForm);
+    setActionLoading(false);
+    if (res.success) {
+      setEditDrawerOpen(false);
+      await refreshData();
+    } else {
+      setActionMessage(res.message);
+    }
   };
 
   /* ─── Delete ─── */
   const handleDeleteConfirm = async () => {
     if (!agentToDelete) return;
     setActionLoading(true);
+    setActionMessage("");
     const res = await deleteSaler(agentToDelete);
     setActionLoading(false);
     if (res.success) {
       setDeleteModalOpen(false);
       setAgentToDelete(null);
-      router.refresh();
+      await refreshData();
     } else {
       setActionMessage(res.message);
     }
+  };
+
+  /* ─── SPA refresh: re-fetch data without full page reload ─── */
+  const refreshData = async () => {
+    // Re-fetch metrics and list from server
+    const { getSalerMetrics, getSalers } = await import("@/actions/agents.actions");
+    const [newMetrics, newSalers] = await Promise.all([
+      getSalerMetrics(),
+      getSalers(currentPage, currentLimit, currentSearch, currentStatus),
+    ]);
+    if (newMetrics.success) setMetrics(newMetrics.data);
+    if (newSalers.success) setData(newSalers.data);
+    router.refresh();
   };
 
   /* ─── Search ─── */
@@ -350,6 +386,8 @@ export default function AgentsClient({
                   }}
                   onEdit={() => {
                     setSelectedAgent(agent);
+                    setEditForm({ pseudo: agent.pseudo, telephone: agent.telephone, email: agent.email });
+                    setActionMessage("");
                     setEditDrawerOpen(true);
                   }}
                   onAssign={() => {
@@ -460,7 +498,7 @@ export default function AgentsClient({
                 value={newUserForm.password}
                 onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
                 error={!!formErrors.password}
-                hint={formErrors.password}
+                hint={formErrors.password || "8 caracteres min, 1 majuscule, 1 minuscule, 1 chiffre."}
               />
             </div>
             {actionMessage && (
@@ -481,6 +519,51 @@ export default function AgentsClient({
                 {actionLoading ? "Creation..." : "Creer l'agent"}
               </button>
             </div>
+          </div>
+        )}
+      </Drawer>
+
+      {/* ─── Edit Drawer ─── */}
+      <Drawer
+        isOpen={editDrawerOpen}
+        onClose={() => setEditDrawerOpen(false)}
+        title="Modifier l'agent"
+        description={selectedAgent?.pseudo ?? ""}
+      >
+        {selectedAgent && (
+          <div className="space-y-4">
+            <div>
+              <Label>Pseudo</Label>
+              <Input
+                value={editForm.pseudo}
+                onChange={(e) => setEditForm({ ...editForm, pseudo: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Telephone</Label>
+              <Input
+                value={editForm.telephone}
+                onChange={(e) => setEditForm({ ...editForm, telephone: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+              />
+            </div>
+            {actionMessage && (
+              <p className="text-sm text-error-500">{actionMessage}</p>
+            )}
+            <button
+              onClick={handleEditSave}
+              disabled={actionLoading}
+              className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
+            >
+              {actionLoading ? "Modification..." : "Enregistrer"}
+            </button>
           </div>
         )}
       </Drawer>

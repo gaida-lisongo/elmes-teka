@@ -268,6 +268,12 @@ export async function createSalerWithUser(input: {
     }
     if (!input.password || input.password.length < 8) {
       errors.password = "Le mot de passe doit contenir au moins 8 caracteres.";
+    } else if (!/[A-Z]/.test(input.password)) {
+      errors.password = "Le mot de passe doit contenir une lettre majuscule.";
+    } else if (!/[a-z]/.test(input.password)) {
+      errors.password = "Le mot de passe doit contenir une lettre minuscule.";
+    } else if (!/\d/.test(input.password)) {
+      errors.password = "Le mot de passe doit contenir un chiffre.";
     }
 
     if (Object.keys(errors).length > 0) {
@@ -391,6 +397,43 @@ export async function removeSalerFromStore(
     return { success: true, message: "Agent retire de la boutique.", data: null };
   } catch (error: any) {
     return { success: false, message: error.message || "Erreur retrait." };
+  }
+}
+
+/* ───── Mise à jour de l'agent (pseudo, telephone, email) ───── */
+
+export async function updateSalerUser(
+  salerId: string,
+  userId: string,
+  input: { pseudo?: string; telephone?: string; email?: string }
+): Promise<ActionResponse<null>> {
+  try {
+    const { tenantId } = await requireTenantSession();
+    await connectToDb();
+
+    if (!Types.ObjectId.isValid(salerId) || !Types.ObjectId.isValid(userId)) {
+      return { success: false, message: "Identifiants invalides." };
+    }
+
+    const saler = await Saler.findOne({ _id: salerId, tenantId }).lean();
+    if (!saler) {
+      return { success: false, message: "Agent introuvable." };
+    }
+
+    const update: Record<string, string> = {};
+    if (input.pseudo && input.pseudo.trim().length >= 2) update.pseudo = input.pseudo.trim();
+    if (input.telephone && input.telephone.trim().length >= 8) update.telephone = input.telephone.replace(/[^\d+]/g, "");
+    if (input.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) update.email = input.email.trim().toLowerCase();
+
+    if (Object.keys(update).length > 0) {
+      await User.updateOne({ _id: userId }, { $set: update });
+    }
+
+    revalidatePath("/agents");
+
+    return { success: true, message: "Agent mis a jour.", data: null };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Erreur mise a jour." };
   }
 }
 

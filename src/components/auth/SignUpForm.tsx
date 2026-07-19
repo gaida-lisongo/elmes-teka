@@ -333,7 +333,7 @@ export default function SignUpForm() {
                 <div>
                   <Label>Mot de passe <span className="text-error-500">*</span></Label>
                   <div className="relative">
-                    <Input type={showPassword ? "text" : "password"} value={form.password} onChange={(event) => updateField("password", event.target.value)} error={Boolean(errors.password)} hint={errors.password} />
+                    <Input type={showPassword ? "text" : "password"} value={form.password} onChange={(event) => updateField("password", event.target.value)} error={Boolean(errors.password)} hint={errors.password || "8 caracteres min, 1 majuscule, 1 minuscule, 1 chiffre."} />
                     <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2" aria-label="Afficher ou masquer le mot de passe">
                       {showPassword ? <EyeIcon className="fill-gray-500 dark:fill-gray-400" /> : <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400" />}
                     </button>

@@ -260,14 +260,14 @@ export default function StoresClient({
       setPaymentStatus(res.data.status);
       if (res.data.paid) {
         setActionMessage("Boutique activee avec succes!");
-        setTimeout(() => {
+        setTimeout(async () => {
           setCreateDrawerOpen(false);
           setCreateStep(1);
           setStoreId(null);
           setOrderNumber("");
           setPaymentStatus("");
           setCreateInfo({ designation: "", description: "", coordonnes: [{ title: "Adresse", content: "" }], phone: "" });
-          router.refresh();
+          await refreshData();
         }, 1500);
       } else if (res.data.status === "FAILED") {
         setActionMessage("Le paiement a echoue. Vous pouvez reessayer.");
@@ -283,12 +283,13 @@ export default function StoresClient({
   const handleEdit = async () => {
     if (!editId) return;
     setActionLoading(true);
+    setActionMessage("");
     const res = await updateStore(editId, editData);
     setActionLoading(false);
     if (res.success) {
       setEditDrawerOpen(false);
       setEditId(null);
-      router.refresh();
+      await refreshData();
     } else {
       setActionMessage(res.message);
     }
@@ -297,7 +298,24 @@ export default function StoresClient({
   /* ─── Archive ─── */
   const handleArchive = async (id: string) => {
     setActionLoading(true);
+    setActionMessage("");
     const res = await archiveStore(id);
+    setActionLoading(false);
+    if (res.success) await refreshData();
+    else setActionMessage(res.message);
+  };
+
+  /* ─── SPA refresh ─── */
+  const refreshData = async () => {
+    const { getStores, getStoreMetrics } = await import("@/actions/stores.actions");
+    const [newMetrics, newData] = await Promise.all([
+      getStoreMetrics(),
+      getStores(currentPage, currentLimit, currentSearch, currentStatus),
+    ]);
+    if (newMetrics.success) setMetrics(newMetrics.data);
+    if (newData.success) setData(newData.data);
+    router.refresh();
+  };
     setActionLoading(false);
     if (res.success) router.refresh();
     else setActionMessage(res.message);
@@ -331,11 +349,12 @@ export default function StoresClient({
   const handleAssociate = async () => {
     if (!associateStoreId || !selectedAnneeId || selectedProductIds.length === 0) return;
     setActionLoading(true);
+    setActionMessage("");
     const res = await associateProductsWithStore(associateStoreId, selectedProductIds, selectedAnneeId);
     setActionLoading(false);
     if (res.success) {
       setAssociateDrawerOpen(false);
-      router.refresh();
+      await refreshData();
     } else {
       setActionMessage(res.message);
     }
@@ -766,7 +785,8 @@ export default function StoresClient({
           </button>
         </div>
       </Drawer>
-    </>);
+    </>
+  );
 }
 
 function MetricCard({ label, value }: { label: string; value: number | string }) {

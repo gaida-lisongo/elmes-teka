@@ -505,7 +505,10 @@ export async function getTenantStoresForSelect(): Promise<
     const { tenantId } = await requireTenantSession();
     await connectToDb();
 
-    const stores = await Store.find({ tenantId, status: "ACTIVE" })
+    const stores = await Store.find({
+      tenantId,
+      status: { $in: ["ACTIVE", "PENDING_PAYMENT"] },
+    })
       .select("_id designation")
       .sort({ designation: 1 })
       .lean();

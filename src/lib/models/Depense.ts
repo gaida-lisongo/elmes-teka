@@ -10,10 +10,14 @@ export interface IDepenseItem {
 }
 
 export interface IDepense {
+  tenantId: Types.ObjectId;
   depenses: IDepenseItem[];
   anneeId: Types.ObjectId;
   shopId: Types.ObjectId;
   agentId: Types.ObjectId;
+  currency: "USD" | "CDF";
+  totalAmount: number;
+  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
   reference: string;
   createdAt: Date;
   updatedAt: Date;
@@ -21,6 +25,7 @@ export interface IDepense {
 
 const DepenseItemSchema = new Schema<IDepenseItem>(
   {
+    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
     libelle: {
       type: String,
       required: true,
@@ -75,6 +80,9 @@ const DepenseSchema = new Schema<IDepense>(
       required: true,
       index: true,
     },
+    currency: { type: String, enum: ["USD", "CDF"], required: true, uppercase: true },
+    totalAmount: { type: Number, required: true, min: 0 },
+    status: { type: String, enum: ["PENDING", "APPROVED", "REJECTED", "CANCELLED"], default: "PENDING", index: true },
     reference: {
       type: String,
       required: true,
@@ -91,6 +99,8 @@ const DepenseSchema = new Schema<IDepense>(
 DepenseSchema.index({ shopId: 1, reference: 1 }, { unique: true });
 DepenseSchema.index({ anneeId: 1, shopId: 1, createdAt: -1 });
 DepenseSchema.index({ agentId: 1, createdAt: -1 });
+DepenseSchema.index({ tenantId: 1, shopId: 1, anneeId: 1, createdAt: -1 });
+DepenseSchema.index({ tenantId: 1, reference: 1 }, { unique: true });
 
 const Depense =
   (models.Depense as Model<IDepense>) || model<IDepense>("Depense", DepenseSchema);

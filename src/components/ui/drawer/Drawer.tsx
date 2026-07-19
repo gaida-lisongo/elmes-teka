@@ -68,7 +68,7 @@ export default function Drawer({
               {title}
             </h3>
             {description && (
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <p className="mt-1 whitespace-pre-wrap break-words text-sm text-gray-500 dark:text-gray-400">
                 {description}
               </p>
             )}

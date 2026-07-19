@@ -22,7 +22,13 @@ export default async function AdminLayout({
   }
 
   const annees = shell.account.tenantId
-    ? await Annee.find({ tenantId: shell.account.tenantId })
+    ? await Annee.find({
+        tenantId: shell.account.tenantId,
+        status: { $in: ["ACTIVE", null] },
+        ...(shell.account.type === "SALER"
+          ? { "provider.status": "PAID" }
+          : {}),
+      })
         .select("_id debut fin slug")
         .sort({ debut: -1 })
         .lean()
@@ -64,8 +70,13 @@ export default async function AdminLayout({
     menuType: "VENDEUR",
     navItems: [
       {
+        icon: "grid",
+        name: "Espace de travail",
+        path: "/",
+      },
+      {
         icon: "dollar",
-        name: "Recettes",
+        name: "Ventes",
         subItems: annees.map((annee) => ({
           name: formatAnneeLabel(annee.debut, annee.fin),
           path: `/commandes/${annee.slug}`,
@@ -73,27 +84,32 @@ export default async function AdminLayout({
       },
       {
         icon: "dollar",
-        name: "Depenses",
+        name: "Dépenses",
         subItems: annees.map((annee) => ({
           name: formatAnneeLabel(annee.debut, annee.fin),
-          path: `/payments/${annee.slug}`,
+          path: `/depenses/${annee.slug}`,
         })),
       },
       {
         icon: "box",
-        name: "Marchandises",
+        name: "Stocks",
         subItems: annees.map((annee) => ({
           name: formatAnneeLabel(annee.debut, annee.fin),
           path: `/stocks/${annee.slug}`,
         })),
       },
+      {
+        icon: "user",
+        name: "Profil",
+        path: "/profile",
+      },
     ],
   };
 
-  const menuApp: MenuAppSection[] = [
-    dashboardMenu,
-    shell.account.type === "TENANT" ? tenantMenu : salerMenu,
-  ];
+  const menuApp: MenuAppSection[] =
+    shell.account.type === "TENANT"
+      ? [dashboardMenu, tenantMenu]
+      : [salerMenu];
 
   return (
     <AdminShellProvider value={shell}>

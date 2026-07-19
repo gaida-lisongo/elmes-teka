@@ -2389,3 +2389,1703 @@ Signaler les éléments incomplets, migrations nécessaires, hypothèses de sch�
 ## 15. Commandes non exécutées
 
 Confirmer explicitement qu’aucun build, lint ou test n’a été lancé.
+#######################################################################
+#######################################################################
+#########################################################################
+# SPRINT 3 — TRANSACTIONS, STOCKS, CLIENTS ET TEMPS RÉEL
+
+Tu travailles sur **ELMES-TEKA**, un CRM made in Congo développé par l’entreprise ELMES pour permettre aux entrepreneurs congolais de superviser leurs boutiques, agents, produits, stocks, recettes, dépenses, clients et exercices comptables.
+
+Avant toute modification, lis obligatoirement :
+
+* `/AGENTS.md`
+* `/PROJECT_CONTEXT.md`
+* `/.github/copilot-instructions.md`
+
+Analyse ensuite les réalisations des Sprints 1 et 2, en particulier :
+
+* l’authentification ;
+* la session signée par cookie ;
+* `AdminShellProvider` ;
+* `useAdminShell` ;
+* les contrôles `TENANT` et `SALER` ;
+* les modèles `User`, `Tenant`, `Saler`, `Store`, `Annee`, `Commande`, `Depense`, `Stock`, `Customer`, `Product` et `Promotion` ;
+* les Server Actions existantes ;
+* les composants TailAdmin ;
+* la page squelette réutilisable ;
+* les drawers ;
+* les composants de recherche ;
+* les services Cloudinary ;
+* les services Pusher ;
+* les utilitaires PDF ;
+* les icônes du dossier `/icons`.
+
+Ne recrée jamais une fonctionnalité déjà présente.
+
+---
+
+# 1. CORRECTION MÉTIER À CONSIDÉRER
+
+Le paiement de 50 USD ne se fait plus à la création d’un point de vente.
+
+Le paiement doit être effectué à la création ou à l’activation d’un exercice comptable `Annee`.
+
+Ne réintroduis aucun paiement dans le workflow de création d’une boutique.
+
+Le Sprint 3 ne doit pas modifier cette nouvelle règle métier, sauf pour vérifier qu’un vendeur ne peut effectuer une transaction que dans un exercice actif et validé.
+
+---
+
+# 2. OBJECTIF DU SPRINT
+
+Mettre en place les principales pages de travail du vendeur `Saler`.
+
+Pages à réaliser :
+
+```text
+/commandes/[slug]
+/payments/[slug]
+/stocks/[slug]
+/clients
+```
+
+Le paramètre `slug` représente la boutique ou le contexte de travail actif selon la convention déjà utilisée dans la codebase.
+
+Le vendeur ne peut travailler que sur :
+
+* la boutique qui lui est affectée ;
+* les exercices actifs de son tenant ;
+* les produits appartenant à son tenant et disponibles dans sa boutique ;
+* les clients accessibles dans le périmètre autorisé.
+
+Le tenant doit recevoir en temps réel les événements importants grâce à Pusher.
+
+---
+
+# 3. RÈGLES ABSOLUES
+
+Respecter strictement les règles suivantes :
+
+* Ne faire que ce qui est demandé dans ce sprint.
+* Ne jamais lancer de build.
+* Ne jamais lancer de lint.
+* Ne jamais lancer de tests.
+* Ne jamais exécuter de commande destructive.
+* Produire uniquement un rapport final.
+* Réutiliser les composants TailAdmin v2.0.
+* Réutiliser les services, actions, types, modèles, hooks et utilitaires existants.
+* Ne jamais utiliser d’emoji comme icône.
+* Toujours utiliser les SVG disponibles dans `/icons`.
+* Toujours récupérer les données initiales côté serveur.
+* Passer les données initiales aux composants clients.
+* Réserver les Client Components aux interactions dynamiques.
+* Utiliser des drawers pour les workflows de création, modification et détail.
+* Toujours prévoir pagination, recherche, filtres et métriques.
+* Toujours vérifier l’appartenance au tenant et à la boutique côté serveur.
+* Ne jamais utiliser un `tenantId`, `storeId`, `salerId`, `anneeId`, `productId`, `customerId`, `commandeId` ou `stockId` reçu du client comme source de vérité.
+* Toujours récupérer les identifiants autorisés à partir de la session et du profil `Saler`.
+* Persister les données avant d’émettre un événement Pusher.
+* Ne jamais considérer Pusher comme la source officielle des données.
+* MongoDB reste la source de vérité.
+* Ne pas ajouter de nouvelle dépendance.
+* Réutiliser `pdfmake`, `pusher`, `pusher-js`, `mongoose`, `uuid`, `crypto` et les autres bibliothèques déjà installées.
+
+---
+
+# 4. CONTRÔLE CENTRAL DU VENDEUR
+
+Créer ou réutiliser un utilitaire central, par exemple :
+
+```ts
+requireSalerSession()
+```
+
+Il doit :
+
+1. lire et vérifier la session ;
+2. exiger `accountType === "SALER"` ;
+3. récupérer le profil `Saler` ;
+4. vérifier que le vendeur est actif ;
+5. vérifier qu’il possède une boutique affectée ;
+6. récupérer la boutique ;
+7. vérifier que la boutique est active ;
+8. vérifier que `Saler.tenantId === Store.tenantId` ;
+9. retourner un objet minimal sérialisable.
+
+Exemple :
+
+```ts
+interface SalerWorkContext {
+  userId: string;
+  salerId: string;
+  tenantId: string;
+  storeId: string;
+  storeSlug: string;
+}
+```
+
+Pour les pages contenant `[slug]`, vérifier obligatoirement que :
+
+```ts
+slug === store.slug
+```
+
+ou utiliser la convention réelle de la codebase.
+
+Un vendeur ne doit jamais pouvoir modifier l’URL pour accéder à une autre boutique.
+
+---
+
+# 5. EXERCICE ACTIF
+
+Toutes les transactions doivent être liées à un exercice `Annee`.
+
+Avant de permettre :
+
+* une commande ;
+* une dépense ;
+* une demande d’approvisionnement ;
+
+le serveur doit vérifier qu’un exercice est :
+
+* associé au tenant ;
+* actif ;
+* validé ;
+* payé si la nouvelle règle métier exige un paiement ;
+* couvrant la date actuelle, si cette règle est appliquée.
+
+Créer ou réutiliser un utilitaire :
+
+```ts
+getActiveAnneeForTenant()
+```
+
+ou :
+
+```ts
+requireActiveAnnee()
+```
+
+Ne jamais accepter directement un `anneeId` envoyé par le client sans vérification.
+
+Si aucun exercice actif n’est disponible, afficher un état bloquant clair :
+
+```text
+Aucun exercice actif n’est disponible pour enregistrer cette opération.
+Contactez le gestionnaire de votre entreprise.
+```
+
+Le vendeur peut consulter les données existantes selon les autorisations, mais ne peut pas créer de nouvelle transaction sans exercice actif.
+
+---
+
+# 6. ARCHITECTURE COMMUNE DES PAGES
+
+Réutiliser la page squelette créée au Sprint 2.
+
+Chaque page doit contenir :
+
+1. titre ;
+2. description ;
+3. informations de la boutique active ;
+4. informations de l’exercice actif ;
+5. métriques ;
+6. recherche ;
+7. filtres ;
+8. action principale ;
+9. cartes ou tableau ;
+10. pagination ;
+11. drawer ;
+12. état vide ;
+13. états de chargement et erreur.
+
+Les composants de cartes doivent être spécifiques à la ressource, mais utiliser la même structure visuelle.
+
+---
+
+# 7. PUSHER ET TEMPS RÉEL
+
+Réutiliser la configuration Pusher existante.
+
+Ne pas recréer de client ou serveur Pusher en parallèle.
+
+Utiliser des canaux privés si l’infrastructure actuelle les prend en charge.
+
+Convention recommandée :
+
+```text
+private-tenant-{tenantId}-commandes
+private-tenant-{tenantId}-depenses
+private-tenant-{tenantId}-stocks
+```
+
+Événements recommandés :
+
+```text
+commande.created
+commande.updated
+commande.deleted
+
+depense.created
+depense.updated
+depense.deleted
+
+stock.requested
+stock.updated
+stock.deleted
+```
+
+Respecter les conventions existantes si elles diffèrent.
+
+Chaque payload doit être minimal.
+
+Exemple :
+
+```ts
+interface RealtimeTransactionPayload {
+  id: string;
+  reference: string;
+  tenantId: string;
+  storeId: string;
+  salerId: string;
+  anneeId: string;
+  status: string;
+  createdAt: string;
+}
+```
+
+Ne jamais envoyer via Pusher :
+
+* hash ;
+* mot de passe ;
+* apiKey ;
+* apiSecret ;
+* données complètes du client ;
+* documents sensibles ;
+* informations inutiles.
+
+L’ordre obligatoire est :
+
+```text
+Validation
+→ Persistance MongoDB
+→ Génération éventuelle du document
+→ Émission Pusher
+→ Réponse au client
+```
+
+Si Pusher échoue après la persistance :
+
+* ne pas annuler la transaction métier ;
+* journaliser l’erreur côté serveur ;
+* retourner le succès métier avec un avertissement interne si nécessaire.
+
+---
+
+# 8. PAGE `/commandes/[slug]`
+
+## 8.1 Objectif
+
+Permettre au vendeur de gérer les recettes ou ventes de sa boutique.
+
+Fonctionnalités :
+
+* création ;
+* lecture ;
+* modification selon les règles métier ;
+* suppression ou annulation ;
+* recherche ;
+* filtres ;
+* pagination ;
+* métriques ;
+* génération de facture PDF ;
+* notification Pusher au tenant.
+
+Le terme métier affiché dans l’interface peut être :
+
+```text
+Ventes
+```
+
+ou :
+
+```text
+Recettes
+```
+
+Conserver le nom du modèle `Commande` dans le code.
+
+## 8.2 Isolation
+
+Chaque requête doit être filtrée avec au minimum :
+
+```ts
+{
+  tenantId: session.tenantId,
+  shopId: session.storeId
+}
+```
+
+Si `Commande` ne contient pas encore `tenantId`, l’ajouter afin de faciliter l’isolation et les agrégations.
+
+Ajouter aussi `agentId` ou `salerId` si ce champ n’existe pas et s’il est nécessaire pour identifier le vendeur ayant créé la transaction.
+
+Structure recommandée :
+
+```ts
+tenantId: ObjectId;
+agentId: ObjectId;
+```
+
+Ne pas créer plusieurs champs concurrents pour la même information.
+
+## 8.3 Correction du schéma des lignes de commande
+
+Une ligne de commande doit figer les informations financières au moment de la vente.
+
+Vérifier le schéma existant.
+
+Chaque ligne doit contenir au minimum :
+
+```ts
+{
+  product: ObjectId;
+  designation: string;
+  code?: string;
+  qte: number;
+  unitPrice: number;
+  currency: string;
+  reduction?: number;
+  total: number;
+}
+```
+
+Ne pas recalculer une ancienne facture à partir du prix actuel du produit.
+
+Conserver un snapshot minimal du produit dans la commande :
+
+* désignation ;
+* code ;
+* prix unitaire ;
+* devise ;
+* réduction appliquée ;
+* total.
+
+La commande doit également conserver :
+
+```ts
+subtotal: number;
+discountAmount: number;
+totalAmount: number;
+currency: string;
+```
+
+Si plusieurs devises dans une même commande ne sont pas autorisées, bloquer l’ajout de produits utilisant une autre devise.
+
+Ne pas mélanger USD et CDF dans un même total.
+
+## 8.4 Métriques
+
+Afficher au minimum :
+
+* nombre de ventes du jour ;
+* chiffre d’affaires du jour ;
+* chiffre d’affaires de l’exercice ;
+* panier moyen ;
+* ventes annulées ;
+* produit le plus vendu.
+
+Respecter les devises.
+
+Si la boutique traite plusieurs devises, afficher les totaux séparément.
+
+## 8.5 Cartes ou tableau des commandes
+
+Afficher :
+
+* référence ;
+* client ;
+* téléphone ;
+* date ;
+* nombre de produits ;
+* montant total ;
+* devise ;
+* statut ;
+* vendeur ;
+* promotion appliquée ;
+* disponibilité de la facture.
+
+Actions :
+
+* voir ;
+* télécharger ou régénérer la facture ;
+* modifier si autorisé ;
+* annuler ;
+* supprimer uniquement si les règles le permettent.
+
+Une vente validée ne doit pas être supprimée brutalement si elle a déjà influencé le stock ou les rapports.
+
+Privilégier un statut :
+
+```text
+CANCELLED
+```
+
+ou l’équivalent existant.
+
+## 8.6 Drawer de création en trois étapes
+
+### Étape 1 — Client
+
+Créer ou réutiliser un composant de recherche client par téléphone.
+
+Nom possible :
+
+```text
+CustomerSearch
+```
+
+Avant de le créer, rechercher un composant équivalent.
+
+Le vendeur saisit le numéro de téléphone.
+
+La recherche doit :
+
+* normaliser le numéro ;
+* être debouncée ;
+* limiter les résultats ;
+* ne retourner aucune information sensible ;
+* rechercher dans le tenant autorisé ;
+* afficher le nom, téléphone, e-mail éventuel et matricule ;
+* permettre la sélection.
+
+#### Cas 1 — Client trouvé
+
+Récupérer :
+
+* `_id` ;
+* nom ;
+* téléphone ;
+* e-mail ;
+* matricule ;
+* promotions associées.
+
+Passer à l’étape 2.
+
+#### Cas 2 — Client introuvable
+
+Afficher un formulaire de création :
+
+* nom ;
+* téléphone déjà renseigné ;
+* e-mail facultatif.
+
+À la validation :
+
+1. vérifier une nouvelle fois que le client n’existe pas ;
+2. créer le client ;
+3. générer son matricule avec `uuid` selon le schéma existant ;
+4. récupérer son `_id` ;
+5. conserver ses informations pour la facture ;
+6. passer à l’étape 2.
+
+Le client doit appartenir au tenant.
+
+Si le schéma `Customer` ne possède pas `tenantId`, l’ajouter.
+
+Ajouter les index utiles :
+
+```ts
+CustomerSchema.index({ tenantId: 1, phone: 1 }, { unique: true });
+CustomerSchema.index({ tenantId: 1, name: 1 });
+```
+
+L’unicité du téléphone doit être limitée au tenant, sauf règle métier contraire.
+
+### Étape 2 — Produits
+
+Créer ou réutiliser un composant de recherche produit.
+
+Recherche par :
+
+* code ;
+* désignation.
+
+La recherche doit être limitée :
+
+* au tenant ;
+* à la boutique ;
+* aux produits actifs ;
+* aux produits disponibles dans le stock de la boutique ;
+* à l’exercice actif si le modèle de stock dépend de l’année.
+
+Afficher :
+
+* photo ;
+* désignation ;
+* code ;
+* prix ;
+* devise ;
+* quantité disponible ;
+* éventuelle promotion.
+
+Le vendeur sélectionne un produit puis renseigne :
+
+* quantité.
+
+Avant l’ajout dans l’état local, vérifier :
+
+* quantité supérieure à zéro ;
+* stock suffisant ;
+* produit actif ;
+* devise compatible avec la commande ;
+* produit non dupliqué ou fusionner les quantités selon la UX choisie.
+
+Conserver les lignes de commande dans un state local.
+
+Permettre :
+
+* ajout ;
+* modification de quantité ;
+* suppression d’une ligne ;
+* visualisation du sous-total.
+
+Ne modifier aucun stock à cette étape.
+
+### Étape 3 — Résumé et facture
+
+Afficher un résumé complet :
+
+* client ;
+* téléphone ;
+* matricule ;
+* boutique ;
+* vendeur ;
+* exercice ;
+* produits ;
+* quantités ;
+* prix unitaires ;
+* sous-total ;
+* promotion ;
+* réduction ;
+* total ;
+* devise ;
+* référence provisoire.
+
+Vérifier les promotions du client.
+
+Appliquer uniquement les promotions :
+
+* actives ;
+* associées au client ;
+* compatibles avec la commande ;
+* appartenant au tenant ;
+* valides selon leurs règles ;
+* non expirées si des dates existent.
+
+Ne pas faire confiance au calcul du navigateur.
+
+À la validation finale, le serveur doit recalculer :
+
+* prix ;
+* quantité disponible ;
+* promotion ;
+* réduction ;
+* sous-total ;
+* total ;
+* devise.
+
+Le serveur reste la source de vérité.
+
+## 8.7 Persistance atomique de la commande
+
+Lors de la création :
+
+1. vérifier la session ;
+2. vérifier la boutique ;
+3. vérifier l’exercice ;
+4. vérifier le client ;
+5. vérifier chaque produit ;
+6. vérifier les stocks ;
+7. recalculer les montants ;
+8. générer la référence ;
+9. créer la commande ;
+10. décrémenter les stocks ;
+11. générer la facture ;
+12. émettre Pusher.
+
+Utiliser une transaction MongoDB lorsque l’infrastructure existante le permet.
+
+La création de la commande et le décrément du stock doivent être atomiques.
+
+Empêcher les stocks négatifs.
+
+Utiliser une mise à jour conditionnelle ou une transaction.
+
+Exemple de condition :
+
+```ts
+{
+  _id: stockId,
+  tenantId,
+  shopId,
+  anneeId,
+  "products.product": productId,
+  "products.qte": { $gte: requestedQuantity }
+}
+```
+
+Adapter à la structure réelle.
+
+Si un produit n’a plus assez de stock au moment de la validation, refuser toute la commande.
+
+## 8.8 Génération de la facture avec pdfmake
+
+Réutiliser les utilitaires `pdfmake` existants.
+
+La facture doit être générée côté serveur.
+
+Elle doit contenir :
+
+* logo du tenant si disponible ;
+* désignation de la marque ;
+* informations de la boutique ;
+* référence ;
+* date ;
+* exercice ;
+* vendeur ;
+* informations client ;
+* tableau des produits ;
+* quantité ;
+* prix unitaire ;
+* réduction ;
+* total ;
+* devise ;
+* mentions ou pied de page.
+
+Le fichier doit avoir un nom clair :
+
+```text
+facture-{reference}.pdf
+```
+
+Décider selon l’architecture existante si la facture est :
+
+* retournée directement ;
+* stockée sur Cloudinary ;
+* ou stockée via un service existant.
+
+Ne pas dupliquer les fichiers inutilement.
+
+Si l’URL de facture est persistée dans la commande, prévoir un champ cohérent :
+
+```ts
+invoice?: {
+  url: string;
+  publicId?: string;
+  generatedAt: Date;
+}
+```
+
+Ne pas exposer de fichier d’un autre tenant.
+
+## 8.9 Pusher commande
+
+Après création réussie :
+
+Canal :
+
+```text
+private-tenant-{tenantId}-commandes
+```
+
+Événement :
+
+```text
+commande.created
+```
+
+Payload minimal :
+
+```ts
+{
+  id,
+  reference,
+  storeId,
+  salerId,
+  customerName,
+  totalAmount,
+  currency,
+  status,
+  createdAt
+}
+```
+
+---
+
+# 9. PAGE `/depenses/[slug]`
+
+## 9.1 Clarification métier
+
+
+Dans l’interface, afficher :
+
+```text
+Dépenses
+```
+
+Ne pas renommer la route dans ce sprint sauf si la codebase prévoit déjà `/depenses/[slug]`.
+
+Ne pas confondre :
+
+* paiement FlexPay de l’exercice ;
+* paiement d’un client ;
+* dépense opérationnelle.
+
+Cette page concerne uniquement les dépenses opérationnelles.
+
+## 9.2 Objectif
+
+Permettre au vendeur de gérer les dépenses de sa boutique.
+
+Fonctionnalités :
+
+* création ;
+* lecture ;
+* modification ;
+* suppression ou annulation ;
+* recherche ;
+* filtres ;
+* pagination ;
+* métriques ;
+* notification Pusher.
+
+## 9.3 Isolation
+
+Chaque dépense doit contenir ou permettre de retrouver :
+
+* `tenantId` ;
+* `anneeId` ;
+* `shopId` ;
+* `agentId` ;
+* `reference`.
+
+Si `tenantId` n’existe pas dans `Depense`, l’ajouter.
+
+Le vendeur ne peut voir que les dépenses :
+
+```ts
+{
+  tenantId: session.tenantId,
+  shopId: session.storeId
+}
+```
+
+Selon la règle métier, il peut voir :
+
+* toutes les dépenses de sa boutique ;
+* ou uniquement celles qu’il a créées.
+
+Appliquer la règle déjà définie dans la codebase.
+
+En l’absence de règle, permettre la lecture des dépenses de la boutique, mais limiter modification et suppression à l’auteur ou au tenant.
+
+## 9.4 Métriques
+
+Afficher au minimum :
+
+* dépenses du jour ;
+* dépenses de l’exercice ;
+* nombre de dépenses ;
+* dépense moyenne ;
+* dépenses en attente ;
+* catégorie ou libellé principal.
+
+Respecter les devises.
+
+## 9.5 Formulaire
+
+Utiliser un drawer.
+
+Le formulaire doit permettre plusieurs lignes :
+
+```ts
+[
+  {
+    libelle: string;
+    amount: number;
+    status: string;
+    observation?: string;
+  }
+]
+```
+
+Ajouter ou utiliser le champ devise au niveau cohérent du schéma.
+
+Le formulaire doit permettre :
+
+* ajout d’une ligne ;
+* suppression d’une ligne ;
+* total dynamique ;
+* devise ;
+* observation ;
+* résumé final.
+
+Le serveur doit recalculer le total.
+
+Ne jamais accepter un montant négatif ou nul.
+
+## 9.6 Persistance et événement
+
+À la validation :
+
+1. vérifier la session ;
+2. vérifier la boutique ;
+3. vérifier l’exercice ;
+4. valider les lignes ;
+5. générer la référence ;
+6. persister la dépense ;
+7. émettre Pusher.
+
+Canal :
+
+```text
+private-tenant-{tenantId}-depenses
+```
+
+Événement :
+
+```text
+depense.created
+```
+
+Payload :
+
+```ts
+{
+  id,
+  reference,
+  storeId,
+  salerId,
+  totalAmount,
+  currency,
+  status,
+  createdAt
+}
+```
+
+---
+
+# 10. PAGE `/stocks/[slug]`
+
+## 10.1 Objectif
+
+Permettre au vendeur de gérer les demandes d’approvisionnement et les mouvements de stock de sa boutique.
+Pour y arriver on va créer un schema pour faire une demande d'approvisionnement, que le tenant va recevoir en notification (au niveau de son Header, pour validation et laquelle validation va incrementé la quantité en stock pour l'année d'exercice pris en charge par la demande d'approvisionnement)
+Le vendeur peut faire du CRD selon la demande :
+
+* créer ;
+* lire ;
+* supprimer ou annuler une demande encore en attente.
+
+Le vendeur ne peut pas valider lui-même un approvisionnement.
+
+La validation appartient au tenant.
+
+## 10.2 Statuts
+
+Prévoir ou réutiliser des statuts cohérents :
+
+```text
+PENDING
+APPROVED
+REJECTED
+CANCELLED
+```
+
+Une création faite par le vendeur doit être :
+
+```text
+PENDING
+```
+
+Le stock disponible ne doit pas être incrémenté tant que le tenant n’a pas validé l’approvisionnement.
+
+## 10.3 Distinction indispensable
+
+Ne pas confondre :
+
+* stock disponible ;
+* demande d’approvisionnement ;
+* mouvement de stock ;
+* inventaire.
+
+Analyser le modèle `Stock`.
+
+Si le modèle actuel représente uniquement un état de stock, ne pas l’utiliser directement comme demande sans conserver une distinction claire.
+
+La solution minimale peut être :
+
+```ts
+type StockOperationType =
+  | "INITIAL"
+  | "SUPPLY_REQUEST"
+  | "SUPPLY"
+  | "SALE"
+  | "ADJUSTMENT";
+```
+
+ou utiliser une collection existante de mouvement.
+
+Ne pas créer une architecture comptable complexe.
+
+Mais il doit être possible de distinguer une demande en attente du stock réellement disponible.
+
+## 10.4 Schéma recommandé si nécessaire
+
+Si aucune structure adaptée n’existe, ajouter des champs minimaux à `Stock` ou créer un modèle cohérent selon l’architecture existante :
+
+```ts
+{
+  tenantId: ObjectId;
+  anneeId: ObjectId;
+  shopId: ObjectId;
+  agentId: ObjectId;
+  products: [
+    {
+      product: ObjectId;
+      qte: number;
+    }
+  ];
+  type: "SUPPLY_REQUEST" | "SUPPLY" | "ADJUSTMENT";
+  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+  reference: string;
+  designation?: string;
+  description?: string;
+}
+```
+
+Ne pas incrémenter le stock actif à la création d’une demande.
+
+Le tenant validera l’approvisionnement dans un sprint ou workflow dédié.
+
+## 10.5 Métriques
+
+Afficher :
+
+* nombre de produits disponibles ;
+* quantité totale en stock ;
+* demandes en attente ;
+* demandes approuvées ;
+* produits en rupture ;
+* produits à stock faible.
+
+Le seuil de stock faible doit utiliser une règle existante.
+
+Ne pas inventer une valeur arbitraire globale si aucun seuil n’existe.
+
+## 10.6 Drawer de création
+
+Le vendeur recherche les produits par :
+
+* code ;
+* désignation.
+
+Il ajoute :
+
+* produit ;
+* quantité demandée.
+
+Permettre plusieurs produits dans une demande.
+
+Afficher un résumé avant validation.
+
+À la validation :
+
+1. vérifier la session ;
+2. vérifier la boutique ;
+3. vérifier l’exercice ;
+4. vérifier chaque produit ;
+5. générer une référence ;
+6. créer une demande `PENDING` ;
+7. émettre Pusher.
+
+## 10.7 Suppression
+
+Le vendeur peut supprimer ou annuler uniquement une demande :
+
+* qu’il a créée ;
+* appartenant à sa boutique ;
+* encore en statut `PENDING`.
+
+Une demande approuvée ou rejetée ne doit pas être supprimée.
+
+## 10.8 Pusher stock
+
+Canal :
+
+```text
+private-tenant-{tenantId}-stocks
+```
+
+Événement :
+
+```text
+stock.requested
+```
+
+Payload :
+
+```ts
+{
+  id,
+  reference,
+  storeId,
+  salerId,
+  productCount,
+  status,
+  createdAt
+}
+```
+
+---
+
+# 11. PAGE `/clients`
+
+## 11.1 Objectif
+
+Permettre au vendeur de consulter et gérer les clients du tenant, avec :
+
+* liste paginée ;
+* recherche ;
+* filtres ;
+* métriques ;
+* historique des commandes ;
+* gestion des promotions associées ;
+* fiche client détaillée.
+
+Le vendeur ne doit pas voir les clients d’un autre tenant.
+
+## 11.2 Schéma Customer
+
+Le client doit être lié au tenant.
+
+Vérifier ou ajouter :
+
+```ts
+tenantId: Types.ObjectId;
+```
+
+La structure attendue est :
+
+```ts
+{
+  tenantId;
+  name;
+  phone;
+  email?;
+  matricule;
+  promotions?: ObjectId[];
+}
+```
+
+Ajouter les index utiles :
+
+```ts
+CustomerSchema.index({ tenantId: 1, phone: 1 }, { unique: true });
+CustomerSchema.index({ tenantId: 1, matricule: 1 }, { unique: true });
+CustomerSchema.index({ tenantId: 1, name: 1 });
+```
+
+## 11.3 Métriques
+
+Afficher au minimum :
+
+* nombre total de clients ;
+* nouveaux clients de l’exercice ;
+* clients ayant commandé ;
+* clients sans commande ;
+* meilleur client par chiffre d’affaires ;
+* montant moyen par client.
+
+Respecter les devises.
+
+## 11.4 Cartes clients
+
+Chaque carte doit afficher :
+
+* nom ;
+* téléphone ;
+* e-mail ;
+* matricule ;
+* nombre de commandes ;
+* chiffre d’affaires cumulé ;
+* dernière commande ;
+* promotions associées ;
+* boutique de dernière activité si pertinente.
+
+Actions :
+
+* voir les commandes ;
+* voir le détail ;
+* associer une promotion ;
+* retirer une promotion ;
+* modifier les informations ;
+* créer une nouvelle vente pour ce client si cela s’intègre sans dépasser le sprint.
+
+## 11.5 Drawer de détail
+
+Cliquer sur une carte ouvre un drawer.
+
+Sections :
+
+### Informations
+
+* nom ;
+* téléphone ;
+* e-mail ;
+* matricule ;
+* date de création.
+
+### Historique des commandes
+
+Afficher les commandes paginées ou limitées :
+
+* référence ;
+* date ;
+* boutique ;
+* montant ;
+* devise ;
+* statut ;
+* facture.
+
+Utiliser une agrégation.
+
+Ne pas effectuer une requête par commande.
+
+### Promotions
+
+Afficher :
+
+* promotions associées ;
+* réduction ;
+* code ;
+* statut ;
+* action de retrait.
+
+## 11.6 Association d’une promotion
+
+Le vendeur peut rechercher les promotions du tenant.
+
+Filtrer :
+
+* promotions actives ;
+* promotions appartenant au tenant ;
+* promotions non déjà associées ;
+* promotions encore valides si des dates existent.
+
+Permettre :
+
+* sélection ;
+* association ;
+* retrait.
+
+Ne jamais associer une promotion d’un autre tenant.
+
+## 11.7 Application de la promotion à la facture
+
+Lors de la création d’une commande :
+
+1. récupérer les promotions du client côté serveur ;
+2. vérifier leur validité ;
+3. appliquer la règle autorisée ;
+4. recalculer la réduction ;
+5. figer la promotion utilisée dans la commande.
+
+La commande doit conserver un snapshot minimal :
+
+```ts
+promotion?: {
+  promotionId: ObjectId;
+  designation: string;
+  code: string;
+  reduction: number;
+  discountAmount: number;
+}
+```
+
+Ne pas recalculer une ancienne facture si la promotion est modifiée plus tard.
+
+## 11.8 Règle en cas de plusieurs promotions
+
+Ne pas cumuler plusieurs promotions sans règle métier explicite.
+
+En l’absence de règle existante :
+
+* sélectionner une seule promotion ;
+* proposer la plus avantageuse ;
+* permettre au vendeur de confirmer celle appliquée ;
+* recalculer et vérifier côté serveur.
+
+Signaler cette hypothèse dans le rapport final.
+
+---
+
+# 12. CRUD ET STATUTS
+
+## Commandes
+
+Privilégier :
+
+* création ;
+* lecture ;
+* modification avant validation seulement ;
+* annulation après validation ;
+* suppression uniquement des brouillons si les brouillons existent.
+
+## Dépenses
+
+Privilégier :
+
+* création ;
+* lecture ;
+* modification avant validation ;
+* annulation ou suppression selon statut.
+
+## Stocks
+
+Permettre :
+
+* création de demande ;
+* lecture ;
+* annulation d’une demande en attente.
+
+## Clients
+
+Permettre :
+
+* création ;
+* lecture ;
+* modification ;
+* association de promotions.
+
+Ne pas supprimer un client ayant des commandes.
+
+Privilégier archivage ou statut inactif si le modèle le permet.
+
+---
+
+# 13. REQUÊTES MONGOOSE ET PERFORMANCE
+
+Utiliser :
+
+* `.lean()` ;
+* `.select()` ;
+* `aggregate()` ;
+* `$match` en première étape ;
+* `$facet` pour pagination et total ;
+* `$lookup` ciblé ;
+* `$unwind` uniquement si nécessaire ;
+* `$group` pour les métriques ;
+* `$project` pour réduire les données ;
+* index composés.
+
+Éviter :
+
+* les requêtes N+1 ;
+* les `populate()` non limités ;
+* les boucles de requêtes ;
+* le chargement complet des historiques ;
+* les regex non sécurisées ;
+* les agrégations sans `tenantId` et `storeId`.
+
+Créer une fonction d’échappement pour les recherches regex si elle n’existe pas.
+
+## Index recommandés
+
+Adapter selon les schémas réels.
+
+### Commande
+
+```ts
+CommandeSchema.index({ tenantId: 1, shopId: 1, anneeId: 1, createdAt: -1 });
+CommandeSchema.index({ tenantId: 1, clientId: 1, createdAt: -1 });
+CommandeSchema.index({ tenantId: 1, reference: 1 }, { unique: true });
+CommandeSchema.index({ tenantId: 1, agentId: 1, createdAt: -1 });
+```
+
+### Depense
+
+```ts
+DepenseSchema.index({ tenantId: 1, shopId: 1, anneeId: 1, createdAt: -1 });
+DepenseSchema.index({ tenantId: 1, reference: 1 }, { unique: true });
+DepenseSchema.index({ tenantId: 1, agentId: 1, createdAt: -1 });
+```
+
+### Stock
+
+```ts
+StockSchema.index({ tenantId: 1, shopId: 1, anneeId: 1, status: 1 });
+StockSchema.index({ tenantId: 1, reference: 1 }, { unique: true });
+StockSchema.index({ tenantId: 1, agentId: 1, createdAt: -1 });
+```
+
+### Customer
+
+```ts
+CustomerSchema.index({ tenantId: 1, phone: 1 }, { unique: true });
+CustomerSchema.index({ tenantId: 1, matricule: 1 }, { unique: true });
+```
+
+---
+
+# 14. SERVEUR ET CLIENT
+
+## Server Components
+
+Ils doivent :
+
+* vérifier la session ;
+* récupérer la boutique ;
+* récupérer l’exercice actif ;
+* charger les métriques ;
+* charger les données paginées ;
+* sérialiser les résultats ;
+* transmettre les données initiales.
+
+## Server Actions
+
+Elles doivent :
+
+* vérifier la session ;
+* vérifier le rôle ;
+* vérifier le tenant ;
+* vérifier la boutique ;
+* vérifier l’exercice ;
+* valider les entrées ;
+* recalculer les montants ;
+* persister ;
+* revalider les pages ;
+* émettre Pusher après persistance.
+
+## Client Components
+
+Ils doivent gérer :
+
+* drawer ;
+* étapes ;
+* recherche dynamique ;
+* sélection client ;
+* sélection produit ;
+* état local des lignes ;
+* aperçu de facture ;
+* affichage des résultats ;
+* interactions de pagination et filtres.
+
+Ne jamais appeler Mongoose depuis un Client Component.
+
+---
+
+# 15. RÉSULTATS D’ACTIONS
+
+Créer ou réutiliser un type commun :
+
+```ts
+type ActionResult<T> =
+  | {
+      success: true;
+      message: string;
+      data: T;
+    }
+  | {
+      success: false;
+      message: string;
+      errors?: Record<string, string>;
+    };
+```
+
+Ne jamais retourner directement un document Mongoose.
+
+Convertir :
+
+* ObjectId en chaîne ;
+* Date en ISO ;
+* Decimal en valeur sérialisable.
+
+---
+
+# 16. RÉFÉRENCES
+
+Générer des références uniques et lisibles.
+
+Exemples :
+
+```text
+CMD-2026-XXXXXX
+DEP-2026-XXXXXX
+STK-2026-XXXXXX
+CLI-XXXXXXXX
+```
+
+Respecter les conventions existantes.
+
+Utiliser `uuid` ou `crypto.randomBytes` selon l’utilitaire déjà présent.
+
+L’unicité doit être vérifiée dans le périmètre du tenant.
+
+---
+
+# 17. UX MOBILE ET TERRAIN
+
+La plateforme est destinée à des vendeurs pouvant travailler principalement avec un téléphone.
+
+Les formulaires doivent :
+
+* avoir des champs suffisamment grands ;
+* limiter la saisie inutile ;
+* afficher les prix et quantités clairement ;
+* conserver l’état lors d’un changement d’étape ;
+* permettre la correction d’une ligne ;
+* afficher un résumé avant validation ;
+* prévenir les doubles clics ;
+* désactiver le bouton pendant l’enregistrement ;
+* afficher les erreurs près des champs ;
+* fonctionner sur petits écrans.
+
+Les drawers doivent utiliser toute la largeur disponible sur mobile.
+
+Le tableau de facture doit devenir une liste lisible sur petit écran si nécessaire.
+
+---
+
+# 18. ÉTATS VIDES
+
+## Commandes
+
+```text
+Aucune vente n’a encore été enregistrée pour cette boutique.
+Créez une vente pour commencer le suivi des recettes.
+```
+
+## Dépenses
+
+```text
+Aucune dépense n’a encore été enregistrée.
+Ajoutez une dépense pour garder une vue fiable sur les sorties de caisse.
+```
+
+## Stocks
+
+```text
+Aucune demande d’approvisionnement n’a encore été créée.
+Créez une demande lorsque la boutique doit recevoir de nouvelles marchandises.
+```
+
+## Clients
+
+```text
+Aucun client n’est encore enregistré.
+Les clients créés pendant une vente apparaîtront également ici.
+```
+
+Ne pas utiliser d’emoji.
+
+---
+
+# 19. NAVIGATION DU VENDEUR
+
+Adapter la sidebar du vendeur avec :
+
+* Espace de travail ;
+* Ventes ;
+* Dépenses ;
+* Stocks ;
+* Clients ;
+* Profil.
+
+Les liens dynamiques doivent utiliser le slug de sa boutique :
+
+```text
+/commandes/{slug}
+/payments/{slug}
+/stocks/{slug}
+/clients
+```
+
+Ne jamais permettre au vendeur de choisir arbitrairement une autre boutique.
+
+---
+
+# 20. ORDRE D’IMPLÉMENTATION
+
+Procéder dans cet ordre :
+
+1. analyser l’existant ;
+2. vérifier le contrôle de session vendeur ;
+3. vérifier l’exercice actif ;
+4. adapter les schémas et index ;
+5. ajouter `tenantId` aux modèles qui en ont besoin ;
+6. adapter la structure historique des lignes de commande ;
+7. créer ou réutiliser `CustomerSearch` ;
+8. créer ou réutiliser la recherche produit ;
+9. implémenter `/commandes/[slug]` ;
+10. implémenter la génération PDF ;
+11. intégrer Pusher pour les commandes ;
+12. implémenter `/payments/[slug]` ;
+13. intégrer Pusher pour les dépenses ;
+14. implémenter `/stocks/[slug]` ;
+15. intégrer Pusher pour les stocks ;
+16. implémenter `/clients` ;
+17. intégrer les promotions dans les commandes ;
+18. adapter la navigation vendeur ;
+19. produire le rapport final.
+
+Ne pas créer des abstractions lourdes avant d’avoir identifié les besoins communs.
+
+---
+
+# 21. CRITÈRES DE VALIDATION
+
+## Commandes
+
+* le vendeur ne travaille que dans sa boutique ;
+* un exercice actif est obligatoire ;
+* le client est recherché par téléphone ;
+* un client absent peut être créé ;
+* les produits sont recherchés par code ou désignation ;
+* les quantités sont validées ;
+* le stock est vérifié côté serveur ;
+* les prix sont figés ;
+* les promotions sont appliquées côté serveur ;
+* la commande et le stock sont mis à jour atomiquement ;
+* une facture PDF est générée ;
+* le tenant reçoit l’événement Pusher.
+
+## Dépenses
+
+* le vendeur ne voit que les dépenses autorisées ;
+* un exercice actif est obligatoire ;
+* les lignes sont validées ;
+* le total est recalculé côté serveur ;
+* la dépense est persistée ;
+* le tenant reçoit l’événement Pusher.
+
+## Stocks
+
+* une demande créée par un vendeur est en attente ;
+* le stock actif n’est pas incrémenté avant validation ;
+* le vendeur peut annuler uniquement une demande en attente ;
+* le tenant reçoit l’événement Pusher.
+
+## Clients
+
+* les clients sont isolés par tenant ;
+* les commandes apparaissent dans le drawer ;
+* les promotions peuvent être associées et retirées ;
+* une promotion valide peut être appliquée à une facture ;
+* l’historique ne change pas si la promotion est modifiée plus tard.
+
+## Interface
+
+* pages paginées ;
+* métriques présentes ;
+* drawers cohérents ;
+* responsive ;
+* états vides ;
+* recherche et filtres ;
+* z-index correct ;
+* composants TailAdmin réutilisés ;
+* aucune icône emoji.
+
+---
+
+# 22. RAPPORT FINAL OBLIGATOIRE
+
+Ne lance ni build, ni lint, ni tests.
+
+À la fin, fournir un rapport avec exactement les rubriques suivantes :
+
+## 1. Résumé des travaux
+
+Décrire les fonctionnalités réalisées.
+
+## 2. Schémas modifiés
+
+Lister les champs, snapshots financiers, statuts et index ajoutés ou adaptés.
+
+## 3. Fichiers créés
+
+Lister chaque fichier et sa responsabilité.
+
+## 4. Fichiers modifiés
+
+Lister chaque fichier et les changements apportés.
+
+## 5. Éléments réutilisés
+
+Lister les composants, actions, services, hooks, layouts, utilitaires PDF, Pusher et composants TailAdmin réutilisés.
+
+## 6. Contrôle du vendeur
+
+Expliquer la validation de session, de boutique, de tenant et d’exercice actif.
+
+## 7. Page Commandes
+
+Décrire le drawer en trois étapes, la création client, la recherche produit, les promotions, la persistance et la facture PDF.
+
+## 8. Page Dépenses
+
+Décrire le CRUD, les lignes, les métriques et l’événement Pusher.
+
+## 9. Page Stocks
+
+Décrire les demandes d’approvisionnement, les statuts et la séparation entre demande et stock disponible.
+
+## 10. Page Clients
+
+Décrire les cartes, l’historique des commandes et les promotions.
+
+## 11. Temps réel Pusher
+
+Lister les canaux, événements et payloads créés ou réutilisés.
+
+## 12. Sécurité multi-tenant
+
+Expliquer les filtres appliqués à chaque ressource.
+
+## 13. Transactions et cohérence du stock
+
+Expliquer comment les stocks négatifs et les ventes concurrentes sont évités.
+
+## 14. Génération PDF
+
+Décrire la facture, son stockage et les champs persistés.
+
+## 15. Agrégations et performances
+
+Lister les principales agrégations, index et optimisations.
+
+## 16. Hypothèses métier
+
+Signaler notamment :
+
+* règle appliquée lorsque plusieurs promotions existent ;
+* droits de modification des dépenses ;
+* distinction demande de stock et stock disponible ;
+* règle de devise d’une commande.
+
+## 17. Variables d’environnement
+
+Lister uniquement les noms nécessaires, sans afficher leurs valeurs.
+
+## 18. Tests manuels à réaliser
+
+Donner des scénarios ordonnés pour les quatre pages, incluant les cas d’erreur.
+
+## 19. Limites et points à surveiller
+
+Signaler les migrations, historiques existants, limites PDF, limites Pusher et décisions restantes.
+
+## 20. Commandes non exécutées
+
+Confirmer explicitement qu’aucun build, lint ou test n’a été lancé.

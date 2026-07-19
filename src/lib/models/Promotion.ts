@@ -1,16 +1,33 @@
-import { Schema, model, models, type Model } from "mongoose";
+import { Schema, model, models, type Model, type Types } from "mongoose";
 
 export interface IPromotionPhoto {
   title: string;
   url: string;
 }
 
+export interface IPromotionRecharge {
+  orderNumber: string;
+  credits: number;
+  amount: number;
+  currency: "USD";
+  phone: string;
+  status: "PENDING" | "PAID" | "FAILED";
+  message: string;
+  paidAt?: Date | null;
+  createdAt: Date;
+}
+
 export interface IPromotion {
+  tenantId: Types.ObjectId;
   designation: string;
   description: string;
   code: string;
   reduction: number;
+  commandes: number;
+  credits: number;
+  recharges: IPromotionRecharge[];
   photo?: IPromotionPhoto | null;
+  status: "ACTIVE" | "INACTIVE" | "ARCHIVED";
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,8 +49,24 @@ const PromotionPhotoSchema = new Schema<IPromotionPhoto>(
   { _id: false }
 );
 
+const PromotionRechargeSchema = new Schema<IPromotionRecharge>(
+  {
+    orderNumber: { type: String, required: true, trim: true },
+    credits: { type: Number, required: true, min: 30 },
+    amount: { type: Number, required: true, min: 2 },
+    currency: { type: String, enum: ["USD"], default: "USD" },
+    phone: { type: String, required: true, trim: true },
+    status: { type: String, enum: ["PENDING", "PAID", "FAILED"], default: "PENDING" },
+    message: { type: String, default: "Paiement initie." },
+    paidAt: { type: Date, default: null },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
 const PromotionSchema = new Schema<IPromotion>(
   {
+    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
     designation: {
       type: String,
       required: true,
@@ -49,7 +82,6 @@ const PromotionSchema = new Schema<IPromotion>(
     code: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
       uppercase: true,
       index: true,
@@ -60,10 +92,14 @@ const PromotionSchema = new Schema<IPromotion>(
       min: 0,
       max: 100,
     },
+    commandes: { type: Number, required: true, min: 1, default: 1 },
+    credits: { type: Number, required: true, min: 0, default: 0 },
+    recharges: { type: [PromotionRechargeSchema], default: [] },
     photo: {
       type: PromotionPhotoSchema,
       default: null,
     },
+    status: { type: String, enum: ["ACTIVE", "INACTIVE", "ARCHIVED"], default: "ACTIVE", index: true },
   },
   {
     timestamps: true,
@@ -72,6 +108,9 @@ const PromotionSchema = new Schema<IPromotion>(
 );
 
 PromotionSchema.index({ designation: 1 });
+PromotionSchema.index({ tenantId: 1, status: 1, designation: 1 });
+PromotionSchema.index({ tenantId: 1, code: 1 }, { unique: true });
+PromotionSchema.index({ tenantId: 1, "recharges.orderNumber": 1 });
 
 const Promotion =
   (models.Promotion as Model<IPromotion>) ||

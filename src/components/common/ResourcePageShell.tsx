@@ -34,7 +34,7 @@ export default function ResourcePageShell({
       {/* Description */}
       {description && (
         <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
-          {description}
+          <span className="whitespace-pre-wrap break-words">{description}</span>
         </p>
       )}
 

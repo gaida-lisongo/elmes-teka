@@ -2,13 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { Types } from "mongoose";
-import { randomBytes } from "node:crypto";
+import { randomUUID } from "node:crypto";
 
 import { requireTenantSession } from "@/lib/auth/require-tenant";
 import connectToDb from "@/lib/utils/db";
 import Product from "@/lib/models/Product";
 import Commande from "@/lib/models/Commande";
 import Stock from "@/lib/models/Stock";
+import { Tenant } from "@/lib/models/User";
 
 export type ActionResponse<T = undefined> =
   | { success: true; message: string; data: T }
@@ -51,6 +52,21 @@ export interface PaginatedProducts {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function generateProductCode(tenantId: string): Promise<string> {
+  const tenant = await Tenant.findById(tenantId).select("slug").lean();
+  if (!tenant?.slug) throw new Error("Slug du tenant introuvable.");
+
+  const prefix = tenant.slug.toUpperCase();
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const suffix = randomUUID().replace(/-/g, "").slice(0, 4).toUpperCase();
+    const code = `${prefix}-${suffix}`;
+    if (!(await Product.exists({ tenantId: new Types.ObjectId(tenantId), code }))) {
+      return code;
+    }
+  }
+  throw new Error("Impossible de generer un code produit unique.");
 }
 
 /* ───── Métriques ───── */
@@ -227,7 +243,7 @@ export async function getProducts(
 export async function createProduct(input: {
   designation: string;
   categorie: string;
-  code: string;
+  code?: string;
   price: Array<{ amount: number; currency: string }>;
   photos?: Array<{ title: string; url: string }>;
   description?: Array<{ title: string; content: string }>;
@@ -245,9 +261,6 @@ export async function createProduct(input: {
     if (!input.categorie || input.categorie.trim().length < 2) {
       errors.categorie = "La categorie est requise.";
     }
-    if (!input.code || input.code.trim().length < 2) {
-      errors.code = "Le code est requis.";
-    }
     if (!input.price || input.price.length === 0) {
       errors.price = "Au moins un prix est requis.";
     }
@@ -256,21 +269,13 @@ export async function createProduct(input: {
       return { success: false, message: "Champs invalides.", errors };
     }
 
-    /* Vérifier unicité du code */
-    const existing = await Product.findOne({
-      tenantId: new Types.ObjectId(tenantId),
-      code: input.code.trim().toUpperCase(),
-    }).lean();
-
-    if (existing) {
-      return { success: false, message: "Un produit avec ce code existe deja." };
-    }
+    const code = await generateProductCode(tenantId);
 
     const product = await Product.create({
       tenantId: new Types.ObjectId(tenantId),
       designation: input.designation.trim(),
       categorie: input.categorie.trim(),
-      code: input.code.trim().toUpperCase(),
+      code,
       price: input.price,
       photos: input.photos ?? [],
       description: input.description ?? [],
@@ -319,7 +324,6 @@ export async function updateProduct(
     const update: Record<string, unknown> = {};
     if (input.designation) update.designation = input.designation.trim();
     if (input.categorie) update.categorie = input.categorie.trim();
-    if (input.code) update.code = input.code.trim().toUpperCase();
     if (input.price) update.price = input.price;
     if (input.photos) update.photos = input.photos;
     if (input.description) update.description = input.description;

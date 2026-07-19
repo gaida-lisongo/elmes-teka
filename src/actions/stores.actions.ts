@@ -33,6 +33,13 @@ export interface StoreListItem {
   createdAt: string;
   coordonnes: Array<{ title: string; content: string }>;
   photos: Array<{ title: string; url: string }>;
+  capitals: Array<{
+    id: string;
+    anneeId: string;
+    amount: number;
+    currency: string;
+    status: string;
+  }>;
   payment: {
     amount: number;
     currency: string;
@@ -49,7 +56,6 @@ export interface StoreListItem {
 export interface StoreMetrics {
   total: number;
   actives: number;
-  enAttente: number;
   inactives: number;
   totalAgents: number;
 }
@@ -84,10 +90,7 @@ export async function getStoreMetrics(): Promise<ActionResponse<StoreMetrics>> {
           _id: null,
           total: { $sum: 1 },
           actives: {
-            $sum: { $cond: [{ $eq: ["$status", "ACTIVE"] }, 1, 0] },
-          },
-          enAttente: {
-            $sum: { $cond: [{ $eq: ["$status", "PENDING_PAYMENT"] }, 1, 0] },
+            $sum: { $cond: [{ $in: ["$status", ["ACTIVE", "PENDING_PAYMENT"]] }, 1, 0] },
           },
           inactives: {
             $sum: {
@@ -109,7 +112,6 @@ export async function getStoreMetrics(): Promise<ActionResponse<StoreMetrics>> {
       data: {
         total: counts?.total ?? 0,
         actives: counts?.actives ?? 0,
-        enAttente: counts?.enAttente ?? 0,
         inactives: counts?.inactives ?? 0,
         totalAgents: agentCount?.total ?? 0,
       },
@@ -140,9 +142,11 @@ export async function getStores(
     const match: Record<string, unknown> = { tenantId: tenantOid };
     if (
       status &&
-      ["PENDING_PAYMENT", "ACTIVE", "INACTIVE", "ARCHIVED"].includes(status)
+      ["ACTIVE", "INACTIVE", "ARCHIVED"].includes(status)
     ) {
-      match.status = status;
+      match.status = status === "ACTIVE"
+        ? { $in: ["ACTIVE", "PENDING_PAYMENT"] }
+        : status;
     }
     if (search && search.length >= 2) {
       const escaped = escapeRegExp(search.slice(0, 80));
@@ -212,10 +216,17 @@ export async function getStores(
           designation: store.designation,
           description: store.description,
           reference: store.reference,
-          status: store.status,
+          status: store.status === "PENDING_PAYMENT" ? "ACTIVE" : store.status,
           createdAt: store.createdAt.toISOString(),
           coordonnes: store.coordonnes ?? [],
           photos: store.photos ?? [],
+          capitals: (store.capitals ?? []).map((capital) => ({
+            id: (capital as any)._id.toString(),
+            anneeId: capital.anneeId.toString(),
+            amount: capital.amount,
+            currency: capital.currency,
+            status: capital.status,
+          })),
           payment: store.payment
             ? {
                 amount: store.payment.amount,
@@ -291,14 +302,14 @@ export async function createStoreStep1(input: {
       coordonnes: input.coordonnes ?? [],
       photos: input.photos ?? [],
       reference,
-      status: "PENDING_PAYMENT",
+      status: "ACTIVE",
       capitals: [],
       caisses: [],
     });
 
     return {
       success: true,
-      message: "Boutique creee (en attente de paiement).",
+      message: "Boutique creee.",
       data: {
         storeId: store._id.toString(),
         reference: store.reference,
@@ -318,6 +329,12 @@ export async function initiateStorePayment(input: {
 }): Promise<
   ActionResponse<{ orderNumber: string; amount: number; currency: string }>
 > {
+  void input;
+  return {
+    success: false,
+    message: "La facturation est desormais geree par exercice comptable.",
+  };
+  /* Ancien workflow conserve temporairement pour compatibilite des donnees. */
   try {
     const { tenantId } = await requireTenantSession();
     await connectToDb();
@@ -427,6 +444,12 @@ export async function initiateStorePayment(input: {
 export async function verifyStorePayment(
   storeId: string
 ): Promise<ActionResponse<{ status: string; paid: boolean }>> {
+  void storeId;
+  return {
+    success: false,
+    message: "La facturation est desormais geree par exercice comptable.",
+  };
+  /* Ancien workflow conserve temporairement pour compatibilite des donnees. */
   try {
     const { tenantId } = await requireTenantSession();
     await connectToDb();
@@ -577,6 +600,162 @@ export async function archiveStore(id: string): Promise<ActionResponse<null>> {
   }
 }
 
+type StoreCapitalInput = {
+  anneeId: string;
+  amount: number;
+  currency: "USD" | "CDF";
+  status?: "PENDING" | "ACTIVE" | "CLOSED" | "CANCELLED";
+};
+
+async function validateCapitalScope(
+  tenantId: string,
+  storeId: string,
+  input: StoreCapitalInput
+): Promise<ActionResponse<{ storeId: Types.ObjectId; anneeId: Types.ObjectId }>> {
+  if (!Types.ObjectId.isValid(storeId) || !Types.ObjectId.isValid(input.anneeId)) {
+    return { success: false, message: "Boutique ou exercice invalide." };
+  }
+  if (!Number.isFinite(input.amount) || input.amount < 0) {
+    return { success: false, message: "Le montant du capital est invalide." };
+  }
+  if (!["USD", "CDF"].includes(input.currency)) {
+    return { success: false, message: "Devise invalide." };
+  }
+
+  const tenantOid = new Types.ObjectId(tenantId);
+  const storeOid = new Types.ObjectId(storeId);
+  const anneeOid = new Types.ObjectId(input.anneeId);
+  const [store, annee] = await Promise.all([
+    Store.findOne({ _id: storeOid, tenantId: tenantOid }).select("_id").lean(),
+    Annee.findOne({
+      _id: anneeOid,
+      tenantId: tenantOid,
+      status: { $in: ["ACTIVE", null] },
+    })
+      .select("_id")
+      .lean(),
+  ]);
+  if (!store) return { success: false, message: "Boutique introuvable." };
+  if (!annee) return { success: false, message: "L'exercice doit etre actif." };
+  return { success: true, message: "Perimetre valide.", data: { storeId: storeOid, anneeId: anneeOid } };
+}
+
+export async function addStoreCapital(
+  storeId: string,
+  input: StoreCapitalInput
+): Promise<ActionResponse<null>> {
+  try {
+    const { tenantId } = await requireTenantSession();
+    await connectToDb();
+    const scope = await validateCapitalScope(tenantId, storeId, input);
+    if (!scope.success) return scope;
+
+    const exists = await Store.exists({
+      _id: scope.data.storeId,
+      tenantId: new Types.ObjectId(tenantId),
+      capitals: { $elemMatch: { anneeId: scope.data.anneeId } },
+    });
+    if (exists) {
+      return { success: false, message: "Un capital existe deja pour cet exercice." };
+    }
+
+    await Store.updateOne(
+      { _id: scope.data.storeId, tenantId: new Types.ObjectId(tenantId) },
+      {
+        $push: {
+          capitals: {
+            anneeId: scope.data.anneeId,
+            amount: input.amount,
+            currency: input.currency,
+            status: input.status ?? "ACTIVE",
+          },
+        },
+      }
+    );
+    revalidatePath("/stores");
+    return { success: true, message: "Capital ajoute.", data: null };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Erreur ajout capital." };
+  }
+}
+
+export async function updateStoreCapital(
+  storeId: string,
+  capitalId: string,
+  input: StoreCapitalInput
+): Promise<ActionResponse<null>> {
+  try {
+    const { tenantId } = await requireTenantSession();
+    await connectToDb();
+    if (!Types.ObjectId.isValid(capitalId)) {
+      return { success: false, message: "Capital invalide." };
+    }
+    const scope = await validateCapitalScope(tenantId, storeId, input);
+    if (!scope.success) return scope;
+
+    const duplicate = await Store.exists({
+      _id: scope.data.storeId,
+      tenantId: new Types.ObjectId(tenantId),
+      capitals: {
+        $elemMatch: {
+          anneeId: scope.data.anneeId,
+          _id: { $ne: new Types.ObjectId(capitalId) },
+        },
+      },
+    });
+    if (duplicate) {
+      return { success: false, message: "Un capital existe deja pour cet exercice." };
+    }
+
+    const result = await Store.updateOne(
+      {
+        _id: scope.data.storeId,
+        tenantId: new Types.ObjectId(tenantId),
+        "capitals._id": new Types.ObjectId(capitalId),
+      },
+      {
+        $set: {
+          "capitals.$.anneeId": scope.data.anneeId,
+          "capitals.$.amount": input.amount,
+          "capitals.$.currency": input.currency,
+          "capitals.$.status": input.status ?? "ACTIVE",
+        },
+      }
+    );
+    if (result.modifiedCount !== 1) {
+      return { success: false, message: "Capital introuvable ou inchange." };
+    }
+    revalidatePath("/stores");
+    return { success: true, message: "Capital modifie.", data: null };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Erreur modification capital." };
+  }
+}
+
+export async function deleteStoreCapital(
+  storeId: string,
+  capitalId: string
+): Promise<ActionResponse<null>> {
+  try {
+    const { tenantId } = await requireTenantSession();
+    await connectToDb();
+    if (!Types.ObjectId.isValid(storeId) || !Types.ObjectId.isValid(capitalId)) {
+      return { success: false, message: "Boutique ou capital invalide." };
+    }
+    const result = await Store.updateOne(
+      { _id: storeId, tenantId: new Types.ObjectId(tenantId) },
+      { $pull: { capitals: { _id: new Types.ObjectId(capitalId) } } }
+    );
+    if (result.modifiedCount !== 1) {
+      return { success: false, message: "Capital introuvable." };
+    }
+    revalidatePath("/stores");
+    return { success: true, message: "Capital supprime.", data: null };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Erreur suppression capital." };
+  }
+}
+
 /* ───── Association de produits (Stock) ───── */
 
 export async function associateProductsWithStore(
@@ -599,6 +778,17 @@ export async function associateProductsWithStore(
 
     if (!Types.ObjectId.isValid(anneeId)) {
       return { success: false, message: "Exercice invalide." };
+    }
+
+    const annee = await Annee.findOne({
+      _id: anneeId,
+      tenantId: new Types.ObjectId(tenantId),
+      status: { $in: ["ACTIVE", null] },
+    })
+      .select("_id")
+      .lean();
+    if (!annee) {
+      return { success: false, message: "L'exercice doit etre actif." };
     }
 
     /* Vérifier que les produits appartiennent au tenant */
@@ -668,6 +858,7 @@ export async function getStoreProducts(
       designation: string;
       qte: number;
       anneeId: string;
+      anneeLabel: string;
     }>
   >
 > {
@@ -687,6 +878,7 @@ export async function getStoreProducts(
     const stocks = await Stock.find({
       shopId: new Types.ObjectId(storeId),
     })
+      .populate({ path: "anneeId", select: "debut fin" })
       .populate({
         path: "stocks.product",
         select: "designation code",
@@ -698,7 +890,11 @@ export async function getStoreProducts(
         productId: (s.product as any)?._id?.toString() ?? "",
         designation: (s.product as any)?.designation ?? "Inconnu",
         qte: s.qte,
-        anneeId: stock.anneeId.toString(),
+        anneeId: (stock.anneeId as any)?._id?.toString() ?? stock.anneeId.toString(),
+        anneeLabel:
+          (stock.anneeId as any)?.debut && (stock.anneeId as any)?.fin
+            ? `${new Date((stock.anneeId as any).debut).getFullYear()} - ${new Date((stock.anneeId as any).fin).getFullYear()}`
+            : "Exercice",
       }))
     );
 
@@ -712,6 +908,127 @@ export async function getStoreProducts(
       success: false,
       message: error.message || "Erreur recuperation.",
     };
+  }
+}
+
+export async function removeProductFromStore(
+  storeId: string,
+  productId: string,
+  anneeId: string
+): Promise<ActionResponse<null>> {
+  try {
+    const { tenantId } = await requireTenantSession();
+    await connectToDb();
+
+    if (
+      !Types.ObjectId.isValid(storeId) ||
+      !Types.ObjectId.isValid(productId) ||
+      !Types.ObjectId.isValid(anneeId)
+    ) {
+      return { success: false, message: "Boutique, produit ou exercice invalide." };
+    }
+
+    const tenantOid = new Types.ObjectId(tenantId);
+    const storeOid = new Types.ObjectId(storeId);
+    const productOid = new Types.ObjectId(productId);
+    const anneeOid = new Types.ObjectId(anneeId);
+    const [store, product, annee] = await Promise.all([
+      Store.findOne({ _id: storeOid, tenantId: tenantOid }).select("_id").lean(),
+      Product.findOne({ _id: productOid, tenantId: tenantOid }).select("_id").lean(),
+      Annee.findOne({ _id: anneeOid, tenantId: tenantOid }).select("_id").lean(),
+    ]);
+    if (!store) return { success: false, message: "Boutique introuvable." };
+    if (!product) return { success: false, message: "Produit introuvable." };
+    if (!annee) return { success: false, message: "Exercice introuvable." };
+
+    const stock = await Stock.findOne({
+      shopId: storeOid,
+      anneeId: anneeOid,
+      stocks: { $elemMatch: { product: productOid } },
+    })
+      .select("stocks")
+      .lean();
+    if (!stock) return { success: false, message: "Produit non associe a cette boutique." };
+
+    const stockItem = stock.stocks.find((item) => item.product.toString() === productId);
+    if ((stockItem?.qte ?? 0) > 0) {
+      return {
+        success: false,
+        message: "Impossible de retirer un produit dont la quantite en stock est superieure a zero.",
+      };
+    }
+
+    await Stock.updateOne(
+      { _id: stock._id, shopId: storeOid, anneeId: anneeOid },
+      { $pull: { stocks: { product: productOid } } }
+    );
+    revalidatePath("/stores");
+    return { success: true, message: "Produit retire de la boutique.", data: null };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Erreur retrait produit." };
+  }
+}
+
+export async function updateStoreProductQuantity(
+  storeId: string,
+  productId: string,
+  anneeId: string,
+  quantity: number
+): Promise<ActionResponse<{ quantity: number }>> {
+  try {
+    const { tenantId } = await requireTenantSession();
+    await connectToDb();
+
+    if (
+      !Types.ObjectId.isValid(storeId) ||
+      !Types.ObjectId.isValid(productId) ||
+      !Types.ObjectId.isValid(anneeId)
+    ) {
+      return { success: false, message: "Boutique, produit ou exercice invalide." };
+    }
+    if (!Number.isInteger(quantity) || quantity < 0) {
+      return { success: false, message: "La quantite doit etre un entier positif ou nul." };
+    }
+
+    const tenantOid = new Types.ObjectId(tenantId);
+    const storeOid = new Types.ObjectId(storeId);
+    const productOid = new Types.ObjectId(productId);
+    const anneeOid = new Types.ObjectId(anneeId);
+    const [store, product, annee] = await Promise.all([
+      Store.findOne({ _id: storeOid, tenantId: tenantOid }).select("_id").lean(),
+      Product.findOne({ _id: productOid, tenantId: tenantOid }).select("_id").lean(),
+      Annee.findOne({
+        _id: anneeOid,
+        tenantId: tenantOid,
+        status: { $in: ["ACTIVE", null] },
+      })
+        .select("_id")
+        .lean(),
+    ]);
+    if (!store) return { success: false, message: "Boutique introuvable." };
+    if (!product) return { success: false, message: "Produit introuvable." };
+    if (!annee) return { success: false, message: "Seul un exercice actif peut etre modifie." };
+
+    const result = await Stock.updateOne(
+      {
+        shopId: storeOid,
+        anneeId: anneeOid,
+        "stocks.product": productOid,
+      },
+      { $set: { "stocks.$.qte": quantity } }
+    );
+    if (result.matchedCount !== 1) {
+      return { success: false, message: "Stock du produit introuvable." };
+    }
+
+    revalidatePath("/stores");
+    return {
+      success: true,
+      message: "Quantite du stock mise a jour.",
+      data: { quantity },
+    };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Erreur mise a jour du stock." };
   }
 }
 
@@ -757,6 +1074,7 @@ export async function getTenantAnneesForSelect(): Promise<
 
     const annees = await Annee.find({
       tenantId: new Types.ObjectId(tenantId),
+      status: { $in: ["ACTIVE", null] },
     })
       .select("_id debut fin")
       .sort({ debut: -1 })

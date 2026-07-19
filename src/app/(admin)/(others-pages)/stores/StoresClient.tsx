@@ -10,6 +10,11 @@ import {
   verifyStorePayment,
   updateStore,
   archiveStore,
+  addStoreCapital,
+  updateStoreCapital,
+  deleteStoreCapital,
+  removeProductFromStore,
+  updateStoreProductQuantity,
   associateProductsWithStore,
   getStoreProducts,
   getTenantProductsForSelect,
@@ -58,24 +63,19 @@ function StoreCard({
   onEdit,
   onArchive,
   onAssociate,
+  onCapitals,
 }: {
   store: any;
   onView: () => void;
   onEdit: () => void;
   onArchive: () => void;
   onAssociate: () => void;
+  onCapitals: () => void;
 }) {
   const statusColors: Record<string, string> = {
     ACTIVE: "bg-success-500/10 text-success-500",
-    PENDING_PAYMENT: "bg-warning-500/10 text-warning-500",
     INACTIVE: "bg-gray-500/10 text-gray-500",
     ARCHIVED: "bg-error-500/10 text-error-500",
-  };
-
-  const paymentStatusColors: Record<string, string> = {
-    PAID: "bg-success-500/10 text-success-500",
-    PENDING: "bg-warning-500/10 text-warning-500",
-    FAILED: "bg-error-500/10 text-error-500",
   };
 
   return (
@@ -90,13 +90,8 @@ function StoreCard({
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[store.status] || ""}`}>
-              {store.status === "PENDING_PAYMENT" ? "En attente de paiement" : store.status}
+              {store.status}
             </span>
-            {store.payment && (
-              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${paymentStatusColors[store.payment.status] || ""}`}>
-                Paiement: {store.payment.status}
-              </span>
-            )}
           </div>
           <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
             <span>{store.nbAgents} agent(s)</span>
@@ -130,6 +125,9 @@ function StoreCard({
         <button onClick={onAssociate} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-brand-500 hover:bg-brand-500/10">
           Associer produits
         </button>
+        <button onClick={onCapitals} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-brand-500 hover:bg-brand-500/10">
+          Gerer les capitaux
+        </button>
         <button onClick={onArchive} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-warning-500 hover:bg-warning-500/10">
           Archiver
         </button>
@@ -155,6 +153,7 @@ export default function StoresClient({
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
   const [associateDrawerOpen, setAssociateDrawerOpen] = useState(false);
+  const [capitalDrawerOpen, setCapitalDrawerOpen] = useState(false);
 
   /* Create form - Step 1: Info */
   const [createStep, setCreateStep] = useState(1);
@@ -183,6 +182,7 @@ export default function StoresClient({
   /* View detail */
   const [viewStore, setViewStore] = useState<any>(null);
   const [storeProducts, setStoreProducts] = useState<any[]>([]);
+  const [stockQuantities, setStockQuantities] = useState<Record<string, number>>({});
 
   /* Associate */
   const [associateStoreId, setAssociateStoreId] = useState<string>("");
@@ -190,6 +190,16 @@ export default function StoresClient({
   const [availableProducts, setAvailableProducts] = useState<Array<{ id: string; designation: string; code: string }>>([]);
   const [availableAnnees, setAvailableAnnees] = useState<Array<{ id: string; label: string }>>([]);
   const [selectedAnneeId, setSelectedAnneeId] = useState("");
+
+  /* Capitals */
+  const [capitalStore, setCapitalStore] = useState<any>(null);
+  const [capitalId, setCapitalId] = useState<string | null>(null);
+  const [capitalForm, setCapitalForm] = useState({
+    anneeId: "",
+    amount: 0,
+    currency: "CDF" as "USD" | "CDF",
+    status: "ACTIVE" as "PENDING" | "ACTIVE" | "CLOSED" | "CANCELLED",
+  });
 
   /* General */
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -219,10 +229,10 @@ export default function StoresClient({
     const res = await createStoreStep1(createInfo);
     setActionLoading(false);
     if (res.success && res.data) {
-      setStoreId(res.data.storeId);
-      setStoreRef(res.data.reference);
-      setCreateStep(2);
+      setCreateDrawerOpen(false);
+      setCreateInfo({ designation: "", description: "", coordonnes: [{ title: "Adresse", content: "" }], phone: "" });
       setActionMessage("");
+      await refreshData();
     } else {
       if (res.errors) setFormErrors(res.errors);
       setActionMessage(res.message);
@@ -321,9 +331,71 @@ export default function StoresClient({
   const handleView = async (store: any) => {
     setViewStore(store);
     setViewDrawerOpen(true);
-    const res = await getStoreProducts(store.id);
+    setActionMessage("");
+    const [res, anneesRes] = await Promise.all([
+      getStoreProducts(store.id),
+      getTenantAnneesForSelect(),
+    ]);
     if (res.success) {
       setStoreProducts(res.data);
+      setStockQuantities(
+        Object.fromEntries(
+          res.data.map((item) => [
+            `${item.productId}-${item.anneeId}`,
+            item.qte,
+          ])
+        )
+      );
+    }
+    if (anneesRes.success) setAvailableAnnees(anneesRes.data);
+  };
+
+  const handleUpdateStockQuantity = async (
+    productId: string,
+    anneeId: string
+  ) => {
+    if (!viewStore) return;
+    const key = `${productId}-${anneeId}`;
+    const quantity = stockQuantities[key];
+    setActionLoading(true);
+    setActionMessage("");
+    const res = await updateStoreProductQuantity(
+      viewStore.id,
+      productId,
+      anneeId,
+      quantity
+    );
+    setActionLoading(false);
+    setActionMessage(res.message);
+    if (res.success) {
+      setStoreProducts((current) =>
+        current.map((item) =>
+          item.productId === productId && item.anneeId === anneeId
+            ? { ...item, qte: res.data.quantity }
+            : item
+        )
+      );
+      await refreshData();
+    }
+  };
+
+  const handleRemoveStoreProduct = async (
+    productId: string,
+    anneeId: string
+  ) => {
+    if (!viewStore) return;
+    setActionLoading(true);
+    setActionMessage("");
+    const res = await removeProductFromStore(viewStore.id, productId, anneeId);
+    setActionLoading(false);
+    setActionMessage(res.message);
+    if (res.success) {
+      setStoreProducts((current) =>
+        current.filter(
+          (item) => item.productId !== productId || item.anneeId !== anneeId
+        )
+      );
+      await refreshData();
     }
   };
 
@@ -356,6 +428,49 @@ export default function StoresClient({
     }
   };
 
+  const resetCapitalForm = () => {
+    setCapitalId(null);
+    setCapitalForm({ anneeId: "", amount: 0, currency: "CDF", status: "ACTIVE" });
+  };
+
+  const handleOpenCapitals = async (store: any) => {
+    setCapitalStore(store);
+    resetCapitalForm();
+    setActionMessage("");
+    const anneesRes = await getTenantAnneesForSelect();
+    if (anneesRes.success) setAvailableAnnees(anneesRes.data);
+    setCapitalDrawerOpen(true);
+  };
+
+  const handleSaveCapital = async () => {
+    if (!capitalStore || !capitalForm.anneeId) return;
+    setActionLoading(true);
+    setActionMessage("");
+    const res = capitalId
+      ? await updateStoreCapital(capitalStore.id, capitalId, capitalForm)
+      : await addStoreCapital(capitalStore.id, capitalForm);
+    setActionLoading(false);
+    setActionMessage(res.message);
+    if (res.success) {
+      setCapitalDrawerOpen(false);
+      resetCapitalForm();
+      await refreshData();
+    }
+  };
+
+  const handleDeleteCapital = async (id: string) => {
+    if (!capitalStore) return;
+    setActionLoading(true);
+    setActionMessage("");
+    const res = await deleteStoreCapital(capitalStore.id, id);
+    setActionLoading(false);
+    setActionMessage(res.message);
+    if (res.success) {
+      setCapitalDrawerOpen(false);
+      await refreshData();
+    }
+  };
+
   const handleSearch = () => {
     navigateWithParams({ search: searchQuery, status: statusFilter, page: "1" });
   };
@@ -373,7 +488,7 @@ export default function StoresClient({
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <MetricCard label="Total" value={metrics.total} />
               <MetricCard label="Actives" value={metrics.actives} />
-              <MetricCard label="En attente" value={metrics.enAttente} />
+              <MetricCard label="Inactives" value={metrics.inactives} />
               <MetricCard label="Agents" value={metrics.totalAgents} />
             </div>
           ) : null
@@ -399,7 +514,6 @@ export default function StoresClient({
               >
                 <option value="">Tous</option>
                 <option value="ACTIVE">Active</option>
-                <option value="PENDING_PAYMENT">En attente</option>
                 <option value="INACTIVE">Inactive</option>
               </select>
             </div>
@@ -436,6 +550,7 @@ export default function StoresClient({
                   }}
                   onArchive={() => handleArchive(s.id)}
                   onAssociate={() => handleOpenAssociate(s.id)}
+                  onCapitals={() => handleOpenCapitals(s)}
                 />
               ))}
             </div>
@@ -467,25 +582,11 @@ export default function StoresClient({
         isOpen={createDrawerOpen}
         onClose={() => setCreateDrawerOpen(false)}
         title="Creer un point de vente"
-        description="Creation en 3 etapes (50 USD)"
+        description="Renseignez les informations du point de vente."
       >
-        {/* Step indicator */}
-        <div className="mb-6 flex items-center gap-2">
-          {[1, 2, 3].map((step) => (
-            <div key={step} className="flex items-center gap-2">
-              <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
-                createStep >= step ? "bg-brand-500 text-white" : "bg-gray-100 text-gray-500 dark:bg-gray-800"
-              }`}>
-                {step}
-              </div>
-              {step < 3 && <div className={`h-0.5 w-8 ${createStep > step ? "bg-brand-500" : "bg-gray-200 dark:bg-gray-700"}`} />}
-            </div>
-          ))}
-        </div>
-
         {createStep === 1 && (
           <div className="space-y-4">
-            <h4 className="font-medium text-gray-800 dark:text-white/90">Etape 1: Informations</h4>
+            <h4 className="font-medium text-gray-800 dark:text-white/90">Informations</h4>
             <div>
               <Label>Designation *</Label>
               <Input
@@ -505,14 +606,6 @@ export default function StoresClient({
               />
             </div>
             <div>
-              <Label>Telephone</Label>
-              <Input
-                value={createInfo.phone}
-                onChange={(e) => setCreateInfo({ ...createInfo, phone: e.target.value })}
-                placeholder="Numero pour le paiement"
-              />
-            </div>
-            <div>
               <Label>Adresse</Label>
               <Input
                 value={createInfo.coordonnes[0]?.content ?? ""}
@@ -525,7 +618,7 @@ export default function StoresClient({
               disabled={actionLoading}
               className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
             >
-              {actionLoading ? "Creation..." : "Suivant: Paiement"}
+              {actionLoading ? "Creation..." : "Creer"}
             </button>
           </div>
         )}
@@ -658,74 +751,221 @@ export default function StoresClient({
       >
         {viewStore && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Reference</Label>
-                <p className="text-sm">{viewStore.reference}</p>
+            <details open className="group rounded-xl border border-gray-200 dark:border-gray-700">
+              <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-gray-800 dark:text-white/90">
+                Informations generales
+              </summary>
+              <div className="grid grid-cols-2 gap-4 border-t border-gray-100 p-4 dark:border-gray-800">
+                <div><Label>Reference</Label><p className="text-sm">{viewStore.reference}</p></div>
+                <div><Label>Statut</Label><p className="text-sm">{viewStore.status}</p></div>
+                <div className="col-span-2">
+                  <Label>Description</Label>
+                  <p className="whitespace-pre-wrap break-words text-sm">{viewStore.description}</p>
+                </div>
+                <div><Label>Agents</Label><p className="text-sm">{viewStore.nbAgents}</p></div>
+                <div><Label>Produits</Label><p className="text-sm">{viewStore.nbProducts}</p></div>
+                <div><Label>Chiffre d'affaires</Label><p className="text-sm">{viewStore.chiffreAffaires}</p></div>
               </div>
-              <div>
-                <Label>Statut</Label>
-                <p className="text-sm">{viewStore.status}</p>
-              </div>
-              <div>
-                <Label>Description</Label>
-                <p className="text-sm">{viewStore.description}</p>
-              </div>
-              <div>
-                <Label>Agents</Label>
-                <p className="text-sm">{viewStore.nbAgents}</p>
-              </div>
-              <div>
-                <Label>Produits</Label>
-                <p className="text-sm">{viewStore.nbProducts}</p>
-              </div>
-              <div>
-                <Label>Chiffre d'affaires</Label>
-                <p className="text-sm">{viewStore.chiffreAffaires}</p>
-              </div>
-            </div>
+            </details>
 
-            {/* Coordonnées */}
             {viewStore.coordonnes?.length > 0 && (
-              <div className="border-t border-gray-100 pt-4 dark:border-gray-800">
-                <h5 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Coordonnees</h5>
-                {viewStore.coordonnes.map((c: any, i: number) => (
-                  <p key={i} className="text-sm text-gray-500">
-                    <strong>{c.title}:</strong> {c.content}
-                  </p>
-                ))}
-              </div>
-            )}
-
-            {/* Paiement */}
-            {viewStore.payment && (
-              <div className="border-t border-gray-100 pt-4 dark:border-gray-800">
-                <h5 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Paiement</h5>
-                <p className="text-sm text-gray-500">Montant: {viewStore.payment.amount} {viewStore.payment.currency}</p>
-                <p className="text-sm text-gray-500">Order: {viewStore.payment.orderNumber}</p>
-                <p className="text-sm text-gray-500">Statut: {viewStore.payment.status}</p>
-                {viewStore.payment.paidAt && (
-                  <p className="text-sm text-gray-500">Paye le: {new Date(viewStore.payment.paidAt).toLocaleDateString("fr-FR")}</p>
-                )}
-              </div>
-            )}
-
-            {/* Produits associés */}
-            {storeProducts.length > 0 && (
-              <div className="border-t border-gray-100 pt-4 dark:border-gray-800">
-                <h5 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Produits associes</h5>
-                <div className="space-y-2">
-                  {storeProducts.map((sp, i) => (
-                    <div key={i} className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-sm dark:bg-gray-800">
-                      <span>{sp.designation}</span>
-                      <span className="text-gray-500">Qte: {sp.qte}</span>
+              <details className="group rounded-xl border border-gray-200 dark:border-gray-700">
+                <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-gray-800 dark:text-white/90">
+                  Coordonnees ({viewStore.coordonnes.length})
+                </summary>
+                <div className="space-y-3 border-t border-gray-100 p-4 dark:border-gray-800">
+                  {viewStore.coordonnes.map((c: any, i: number) => (
+                    <div key={i}>
+                      <Label>{c.title}</Label>
+                      <p className="whitespace-pre-wrap break-words text-sm text-gray-500">{c.content}</p>
                     </div>
                   ))}
                 </div>
-              </div>
+              </details>
             )}
+
+            <details className="group rounded-xl border border-gray-200 dark:border-gray-700">
+              <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-gray-800 dark:text-white/90">
+                Produits associes ({storeProducts.length})
+              </summary>
+              <div className="space-y-2 border-t border-gray-100 p-4 dark:border-gray-800">
+                {storeProducts.length === 0 ? (
+                  <p className="text-sm text-gray-500">Aucun produit associe.</p>
+                ) : storeProducts.map((sp) => (
+                  <details key={`${sp.productId}-${sp.anneeId}`} className="rounded-lg border border-gray-200 dark:border-gray-700">
+                    <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-sm font-medium">
+                      <span>{sp.designation}</span>
+                      <span className="text-xs text-gray-500">Qte: {sp.qte}</span>
+                    </summary>
+                    <div className="space-y-3 border-t border-gray-100 px-3 py-3 dark:border-gray-800">
+                      <p className="text-xs text-gray-500">{sp.anneeLabel}</p>
+                      <div className="flex flex-wrap items-end gap-3">
+                        <div className="min-w-32 flex-1">
+                          <Label>Quantite en stock</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step={1}
+                            value={stockQuantities[`${sp.productId}-${sp.anneeId}`] ?? sp.qte}
+                            onChange={(e) =>
+                              setStockQuantities((current) => ({
+                                ...current,
+                                [`${sp.productId}-${sp.anneeId}`]: Number(e.target.value),
+                              }))
+                            }
+                          />
+                        </div>
+                        <button
+                          onClick={() => handleUpdateStockQuantity(sp.productId, sp.anneeId)}
+                          disabled={actionLoading}
+                          className="h-11 rounded-lg bg-brand-500 px-3 text-xs font-medium text-white hover:bg-brand-600 disabled:opacity-50"
+                        >
+                          Enregistrer
+                        </button>
+                        <button
+                          onClick={() => handleRemoveStoreProduct(sp.productId, sp.anneeId)}
+                          disabled={actionLoading || sp.qte > 0}
+                          className="inline-flex h-11 items-center gap-1 rounded-lg px-3 text-xs font-medium text-error-500 hover:bg-error-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                          title={sp.qte > 0 ? "Ramenez la quantite a zero avant le retrait" : "Retirer ce produit"}
+                        >
+                          <TrashBinIcon className="h-4 w-4" /> Retirer
+                        </button>
+                      </div>
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </details>
+            {actionMessage && <p className="text-sm text-error-500">{actionMessage}</p>}
           </div>
         )}
+      </Drawer>
+
+      <Drawer
+        isOpen={capitalDrawerOpen}
+        onClose={() => setCapitalDrawerOpen(false)}
+        title="Capitaux du point de vente"
+        description={capitalStore?.designation ?? ""}
+      >
+        <div className="space-y-5">
+          {capitalStore?.capitals?.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-gray-800 dark:text-white/90">Capitaux enregistres</h4>
+              {capitalStore.capitals.map((capital: any) => (
+                <div key={capital.id} className="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                      {capital.amount.toLocaleString("fr-FR")} {capital.currency}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {availableAnnees.find((annee) => annee.id === capital.anneeId)?.label ?? "Exercice"} - {capital.status}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setCapitalId(capital.id);
+                        setCapitalForm({
+                          anneeId: capital.anneeId,
+                          amount: capital.amount,
+                          currency: capital.currency,
+                          status: capital.status,
+                        });
+                        setActionMessage("");
+                      }}
+                      className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      aria-label="Modifier le capital"
+                    >
+                      <PencilIcon className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCapital(capital.id)}
+                      disabled={actionLoading}
+                      className="rounded-lg p-2 text-error-500 hover:bg-error-500/10 disabled:opacity-50"
+                      aria-label="Supprimer le capital"
+                    >
+                      <TrashBinIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="border-t border-gray-100 pt-4 dark:border-gray-800">
+            <h4 className="mb-4 text-sm font-medium text-gray-800 dark:text-white/90">
+              {capitalId ? "Modifier le capital" : "Ajouter un capital"}
+            </h4>
+            <div className="space-y-4">
+              <div>
+                <Label>Exercice *</Label>
+                <select
+                  value={capitalForm.anneeId}
+                  onChange={(e) => setCapitalForm({ ...capitalForm, anneeId: e.target.value })}
+                  className="h-11 w-full rounded-lg border border-gray-300 px-4 text-sm dark:border-gray-700 dark:bg-gray-900"
+                >
+                  <option value="">Selectionner un exercice actif</option>
+                  {availableAnnees.map((annee) => (
+                    <option key={annee.id} value={annee.id}>{annee.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Montant *</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={capitalForm.amount}
+                    onChange={(e) => setCapitalForm({ ...capitalForm, amount: Number(e.target.value) })}
+                  />
+                </div>
+                <div>
+                  <Label>Devise *</Label>
+                  <select
+                    value={capitalForm.currency}
+                    onChange={(e) => setCapitalForm({ ...capitalForm, currency: e.target.value as "USD" | "CDF" })}
+                    className="h-11 w-full rounded-lg border border-gray-300 px-4 text-sm dark:border-gray-700 dark:bg-gray-900"
+                  >
+                    <option value="CDF">CDF</option>
+                    <option value="USD">USD</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <Label>Statut *</Label>
+                <select
+                  value={capitalForm.status}
+                  onChange={(e) => setCapitalForm({ ...capitalForm, status: e.target.value as typeof capitalForm.status })}
+                  className="h-11 w-full rounded-lg border border-gray-300 px-4 text-sm dark:border-gray-700 dark:bg-gray-900"
+                >
+                  <option value="PENDING">En attente</option>
+                  <option value="ACTIVE">Actif</option>
+                  <option value="CLOSED">Cloture</option>
+                  <option value="CANCELLED">Annule</option>
+                </select>
+              </div>
+              {actionMessage && <p className="text-sm text-error-500">{actionMessage}</p>}
+              <div className="flex gap-3">
+                {capitalId && (
+                  <button
+                    onClick={resetCapitalForm}
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50"
+                  >
+                    Annuler
+                  </button>
+                )}
+                <button
+                  onClick={handleSaveCapital}
+                  disabled={actionLoading || !capitalForm.anneeId}
+                  className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
+                >
+                  {actionLoading ? "Enregistrement..." : capitalId ? "Modifier" : "Ajouter"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </Drawer>
 
       {/* ─── Associate Products Drawer ─── */}
@@ -753,21 +993,26 @@ export default function StoresClient({
             <Label>Produits *</Label>
             <div className="max-h-60 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700">
               {availableProducts.map((p) => (
-                <label key={p.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/[0.05]">
-                  <input
-                    type="checkbox"
-                    checked={selectedProductIds.includes(p.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedProductIds([...selectedProductIds, p.id]);
-                      } else {
-                        setSelectedProductIds(selectedProductIds.filter((id) => id !== p.id));
-                      }
-                    }}
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <span className="text-sm">{p.designation} ({p.code})</span>
-                </label>
+                <details key={p.id} className="border-b border-gray-100 last:border-b-0 dark:border-gray-800">
+                  <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium hover:bg-gray-50 dark:hover:bg-white/[0.05]">
+                    {p.designation}
+                  </summary>
+                  <label className="flex cursor-pointer items-center gap-3 border-t border-gray-100 px-4 py-3 text-sm text-gray-500 dark:border-gray-800">
+                    <input
+                      type="checkbox"
+                      checked={selectedProductIds.includes(p.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedProductIds([...selectedProductIds, p.id]);
+                        } else {
+                          setSelectedProductIds(selectedProductIds.filter((id) => id !== p.id));
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                    Associer le produit - {p.code}
+                  </label>
+                </details>
               ))}
             </div>
           </div>

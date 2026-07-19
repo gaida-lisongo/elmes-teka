@@ -98,6 +98,21 @@ function ProductCard({
           </div>
         </div>
       </div>
+      {product.description?.length > 0 && (
+        <details className="mt-4 rounded-lg border border-gray-100 dark:border-gray-800">
+          <summary className="cursor-pointer list-none px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            Description
+          </summary>
+          <div className="space-y-3 border-t border-gray-100 px-3 py-3 dark:border-gray-800">
+            {product.description.map((item: { title: string; content: string }, index: number) => (
+              <div key={`${item.title}-${index}`}>
+                {item.title && <p className="text-xs font-medium text-gray-600 dark:text-gray-400">{item.title}</p>}
+                <p className="whitespace-pre-wrap break-words text-sm text-gray-500">{item.content}</p>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
       <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-4 dark:border-gray-800">
         <button onClick={onEdit} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400">
           <PencilIcon className="h-4 w-4" /> Modifier
@@ -408,15 +423,6 @@ export default function ProductsClient({
                 hint={formErrors.categorie}
               />
             </div>
-            <div>
-              <Label>Code *</Label>
-              <Input
-                value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                error={!!formErrors.code}
-                hint={formErrors.code}
-              />
-            </div>
             {actionMessage && <p className="text-sm text-error-500">{actionMessage}</p>}
             <button
               onClick={() => setCreateStep(2)}
@@ -538,10 +544,15 @@ export default function ProductsClient({
               />
             </div>
             <div>
-              <Label>Code</Label>
-              <Input
-                value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+              <Label>Description</Label>
+              <textarea
+                value={formData.description?.[0]?.content ?? ""}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  description: [{ title: "Description", content: e.target.value }],
+                })}
+                rows={5}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-900"
               />
             </div>
             {formData.price.map((p, i) => (

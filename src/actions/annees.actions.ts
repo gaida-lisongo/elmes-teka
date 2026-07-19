@@ -8,6 +8,7 @@ import connectToDb from "@/lib/utils/db";
 import Annee from "@/lib/models/Annee";
 import Commande from "@/lib/models/Commande";
 import Depense from "@/lib/models/Depense";
+import { checkStatus, initiateCollection } from "@/lib/utils/payment.service";
 
 export type ActionResponse<T = undefined> =
   | { success: true; message: string; data: T }
@@ -20,6 +21,16 @@ export interface AnneeListItem {
   debut: string;
   fin: string;
   slug: string;
+  status: "PENDING" | "ACTIVE" | "COMPLETED";
+  provider: {
+    name: "FLEXPAY";
+    orderNumber: string | null;
+    message: string;
+    status: "PENDING" | "PAID" | "FAILED";
+    amount: number;
+    currency: "USD" | "CDF";
+    paidAt: string | null;
+  };
   createdAt: string;
   totalRecettes: number;
   totalDepenses: number;
@@ -57,6 +68,13 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+function getSubscriptionAmount(currency: "USD" | "CDF") {
+  const taux = Number.parseFloat(process.env.TAUX ?? "0");
+  return currency === "CDF" && taux > 0
+    ? ({ amount: Math.round(50 * taux), currency: "CDF" } as const)
+    : ({ amount: 50, currency: "USD" } as const);
+}
+
 /* ───── Métriques ───── */
 
 export async function getAnneeMetrics(): Promise<ActionResponse<AnneeMetrics>> {
@@ -74,6 +92,7 @@ export async function getAnneeMetrics(): Promise<ActionResponse<AnneeMetrics>> {
     const now = new Date();
     const courant = await Annee.findOne({
       tenantId: tenantOid,
+      status: { $in: ["ACTIVE", null] },
       debut: { $lte: now },
       fin: { $gte: now },
     })
@@ -218,6 +237,16 @@ export async function getAnnees(
           debut: annee.debut.toISOString(),
           fin: annee.fin.toISOString(),
           slug: annee.slug,
+          status: annee.status ?? "ACTIVE",
+          provider: {
+            name: annee.provider?.name ?? "FLEXPAY",
+            orderNumber: annee.provider?.orderNumber ?? null,
+            message: annee.provider?.message ?? "Exercice existant avant la facturation annuelle.",
+            status: annee.provider?.status ?? "PAID",
+            amount: annee.provider?.amount ?? 0,
+            currency: annee.provider?.currency ?? "USD",
+            paidAt: annee.provider?.paidAt?.toISOString() ?? null,
+          },
           createdAt: annee.createdAt.toISOString(),
           totalRecettes,
           totalDepenses,
@@ -243,7 +272,9 @@ export async function getAnnees(
 export async function createAnnee(input: {
   debut: string;
   fin: string;
-}): Promise<ActionResponse<{ id: string }>> {
+  phone: string;
+  currency: "USD" | "CDF";
+}): Promise<ActionResponse<{ id: string; paymentInitiated: boolean }>> {
   try {
     const { tenantId } = await requireTenantSession();
     await connectToDb();
@@ -258,6 +289,12 @@ export async function createAnnee(input: {
     if (!isNaN(debut.getTime()) && !isNaN(fin.getTime()) && fin <= debut) {
       errors.fin = "La date de fin doit etre posterieure a la date de debut.";
     }
+    if (!input.phone || input.phone.trim().length < 8) {
+      errors.phone = "Numero de telephone invalide.";
+    }
+    if (!["USD", "CDF"].includes(input.currency)) {
+      errors.currency = "Devise invalide.";
+    }
 
     if (Object.keys(errors).length > 0) {
       return { success: false, message: "Champs invalides.", errors };
@@ -270,22 +307,206 @@ export async function createAnnee(input: {
       return { success: false, message: "Un exercice avec ce slug existe deja." };
     }
 
+    const payment = getSubscriptionAmount(input.currency);
     const annee = await Annee.create({
       tenantId: new Types.ObjectId(tenantId),
       debut,
       fin,
       slug,
+      status: "PENDING",
+      provider: {
+        name: "FLEXPAY",
+        orderNumber: null,
+        message: "Initiation du paiement en cours.",
+        status: "PENDING",
+        amount: payment.amount,
+        currency: payment.currency,
+        paidAt: null,
+      },
     });
+
+    const paymentResult = await initiateCollection({
+      phone: input.phone.trim(),
+      amount: payment.amount,
+      reference: `ANNEE-${annee._id.toString()}`,
+      currency: payment.currency,
+    });
+    const paymentInitiated = Boolean(paymentResult.success && paymentResult.orderNumber);
+
+    await Annee.updateOne(
+      { _id: annee._id, tenantId: new Types.ObjectId(tenantId) },
+      {
+        $set: {
+          "provider.orderNumber": paymentResult.orderNumber ?? null,
+          "provider.message": paymentResult.message ?? paymentResult.error ?? "Echec de l'initiation du paiement.",
+          "provider.status": paymentInitiated ? "PENDING" : "FAILED",
+        },
+      }
+    );
 
     revalidatePath("/annees");
 
     return {
       success: true,
-      message: "Exercice cree.",
-      data: { id: annee._id.toString() },
+      message: paymentInitiated
+        ? "Exercice cree, paiement initie."
+        : "Exercice cree, mais le paiement n'a pas pu etre initie.",
+      data: { id: annee._id.toString(), paymentInitiated },
     };
   } catch (error: any) {
     return { success: false, message: error.message || "Erreur creation." };
+  }
+}
+
+export async function initiateAnneePayment(input: {
+  anneeId: string;
+  phone: string;
+  currency: "USD" | "CDF";
+}): Promise<ActionResponse<{ orderNumber: string }>> {
+  try {
+    const { tenantId } = await requireTenantSession();
+    await connectToDb();
+
+    if (!Types.ObjectId.isValid(input.anneeId)) {
+      return { success: false, message: "Exercice invalide." };
+    }
+    if (!input.phone || input.phone.trim().length < 8) {
+      return { success: false, message: "Numero de telephone invalide." };
+    }
+
+    const annee = await Annee.findOne({ _id: input.anneeId, tenantId }).lean();
+    if (!annee) return { success: false, message: "Exercice introuvable." };
+    if (annee.status !== "PENDING") {
+      return { success: false, message: "Seul un exercice en attente peut etre paye." };
+    }
+    if (annee.provider?.orderNumber && annee.provider.status === "PENDING") {
+      return {
+        success: true,
+        message: "Paiement deja initie.",
+        data: { orderNumber: annee.provider.orderNumber },
+      };
+    }
+
+    const payment = getSubscriptionAmount(input.currency);
+    const result = await initiateCollection({
+      phone: input.phone.trim(),
+      amount: payment.amount,
+      reference: `ANNEE-${annee._id.toString()}`,
+      currency: payment.currency,
+    });
+    const initiated = Boolean(result.success && result.orderNumber);
+    await Annee.updateOne(
+      { _id: annee._id, tenantId },
+      {
+        $set: {
+          provider: {
+            name: "FLEXPAY",
+            orderNumber: result.orderNumber ?? null,
+            message: result.message ?? result.error ?? "Echec de l'initiation du paiement.",
+            status: initiated ? "PENDING" : "FAILED",
+            amount: payment.amount,
+            currency: payment.currency,
+            paidAt: null,
+          },
+        },
+      }
+    );
+    revalidatePath("/annees");
+
+    if (!initiated || !result.orderNumber) {
+      return { success: false, message: result.error ?? "Echec de l'initiation du paiement." };
+    }
+    return { success: true, message: "Paiement initie.", data: { orderNumber: result.orderNumber } };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Erreur paiement." };
+  }
+}
+
+export async function verifyAnneePayment(
+  anneeId: string
+): Promise<ActionResponse<{ status: "PENDING" | "ACTIVE" }>> {
+  try {
+    const { tenantId } = await requireTenantSession();
+    await connectToDb();
+    if (!Types.ObjectId.isValid(anneeId)) {
+      return { success: false, message: "Exercice invalide." };
+    }
+
+    const annee = await Annee.findOne({ _id: anneeId, tenantId }).lean();
+    if (!annee) return { success: false, message: "Exercice introuvable." };
+    if (annee.status === "ACTIVE") {
+      return { success: true, message: "Exercice deja actif.", data: { status: "ACTIVE" } };
+    }
+    if (annee.status !== "PENDING" || !annee.provider?.orderNumber) {
+      return { success: false, message: "Aucun paiement en attente pour cet exercice." };
+    }
+
+    const result = await checkStatus(annee.provider.orderNumber);
+    if (!result.success) {
+      await Annee.updateOne(
+        { _id: anneeId, tenantId },
+        { $set: { "provider.message": result.error ?? "Verification impossible." } }
+      );
+      return { success: false, message: result.error ?? "Verification impossible." };
+    }
+
+    if (result.status === "SUCCES") {
+      await Annee.updateOne(
+        { _id: anneeId, tenantId, status: "PENDING" },
+        {
+          $set: {
+            status: "ACTIVE",
+            "provider.status": "PAID",
+            "provider.message": result.message ?? "Paiement confirme.",
+            "provider.paidAt": new Date(),
+          },
+        }
+      );
+      revalidatePath("/annees");
+      revalidatePath("/", "layout");
+      return { success: true, message: "Paiement confirme, exercice actif.", data: { status: "ACTIVE" } };
+    }
+
+    const failed = result.status === "ECHEC";
+    await Annee.updateOne(
+      { _id: anneeId, tenantId },
+      {
+        $set: {
+          "provider.status": failed ? "FAILED" : "PENDING",
+          "provider.message": result.message ?? (failed ? "Paiement echoue." : "Paiement en attente."),
+        },
+      }
+    );
+    revalidatePath("/annees");
+    return {
+      success: true,
+      message: failed ? "Le paiement a echoue." : "Paiement toujours en attente.",
+      data: { status: "PENDING" },
+    };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Erreur verification." };
+  }
+}
+
+export async function completeAnnee(anneeId: string): Promise<ActionResponse<null>> {
+  try {
+    const { tenantId } = await requireTenantSession();
+    await connectToDb();
+    if (!Types.ObjectId.isValid(anneeId)) {
+      return { success: false, message: "Exercice invalide." };
+    }
+    const result = await Annee.updateOne(
+      { _id: anneeId, tenantId, status: "ACTIVE" },
+      { $set: { status: "COMPLETED" } }
+    );
+    if (result.modifiedCount !== 1) {
+      return { success: false, message: "Seul un exercice actif peut etre cloture." };
+    }
+    revalidatePath("/annees");
+    revalidatePath("/", "layout");
+    return { success: true, message: "Exercice cloture.", data: null };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Erreur cloture." };
   }
 }
 

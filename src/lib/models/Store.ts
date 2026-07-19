@@ -196,7 +196,7 @@ const StoreSchema = new Schema<IStore>(
     status: {
       type: String,
       enum: ["PENDING_PAYMENT", "ACTIVE", "INACTIVE", "ARCHIVED"],
-      default: "PENDING_PAYMENT",
+      default: "ACTIVE",
       index: true,
     },
     payment: {

@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Schema, model, models, type Model, type Types } from "mongoose";
 
 export interface ICustomer {
+  tenantId: Types.ObjectId;
   name: string;
   phone: string;
   email?: string;
@@ -13,6 +14,7 @@ export interface ICustomer {
 
 const CustomerSchema = new Schema<ICustomer>(
   {
+    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
     name: {
       type: String,
       required: true,
@@ -33,7 +35,6 @@ const CustomerSchema = new Schema<ICustomer>(
     matricule: {
       type: String,
       required: true,
-      unique: true,
       default: uuidv4,
       index: true,
     },
@@ -50,10 +51,12 @@ const CustomerSchema = new Schema<ICustomer>(
   }
 );
 
-CustomerSchema.index({ phone: 1 }, { unique: true });
+CustomerSchema.index({ tenantId: 1, phone: 1 }, { unique: true });
+CustomerSchema.index({ tenantId: 1, matricule: 1 }, { unique: true });
+CustomerSchema.index({ tenantId: 1, name: 1 });
 CustomerSchema.index(
   { email: 1 },
-  { unique: true, partialFilterExpression: { email: { $type: "string" } } }
+  { partialFilterExpression: { email: { $type: "string" } } }
 );
 
 const Customer =

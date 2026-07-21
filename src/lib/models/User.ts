@@ -27,7 +27,7 @@ export interface IUser {
   telephone: string;
   boutique?: Types.ObjectId | null;
   email: string;
-  secure: string;
+  secure?: string;
   matricule: string;
   status: AccountStatus;
   photo?: string | null;

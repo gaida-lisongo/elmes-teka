@@ -220,7 +220,7 @@ async function detectAccount(userId: Types.ObjectId): Promise<{
       accountType: "SALER",
       tenantId: tenant._id.toString(),
       salerId: saler._id.toString(),
-      storeId: saler.storeId.toString(),
+      storeId: saler?.storeId ? saler?.storeId.toString() : '',
       status: tenant.status === "ACTIVE" ? saler.status : tenant.status,
     };
   }
@@ -481,7 +481,7 @@ export async function authenticateUser(
       return { success: false, message: GENERIC_LOGIN_ERROR };
     }
 
-    const passwordIsValid = await verifyPassword(password, user.secure);
+    const passwordIsValid = await verifyPassword(password, user.secure as string);
 
     if (!passwordIsValid) {
       console.warn("AUTHENTICATE_USER_REJECTED", { reason: "bad_password", userId: user._id.toString() });

@@ -279,7 +279,7 @@ export async function createProduct(input: {
       price: input.price,
       photos: input.photos ?? [],
       description: input.description ?? [],
-      status: input.status || "ACTIVE",
+      status: input.status as "ACTIVE",
     });
 
     revalidatePath("/products");

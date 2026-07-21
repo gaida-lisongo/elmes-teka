@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Types } from "mongoose";
+import { Types, PipelineStage } from "mongoose";
 import { randomBytes } from "node:crypto";
 
 import { requireTenantSession } from "@/lib/auth/require-tenant";
@@ -119,7 +119,7 @@ export async function getSalers(
     }
 
     /* On cherche d'abord les Saler, puis on joint User et Store */
-    const pipeline: Record<string, unknown>[] = [
+    const pipeline: PipelineStage[] = [
       { $match: match },
       { $sort: { createdAt: -1 } },
       { $skip: skip },
@@ -166,7 +166,7 @@ export async function getSalers(
     const total = countResult?.total ?? 0;
     const totalPages = Math.ceil(total / safeLimit) || 1;
 
-    const items = (await Saler.aggregate(pipeline)) as any[];
+    const items = (await Saler.aggregate(pipeline as PipelineStage[])) as any[];
 
     return {
       success: true,

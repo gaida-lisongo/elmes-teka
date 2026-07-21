@@ -127,7 +127,7 @@ export async function getAdminShellAccount(): Promise<AdminShellContextValue | n
         type: "SALER",
         tenantId: tenant._id.toString(),
         salerId: saler._id.toString(),
-        storeId: saler.storeId.toString(),
+        storeId: saler?.storeId ? saler?.storeId.toString() : "",
         designation: tenant.designation,
         logo: tenant.logo || null,
         storeDesignation: store?.designation || null,

@@ -19,7 +19,7 @@ import {
 } from "@/lib/utils/payment.service";
 
 export type ActionResponse<T = undefined> =
-  | { success: true; message: string; data: T }
+  | { success: true; message: string; data: T; errors?: Record<string, string> }
   | { success: false; message: string; errors?: Record<string, string> };
 
 /* ───── Types ───── */
@@ -335,108 +335,108 @@ export async function initiateStorePayment(input: {
     message: "La facturation est desormais geree par exercice comptable.",
   };
   /* Ancien workflow conserve temporairement pour compatibilite des donnees. */
-  try {
-    const { tenantId } = await requireTenantSession();
-    await connectToDb();
+  // try {
+  //   const { tenantId } = await requireTenantSession();
+  //   await connectToDb();
 
-    if (!Types.ObjectId.isValid(input.storeId)) {
-      return { success: false, message: "Boutique invalide." };
-    }
+  //   if (!Types.ObjectId.isValid(input.storeId)) {
+  //     return { success: false, message: "Boutique invalide." };
+  //   }
 
-    const store = await Store.findOne({
-      _id: input.storeId,
-      tenantId,
-    }).lean();
+  //   const store = await Store.findOne({
+  //     _id: input.storeId,
+  //     tenantId,
+  //   }).lean();
 
-    if (!store) {
-      return { success: false, message: "Boutique introuvable." };
-    }
+  //   if (!store) {
+  //     return { success: false, message: "Boutique introuvable." };
+  //   }
 
-    if (store.payment?.status === "PAID") {
-      return { success: false, message: "Cette boutique est deja payee." };
-    }
+  //   if (store!.payment?.status === "PAID") {
+  //     return { success: false, message: "Cette boutique est deja payee." };
+  //   }
 
-    if (store.payment?.orderNumber) {
-      /* Ne pas créer une nouvelle transaction si une existe déjà */
-      return {
-        success: true,
-        message: "Paiement deja initie.",
-        data: {
-          orderNumber: store.payment.orderNumber,
-          amount: store.payment.amount,
-          currency: store.payment.currency,
-        },
-      };
-    }
+  //   if (store!.payment?.orderNumber) {
+  //     /* Ne pas créer une nouvelle transaction si une existe déjà */
+  //     return {
+  //       success: true,
+  //       message: "Paiement deja initie.",
+  //       data: {
+  //         orderNumber: store!.payment.orderNumber!,
+  //         amount: store!.payment.amount!,
+  //         currency: store!.payment.currency!,
+  //       },
+  //     };
+  //   }
 
-    const tauxStr = process.env.TAUX;
-    const taux = tauxStr ? parseFloat(tauxStr) : 0;
+  //   const tauxStr = process.env.TAUX;
+  //   const taux = tauxStr ? parseFloat(tauxStr) : 0;
 
-    let amount: number;
-    let currency: "USD" | "CDF";
+  //   let amount: number;
+  //   let currency: "USD" | "CDF";
 
-    if (input.currency === "CDF" && taux > 0) {
-      amount = Math.round(50 * taux);
-      currency = "CDF";
-    } else {
-      amount = 50;
-      currency = "USD";
-    }
+  //   if (input.currency === "CDF" && taux > 0) {
+  //     amount = Math.round(50 * taux);
+  //     currency = "CDF";
+  //   } else {
+  //     amount = 50;
+  //     currency = "USD";
+  //   }
 
-    if (amount <= 0) {
-      return { success: false, message: "Montant invalide." };
-    }
+  //   if (amount <= 0) {
+  //     return { success: false, message: "Montant invalide." };
+  //   }
 
-    if (!input.phone || input.phone.trim().length < 8) {
-      return { success: false, message: "Numero de telephone invalide." };
-    }
+  //   if (!input.phone || input.phone.trim().length < 8) {
+  //     return { success: false, message: "Numero de telephone invalide." };
+  //   }
 
-    /* Appel FlexPay */
-    const paymentResult = await initiateCollection({
-      phone: input.phone.trim(),
-      amount,
-      reference: store.reference,
-      currency,
-    });
+  //   /* Appel FlexPay */
+  //   const paymentResult = await initiateCollection({
+  //     phone: input.phone.trim(),
+  //     amount,
+  //     reference: store.reference!,
+  //     currency,
+  //   });
 
-    if (!paymentResult.success || !paymentResult.orderNumber) {
-      return {
-        success: false,
-        message: paymentResult.error || "Echec du paiement.",
-      };
-    }
+  //   if (!paymentResult.success || !paymentResult.orderNumber) {
+  //     return {
+  //       success: false,
+  //       message: paymentResult.error || "Echec du paiement.",
+  //     };
+  //   }
 
-    /* Enregistrer la tentative de paiement */
-    await Store.updateOne(
-      { _id: input.storeId },
-      {
-        $set: {
-          payment: {
-            amount,
-            currency,
-            orderNumber: paymentResult.orderNumber,
-            provider: "FLEXPAY",
-            status: "PENDING",
-            paidAt: null,
-          },
-        },
-      }
-    );
+  //   /* Enregistrer la tentative de paiement */
+  //   await Store.updateOne(
+  //     { _id: input.storeId },
+  //     {
+  //       $set: {
+  //         payment: {
+  //           amount,
+  //           currency,
+  //           orderNumber: paymentResult.orderNumber,
+  //           provider: "FLEXPAY",
+  //           status: "PENDING",
+  //           paidAt: null,
+  //         },
+  //       },
+  //     }
+  //   );
 
-    revalidatePath("/stores");
+  //   revalidatePath("/stores");
 
-    return {
-      success: true,
-      message: "Paiement initie.",
-      data: {
-        orderNumber: paymentResult.orderNumber,
-        amount,
-        currency,
-      },
-    };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur paiement." };
-  }
+  //   return {
+  //     success: true,
+  //     message: "Paiement initie.",
+  //     data: {
+  //       orderNumber: paymentResult.orderNumber,
+  //       amount,
+  //       currency,
+  //     },
+  //   };
+  // } catch (error: any) {
+  //   return { success: false, message: error.message || "Erreur paiement." };
+  // }
 }
 
 /* ───── Étape 3: Vérification du paiement ───── */
@@ -450,86 +450,86 @@ export async function verifyStorePayment(
     message: "La facturation est desormais geree par exercice comptable.",
   };
   /* Ancien workflow conserve temporairement pour compatibilite des donnees. */
-  try {
-    const { tenantId } = await requireTenantSession();
-    await connectToDb();
+  // try {
+  //   const { tenantId } = await requireTenantSession();
+  //   await connectToDb();
 
-    if (!Types.ObjectId.isValid(storeId)) {
-      return { success: false, message: "Boutique invalide." };
-    }
+  //   if (!Types.ObjectId.isValid(storeId)) {
+  //     return { success: false, message: "Boutique invalide." };
+  //   }
 
-    const store = await Store.findOne({ _id: storeId, tenantId }).lean();
+  //   const store = await Store.findOne({ _id: storeId, tenantId }).lean();
 
-    if (!store) {
-      return { success: false, message: "Boutique introuvable." };
-    }
+  //   if (!store) {
+  //     return { success: false, message: "Boutique introuvable." };
+  //   }
 
-    if (!store.payment?.orderNumber) {
-      return { success: false, message: "Aucun paiement initie." };
-    }
+  //   if (!store.payment?.orderNumber) {
+  //     return { success: false, message: "Aucun paiement initie." };
+  //   }
 
-    if (store.payment?.status === "PAID") {
-      return {
-        success: true,
-        message: "Boutique deja active.",
-        data: { status: "PAID", paid: true },
-      };
-    }
+  //   if (store.payment?.status === "PAID") {
+  //     return {
+  //       success: true,
+  //       message: "Boutique deja active.",
+  //       data: { status: "PAID", paid: true },
+  //     };
+  //   }
 
-    /* Vérification via FlexPay */
-    const statusResult = await checkStatus(store.payment.orderNumber);
+  //   /* Vérification via FlexPay */
+  //   const statusResult = await checkStatus(store.payment.orderNumber);
 
-    if (!statusResult.success) {
-      return {
-        success: false,
-        message: statusResult.error || "Impossible de verifier le paiement.",
-      };
-    }
+  //   if (!statusResult.success) {
+  //     return {
+  //       success: false,
+  //       message: statusResult.error || "Impossible de verifier le paiement.",
+  //     };
+  //   }
 
-    if (statusResult.status === "SUCCES") {
-      await Store.updateOne(
-        { _id: storeId },
-        {
-          $set: {
-            status: "ACTIVE",
-            "payment.status": "PAID",
-            "payment.paidAt": new Date(),
-          },
-        }
-      );
+  //   if (statusResult.status === "SUCCES") {
+  //     await Store.updateOne(
+  //       { _id: storeId },
+  //       {
+  //         $set: {
+  //           status: "ACTIVE",
+  //           "payment.status": "PAID",
+  //           "payment.paidAt": new Date(),
+  //         },
+  //       }
+  //     );
 
-      revalidatePath("/stores");
+  //     revalidatePath("/stores");
 
-      return {
-        success: true,
-        message: "Paiement confirme, boutique active.",
-        data: { status: "PAID", paid: true },
-      };
-    }
+  //     return {
+  //       success: true,
+  //       message: "Paiement confirme, boutique active.",
+  //       data: { status: "PAID", paid: true },
+  //     };
+  //   }
 
-    if (statusResult.status === "ECHEC") {
-      await Store.updateOne(
-        { _id: storeId },
-        { $set: { "payment.status": "FAILED" } }
-      );
+  //   if (statusResult.status === "ECHEC") {
+  //     await Store.updateOne(
+  //       { _id: storeId },
+  //       { $set: { "payment.status": "FAILED" } }
+  //     );
 
-      revalidatePath("/stores");
+  //     revalidatePath("/stores");
 
-      return {
-        success: true,
-        message: "Le paiement a echoue.",
-        data: { status: "FAILED", paid: false },
-      };
-    }
+  //     return {
+  //       success: true,
+  //       message: "Le paiement a echoue.",
+  //       data: { status: "FAILED", paid: false },
+  //     };
+  //   }
 
-    return {
-      success: true,
-      message: "Paiement en attente de confirmation.",
-      data: { status: "PENDING", paid: false },
-    };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur verification." };
-  }
+  //   return {
+  //     success: true,
+  //     message: "Paiement en attente de confirmation.",
+  //     data: { status: "PENDING", paid: false },
+  //   };
+  // } catch (error: any) {
+  //   return { success: false, message: error.message || "Erreur verification." };
+  // }
 }
 
 /* ───── Mise à jour boutique ───── */

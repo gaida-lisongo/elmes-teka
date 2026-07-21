@@ -35,7 +35,7 @@ const CustomerSchema = new Schema<ICustomer>(
     matricule: {
       type: String,
       required: true,
-      default: uuidv4,
+      default: () => uuidv4(),
       index: true,
     },
     promotions: [

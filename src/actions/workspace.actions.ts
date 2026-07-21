@@ -241,7 +241,7 @@ export async function createSale(
         .session(session)
         .lean();
       if (products.length !== ids.length) throw new Error("PRODUCT_INVALID");
-      let currency = "";
+      let currency: "USD" | "CDF" | "" = "";
       let subtotal = 0;
       const lines = input.lines.map((line) => {
         if (!Number.isInteger(line.quantity) || line.quantity < 1)
@@ -253,7 +253,7 @@ export async function createSale(
         if (!price) throw new Error("PRICE_MISSING");
         if (currency && currency !== price.currency)
           throw new Error("MIXED_CURRENCY");
-        currency = price.currency;
+        currency = price.currency as ('USD' | 'CDF');
         const total = price.amount * line.quantity;
         subtotal += total;
         return {
@@ -262,7 +262,7 @@ export async function createSale(
           code: product.code,
           qte: line.quantity,
           unitPrice: price.amount,
-          currency: price.currency,
+          currency: price.currency as "USD" | "CDF",
           reduction: 0,
           total,
         };
@@ -306,7 +306,8 @@ export async function createSale(
         if (updated.modifiedCount !== 1) throw new Error("INSUFFICIENT_STOCK");
       }
       const reference = ref("CMD");
-      [created] = await Commande.create(
+
+      const createdDocs = await Commande.create(
         [
           {
             tenantId: oid(context.tenantId),
@@ -314,7 +315,7 @@ export async function createSale(
             commandes: lines,
             anneeId: oid(annee.id),
             clientId: oid(input.customerId),
-            currency,
+            currency: currency as "USD" | "CDF",
             shopId: oid(context.storeId),
             promotion,
             subtotal,
@@ -327,6 +328,7 @@ export async function createSale(
         ],
         { session },
       );
+      created = createdDocs[0];
     });
     await publishTenantEvent(
       (await requireSalerSession()).tenantId,

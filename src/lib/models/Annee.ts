@@ -58,8 +58,9 @@ const AnneeSchema = new Schema<IAnnee>(
       type: Date,
       required: true,
       validate: {
-        validator(this: IAnnee, value: Date) {
-          return !this.debut || value > this.debut;
+        validator(value: Date) {
+          const doc = this as IAnnee;
+          return !doc.debut || value > doc.debut;
         },
         message: "La date de fin doit être postérieure à la date de début.",
       },

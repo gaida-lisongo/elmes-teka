@@ -1,0 +1,64 @@
+import React from "react";
+import PageBreadcrumb from "@/components/common/PageBreadCrumb";
+
+export interface ResourcePageShellProps {
+  title: string;
+  description?: string;
+  breadcrumbs?: React.ReactNode;
+  metrics?: React.ReactNode;
+  toolbar?: React.ReactNode;
+  filters?: React.ReactNode;
+  content: React.ReactNode;
+  pagination?: React.ReactNode;
+  drawer?: React.ReactNode;
+  emptyState?: React.ReactNode;
+}
+
+export default function ResourcePageShell({
+  title,
+  description,
+  breadcrumbs,
+  metrics,
+  toolbar,
+  filters,
+  content,
+  pagination,
+  drawer,
+  emptyState,
+}: ResourcePageShellProps) {
+  return (
+    <div>
+      {/* Breadcrumb */}
+      {breadcrumbs ?? <PageBreadcrumb pageTitle={title} />}
+
+      {/* Description */}
+      {description && (
+        <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
+          <span className="whitespace-pre-wrap break-words">{description}</span>
+        </p>
+      )}
+
+      {/* Metrics */}
+      {metrics && <div className="mb-6">{metrics}</div>}
+
+      {/* Toolbar */}
+      {toolbar && <div className="mb-4">{toolbar}</div>}
+
+      {/* Filters */}
+      {filters && <div className="mb-4">{filters}</div>}
+
+      {/* Content or Empty State */}
+      {emptyState ?? (
+        <div className="">
+          {content}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {pagination && <div className="mt-6">{pagination}</div>}
+
+      {/* Drawer */}
+      {drawer}
+    </div>
+  );
+}

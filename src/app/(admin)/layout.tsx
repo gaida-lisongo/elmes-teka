@@ -1,39 +1,111 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useSidebar } from "@/context/SidebarContext";
-import AppHeader from "@/layout/AppHeader";
-import AppSidebar from "@/layout/AppSidebar";
-import Backdrop from "@/layout/Backdrop";
-import React from "react";
+import { AdminShellProvider } from "@/context/AdminShellContext";
+import { getAdminShellAccount } from "@/lib/auth/admin-shell";
+import Annee from "@/lib/models/Annee";
+import AdminLayoutClient from "@/layout/AdminLayoutClient";
+import type { MenuAppSection } from "@/layout/AppSidebar";
 
-export default function AdminLayout({
+function formatAnneeLabel(debut: Date, fin: Date): string {
+  return `${debut.getFullYear()} - ${fin.getFullYear()}`;
+}
+
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { isExpanded, isHovered, isMobileOpen } = useSidebar();
+  const shell = await getAdminShellAccount();
 
-  // Dynamic class for main content margin based on sidebar state
-  const mainContentMargin = isMobileOpen
-    ? "ml-0"
-    : isExpanded || isHovered
-    ? "lg:ml-[290px]"
-    : "lg:ml-[90px]";
+  if (!shell) {
+    redirect("/signin");
+  }
+
+  const annees = shell.account.tenantId
+    ? await Annee.find({
+        tenantId: shell.account.tenantId,
+        status: "ACTIVE",
+      })
+        .select("_id debut fin slug")
+        .sort({ debut: -1 })
+        .lean()
+    : [];
+
+  const dashboardMenu: MenuAppSection = {
+    menuType: "APPLICATION",
+    navItems: [
+      {
+        icon: "grid",
+        name: "Dashboard",
+        path: "/",
+      },
+    ],
+  };
+
+  const tenantMenu: MenuAppSection = {
+    menuType: `${shell.account.designation || "TENANT"} TENANT`,
+    navItems: [
+      {
+        icon: "user",
+        name: "Agents",
+        path: "/agents",
+      },
+      {
+        icon: "page",
+        name: "Articles",
+        path: "/products",
+      },
+      {
+        icon: "folder",
+        name: "Points de ventes",
+        path: "/stores",
+      },
+    ],
+  };
+
+  const salerMenu: MenuAppSection = {
+    menuType: "VENDEUR",
+    navItems: [
+      {
+        icon: "grid",
+        name: "Espace de travail",
+        path: "/",
+      },
+      {
+        icon: "dollar",
+        name: "Ventes",
+        subItems: annees.map((annee) => ({
+          name: formatAnneeLabel(annee.debut, annee.fin),
+          path: `/commandes/${annee.slug}`,
+        })),
+      },
+      {
+        icon: "dollar",
+        name: "Dépenses",
+        subItems: annees.map((annee) => ({
+          name: formatAnneeLabel(annee.debut, annee.fin),
+          path: `/depenses/${annee.slug}`,
+        })),
+      },
+      {
+        icon: "box",
+        name: "Stocks",
+        subItems: annees.map((annee) => ({
+          name: formatAnneeLabel(annee.debut, annee.fin),
+          path: `/stocks/${annee.slug}`,
+        })),
+      }
+    ],
+  };
+
+  const menuApp: MenuAppSection[] =
+    shell.account.type === "TENANT"
+      ? [dashboardMenu, tenantMenu]
+      : [salerMenu];
 
   return (
-    <div className="min-h-screen xl:flex">
-      {/* Sidebar and Backdrop */}
-      <AppSidebar />
-      <Backdrop />
-      {/* Main Content Area */}
-      <div
-        className={`flex-1 transition-all  duration-300 ease-in-out ${mainContentMargin}`}
-      >
-        {/* Header */}
-        <AppHeader />
-        {/* Page Content */}
-        <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">{children}</div>
-      </div>
-    </div>
+    <AdminShellProvider value={shell}>
+      <AdminLayoutClient menuApp={menuApp}>{children}</AdminLayoutClient>
+    </AdminShellProvider>
   );
 }

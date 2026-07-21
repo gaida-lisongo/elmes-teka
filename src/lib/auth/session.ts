@@ -102,25 +102,14 @@ export async function createSessionCookie(
 }
 
 export async function getSession(): Promise<SessionPayload | null> {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
-    if (!token) {
-      return null;
-    }
-
-    const payload = verifySession(token);
-
-    if (!payload) {
-      cookieStore.delete(SESSION_COOKIE_NAME);
-    }
-
-    return payload;
-  } catch (error) {
-    console.error("GET_SESSION_ERROR", error);
+  if (!token) {
     return null;
   }
+
+  return verifySession(token);
 }
 
 export async function deleteSession(): Promise<void> {

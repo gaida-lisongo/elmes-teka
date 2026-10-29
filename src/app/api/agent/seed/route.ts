@@ -179,6 +179,17 @@ export async function POST(request: NextRequest) {
     /* ═══════════════════════════════════════
        5. DONNÉES FINANCIÈRES (parallèle)
     ═══════════════════════════════════════ */
+    // diagnostic guard — should never trigger if ObjectId construction worked
+    if (!shopId || !shopId2 || !anneeId || !agentUserId) {
+      return NextResponse.json({
+        error: "diagnostic: null ObjectId",
+        shopId: shopId?.toString(),
+        shopId2: shopId2?.toString(),
+        anneeId: anneeId?.toString(),
+        agentUserId: agentUserId?.toString(),
+      }, { status: 500 });
+    }
+
     await Promise.all([
       /* Immobilisations */
       Immobilisation.insertMany([
@@ -187,8 +198,8 @@ export async function POST(request: NextRequest) {
         { tenantId, shopId, anneeId, agentId: agentUserId, designation: "Climatiseurs bureaux (×4)", categorie: "MATERIEL", valeurAchat: 3200, dureeVieAns: 7, dateAcquisition: ago(90), reference: ref("IMM"), status: "ACTIF", description: "" },
         { tenantId, shopId, anneeId, agentId: agentUserId, designation: "Mobilier de bureau complet", categorie: "MOBILIER", valeurAchat: 8500, dureeVieAns: 10, dateAcquisition: ago(200), reference: ref("IMM"), status: "ACTIF", description: "" },
         { tenantId, shopId, anneeId, agentId: agentUserId, designation: "Serveur Dell PowerEdge R640", categorie: "MATERIEL", valeurAchat: 6800, dureeVieAns: 5, dateAcquisition: ago(60), reference: ref("IMM"), status: "ACTIF", description: "" },
-        { tenantId, shopId2, anneeId, agentId: agentUserId, designation: "Local commercial Gombe", categorie: "IMMEUBLE", valeurAchat: 120000, dureeVieAns: 30, dateAcquisition: ago(730), reference: ref("IMM"), status: "ACTIF", description: "" },
-        { tenantId, shopId2, anneeId, agentId: agentUserId, designation: "Photocopieur Xerox WorkCentre", categorie: "MATERIEL", valeurAchat: 4200, dureeVieAns: 6, dateAcquisition: ago(300), reference: ref("IMM"), status: "ACTIF", description: "" },
+        { tenantId, shopId: shopId2, anneeId, agentId: agentUserId, designation: "Local commercial Gombe", categorie: "IMMEUBLE", valeurAchat: 120000, dureeVieAns: 30, dateAcquisition: ago(730), reference: ref("IMM"), status: "ACTIF", description: "" },
+        { tenantId, shopId: shopId2, anneeId, agentId: agentUserId, designation: "Photocopieur Xerox WorkCentre", categorie: "MATERIEL", valeurAchat: 4200, dureeVieAns: 6, dateAcquisition: ago(300), reference: ref("IMM"), status: "ACTIF", description: "" },
       ]),
 
       /* Fonds propres */
@@ -208,29 +219,29 @@ export async function POST(request: NextRequest) {
         { tenantId, shopId, anneeId, agentId: agentUserId, libelle: "Achat fournitures de bureau", montant: 450, currency: "USD", type: "SORTIE", reference: ref("LIQ"), dateOperation: ago(12), status: "VALIDE" },
         { tenantId, shopId, anneeId, agentId: agentUserId, libelle: "Encaissement ventes journalières", montant: 3200000, currency: "CDF", type: "ENTREE", reference: ref("LIQ"), dateOperation: ago(1), status: "VALIDE" },
         { tenantId, shopId, anneeId, agentId: agentUserId, libelle: "Règlement salaires personnel", montant: 5400000, currency: "CDF", type: "SORTIE", reference: ref("LIQ"), dateOperation: ago(7), status: "VALIDE" },
-        { tenantId, shopId2, anneeId, agentId: agentUserId, libelle: "Vente équipements Hôtel Grand Palace", montant: 8900, currency: "USD", type: "ENTREE", reference: ref("LIQ"), dateOperation: ago(15), status: "VALIDE" },
-        { tenantId, shopId2, anneeId, agentId: agentUserId, libelle: "Carburant véhicule — livraisons", montant: 350000, currency: "CDF", type: "SORTIE", reference: ref("LIQ"), dateOperation: ago(4), status: "VALIDE" },
-        { tenantId, shopId2, anneeId, agentId: agentUserId, libelle: "Règlement École Saint-Joseph", montant: 1200, currency: "USD", type: "ENTREE", reference: ref("LIQ"), dateOperation: ago(20), status: "VALIDE" },
+        { tenantId, shopId: shopId2, anneeId, agentId: agentUserId, libelle: "Vente équipements Hôtel Grand Palace", montant: 8900, currency: "USD", type: "ENTREE", reference: ref("LIQ"), dateOperation: ago(15), status: "VALIDE" },
+        { tenantId, shopId: shopId2, anneeId, agentId: agentUserId, libelle: "Carburant véhicule — livraisons", montant: 350000, currency: "CDF", type: "SORTIE", reference: ref("LIQ"), dateOperation: ago(4), status: "VALIDE" },
+        { tenantId, shopId: shopId2, anneeId, agentId: agentUserId, libelle: "Règlement École Saint-Joseph", montant: 1200, currency: "USD", type: "ENTREE", reference: ref("LIQ"), dateOperation: ago(20), status: "VALIDE" },
         { tenantId, shopId, anneeId, agentId: agentUserId, libelle: "Maintenance groupe électrogène", montant: 680, currency: "USD", type: "SORTIE", reference: ref("LIQ"), dateOperation: ago(10), status: "VALIDE" },
         { tenantId, shopId, anneeId, agentId: agentUserId, libelle: "Ventes comptoir — semaine S42", montant: 7600000, currency: "CDF", type: "ENTREE", reference: ref("LIQ"), dateOperation: ago(14), status: "VALIDE" },
-        { tenantId, shopId2, anneeId, agentId: agentUserId, libelle: "Facture internet & téléphonie", montant: 850000, currency: "CDF", type: "SORTIE", reference: ref("LIQ"), dateOperation: ago(6), status: "VALIDE" },
+        { tenantId, shopId: shopId2, anneeId, agentId: agentUserId, libelle: "Facture internet & téléphonie", montant: 850000, currency: "CDF", type: "SORTIE", reference: ref("LIQ"), dateOperation: ago(6), status: "VALIDE" },
       ]),
 
       /* Dettes */
       Dette.insertMany([
         { tenantId, shopId, anneeId, fournisseurNom: "SOTRAKIN — Transport", fournisseurTel: "+243800100001", designation: "Service livraison Q3-2026", montant: 3500, currency: "USD", dateEcheance: from(45), dateCreation: ago(20), status: "EN_COURS", reference: ref("DET") },
         { tenantId, shopId, anneeId, fournisseurNom: "ELECTROGAZ SARL", fournisseurTel: "+243800100002", designation: "Facture électricité oct-2026", montant: 1200000, currency: "CDF", dateEcheance: from(15), dateCreation: ago(5), status: "EN_COURS", reference: ref("DET") },
-        { tenantId, shopId2, anneeId, fournisseurNom: "Imprimerie PRIMA", fournisseurTel: "+243800100003", designation: "Édition supports marketing 2026", montant: 2800000, currency: "CDF", dateEcheance: from(30), dateCreation: ago(10), status: "EN_COURS", reference: ref("DET") },
+        { tenantId, shopId: shopId2, anneeId, fournisseurNom: "Imprimerie PRIMA", fournisseurTel: "+243800100003", designation: "Édition supports marketing 2026", montant: 2800000, currency: "CDF", dateEcheance: from(30), dateCreation: ago(10), status: "EN_COURS", reference: ref("DET") },
         { tenantId, shopId, anneeId, fournisseurNom: "Congo IT Solutions", fournisseurTel: "+243800100004", designation: "Maintenance réseau Q3", montant: 1500, currency: "USD", dateEcheance: from(20), dateCreation: ago(7), status: "EN_COURS", reference: ref("DET") },
-        { tenantId, shopId2, anneeId, fournisseurNom: "SNEL — Raccordement", fournisseurTel: "+243800100005", designation: "Raccordement agence Gombe", montant: 4200, currency: "USD", dateEcheance: from(60), dateCreation: ago(3), status: "EN_COURS", reference: ref("DET") },
+        { tenantId, shopId: shopId2, anneeId, fournisseurNom: "SNEL — Raccordement", fournisseurTel: "+243800100005", designation: "Raccordement agence Gombe", montant: 4200, currency: "USD", dateEcheance: from(60), dateCreation: ago(3), status: "EN_COURS", reference: ref("DET") },
       ]),
 
       /* Créances */
       Creance.insertMany([
         { tenantId, shopId, anneeId, clientId: cIds[0], montant: 6800, currency: "USD", dateEcheance: from(30), dateCreation: ago(10), status: "EN_COURS", reference: ref("CRE") },
         { tenantId, shopId, anneeId, clientId: cIds[1], montant: 1200000, currency: "CDF", dateEcheance: from(15), dateCreation: ago(5), status: "EN_COURS", reference: ref("CRE") },
-        { tenantId, shopId2, anneeId, clientId: cIds[3], montant: 4500, currency: "USD", dateEcheance: from(45), dateCreation: ago(20), status: "EN_COURS", reference: ref("CRE") },
-        { tenantId, shopId2, anneeId, clientId: cIds[5], montant: 850000, currency: "CDF", dateEcheance: from(60), dateCreation: ago(3), status: "EN_COURS", reference: ref("CRE") },
+        { tenantId, shopId: shopId2, anneeId, clientId: cIds[3], montant: 4500, currency: "USD", dateEcheance: from(45), dateCreation: ago(20), status: "EN_COURS", reference: ref("CRE") },
+        { tenantId, shopId: shopId2, anneeId, clientId: cIds[5], montant: 850000, currency: "CDF", dateEcheance: from(60), dateCreation: ago(3), status: "EN_COURS", reference: ref("CRE") },
         { tenantId, shopId, anneeId, clientId: cIds[7], montant: 9200, currency: "USD", dateEcheance: from(20), dateCreation: ago(8), status: "EN_COURS", reference: ref("CRE") },
       ]),
 

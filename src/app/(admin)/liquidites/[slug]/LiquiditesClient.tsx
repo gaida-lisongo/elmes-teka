@@ -51,11 +51,13 @@ const emptyForm = {
 };
 
 export default function LiquiditesClient({
-  slug,
+  shopId,
+  anneeId,
   initialData,
   role,
 }: {
-  slug: string;
+  shopId: string;
+  anneeId: string;
   initialData: LiquiditesData | null;
   role: "TENANT" | "SALER";
 }) {
@@ -81,7 +83,7 @@ export default function LiquiditesClient({
     setLoading(true);
     setMessage("");
     try {
-      const result = await createLiquidite(slug, form);
+      const result = await createLiquidite({ ...form, shopId, anneeId });
       setMessage(result.message);
       if (result.success) {
         setOpen(false);

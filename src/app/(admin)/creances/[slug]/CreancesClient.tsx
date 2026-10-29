@@ -56,11 +56,13 @@ const emptyForm = {
 };
 
 export default function CreancesClient({
-  slug,
+  shopId,
+  anneeId,
   initialData,
   role,
 }: {
-  slug: string;
+  shopId: string;
+  anneeId: string;
   initialData: CreancesData | null;
   role: "TENANT" | "SALER";
 }) {
@@ -81,7 +83,7 @@ export default function CreancesClient({
     setLoading(true);
     setMessage("");
     try {
-      const result = await createCreance(slug, form);
+      const result = await createCreance({ ...form, shopId, anneeId });
       setMessage(result.message);
       if (result.success) {
         setOpen(false);

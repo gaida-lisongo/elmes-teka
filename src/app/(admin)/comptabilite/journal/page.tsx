@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 import { requireTenantSession } from "@/lib/auth/require-tenant";
 import connectToDb from "@/lib/utils/db";
 import Annee from "@/lib/models/Annee";
+import Store from "@/lib/models/Store";
 import JournalClient from "./JournalClient";
 
 // @ts-ignore – actions créées par Agent 2
@@ -44,6 +45,21 @@ export default async function JournalPage({
       const result = await getJournalOperations(anneeActive._id.toString());
       if (result.success) {
         let entries: typeof result.data = result.data;
+
+        /* Résoudre les noms de boutiques depuis leurs ObjectId */
+        const uniqueShopIds = [...new Set(entries.map((e: any) => e.shopId).filter(Boolean))];
+        const stores = uniqueShopIds.length > 0
+          ? await Store.find({
+              _id: { $in: uniqueShopIds.map((id: string) => new Types.ObjectId(id)) },
+            })
+              .select("_id designation")
+              .lean()
+          : [];
+        const storeNameMap: Record<string, string> = {};
+        for (const s of stores) {
+          storeNameMap[s._id.toString()] = s.designation;
+        }
+
         if (typeFilter) {
           entries = entries.filter((e: { type: string }) => e.type === typeFilter);
         }
@@ -60,7 +76,7 @@ export default async function JournalPage({
             montant: e.montant,
             currency: e.currency,
             reference: e.reference,
-            shopDesignation: e.shopId,
+            shopDesignation: storeNameMap[e.shopId] ?? e.shopId,
           }));
         initialData = { items, total, page: currentPage, totalPages };
       }

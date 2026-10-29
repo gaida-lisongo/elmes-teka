@@ -44,8 +44,12 @@ const emptyForm = {
 };
 
 export default function FondsClient({
+  shopId,
+  anneeId,
   initialData,
 }: {
+  shopId: string;
+  anneeId: string;
   initialData: IFondsSerialized[] | null;
 }) {
   const router = useRouter();
@@ -70,7 +74,7 @@ export default function FondsClient({
     setLoading(true);
     setMessage("");
     try {
-      const result = await createFonds(form);
+      const result = await createFonds({ ...form, shopId, anneeId });
       setMessage(result.message);
       if (result.success) {
         setOpen(false);

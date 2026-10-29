@@ -52,11 +52,13 @@ const emptyForm = {
 };
 
 export default function DettesClient({
-  slug,
+  shopId,
+  anneeId,
   initialData,
   role,
 }: {
-  slug: string;
+  shopId: string;
+  anneeId: string;
   initialData: DettesData | null;
   role: "TENANT" | "SALER";
 }) {
@@ -76,7 +78,7 @@ export default function DettesClient({
     setLoading(true);
     setMessage("");
     try {
-      const result = await createDette(slug, form);
+      const result = await createDette({ ...form, shopId, anneeId });
       setMessage(result.message);
       if (result.success) {
         setOpen(false);

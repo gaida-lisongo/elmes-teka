@@ -40,12 +40,40 @@ export interface ProductRankingItem {
   revenue: number;
   currency: string;
 }
+export interface TodayMetrics {
+  revenue: { totals: CurrencyTotal[]; transactionCount: number };
+  expenses: { totals: CurrencyTotal[]; expenseCount: number };
+}
+export interface StoreMetric {
+  storeId: string;
+  designation: string;
+  todayRevenue: CurrencyTotal[];
+  todayOrderCount: number;
+  activeSalersToday: number;
+}
+export interface DashboardAlert {
+  type: "pending_orders" | "supply_requests";
+  message: string;
+  count: number;
+}
+export interface TopClientItem {
+  clientId: string;
+  name: string;
+  phone: string;
+  orderCount: number;
+  revenue: number;
+  currency: string;
+}
 export interface DashboardData {
   scope: "TENANT" | "SALER";
   metrics: {
     revenue: { totals: CurrencyTotal[]; transactionCount: number };
     expenses: { totals: CurrencyTotal[]; expenseCount: number };
   };
+  today: TodayMetrics;
+  stores: StoreMetric[];
+  alerts: DashboardAlert[];
+  topClients: TopClientItem[];
   exercises: ExerciseOption[];
   selectedChartExercise: string | null;
   selectedTargetExercise: string | null;

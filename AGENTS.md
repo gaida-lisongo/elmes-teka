@@ -236,24 +236,44 @@ Ne pas introduire sans nécessité :
 
 ## 12. Exécution des commandes
 
-Ne jamais lancer :
+### Vérification avant déploiement
 
-- `npm run build` ;
-- `npm run lint` ;
-- `npm test` ;
-- `pnpm build` ;
-- `pnpm lint` ;
-- `yarn build` ;
-- toute commande de test, de lint ou de compilation.
+Toujours lancer le build avant de déclencher un déploiement ou de créer un PR :
 
-Ne pas lancer automatiquement de serveur de développement.
+```bash
+pnpm build
+```
 
-Après une modification, fournir uniquement un rapport clair indiquant :
+Si le build est rouge, corriger les erreurs TypeScript / ESLint avant de continuer.
+
+### Lint
+
+Lancer le lint pour détecter les problèmes de style et de typage :
+
+```bash
+pnpm lint
+```
+
+### Tests
+
+Lancer les tests si le projet en dispose :
+
+```bash
+pnpm test
+```
+
+### Serveur de développement
+
+Ne pas lancer automatiquement le serveur de développement sans que l’utilisateur le demande.
+
+### Rapport après modification
+
+Après une modification, fournir un rapport clair indiquant :
 
 - les fichiers modifiés ;
 - les fonctionnalités ajoutées ;
 - les choix techniques ;
-- les points que l’utilisateur doit tester manuellement ;
+- les points à tester manuellement ;
 - les éventuelles limites ou hypothèses.
 
 ## 13. Comportement attendu

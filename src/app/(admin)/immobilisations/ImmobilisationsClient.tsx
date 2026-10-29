@@ -70,8 +70,12 @@ const STEPS = ["Informations générales", "Détails financiers"];
 /* ── Composant ────────────────────────────────────────────── */
 
 export default function ImmobilisationsClient({
+  shopId,
+  anneeId,
   initialData,
 }: {
+  shopId: string;
+  anneeId: string;
   initialData: IImmobilisationSerialized[] | null;
 }) {
   const router = useRouter();
@@ -139,7 +143,7 @@ export default function ImmobilisationsClient({
     try {
       const result = editingId
         ? await updateImmobilisation(editingId, form)
-        : await createImmobilisation(form);
+        : await createImmobilisation({ ...form, shopId, anneeId });
       setMessage(result.message);
       if (result.success) {
         setOpen(false);
@@ -377,7 +381,7 @@ export default function ImmobilisationsClient({
                 <Label>Durée de vie (ans) *</Label>
                 <Input
                   type="number"
-                  min={1}
+                  min="1"
                   value={form.dureeVieAns}
                   onChange={(e) =>
                     setForm({ ...form, dureeVieAns: Number(e.target.value) })

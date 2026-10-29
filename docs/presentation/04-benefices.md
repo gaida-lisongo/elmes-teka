@@ -1,94 +1,89 @@
 # Chapitre 4 — Bénéfices
 
-> Statut : 🟡 Brouillon initial — À valider avec l'utilisateur
+> Statut : 🟡 Brouillon — structure validée le 29/10/2026
 
 ---
 
-## 4.1 Scoring — Ouvrir les portes du financement
+## 4.1 Superviser à 360° ses activités en temps réel
 
-**Titre de slide** : *Votre historique commercial devient votre dossier de crédit*
+**Titre de slide** : *Trois boutiques, un seul regard — depuis votre téléphone*
 
-**Le problème actuel** :
-Les banques et microfinances en RDC exigent des bilans et états financiers pour accorder un crédit. La plupart des entrepreneurs TPE/PME n'ont jamais produit de tel document — pas parce qu'ils ne sont pas solvables, mais parce qu'ils n't ont pas les outils pour prouver leur activité.
+**Ce que le marchand gagne** :
+- Vision unifiée de **tous ses points de vente** depuis un seul dashboard
+- Chaque vente notifiée **en temps réel** — même à distance
+- Stock de chaque boutique visible à tout moment → plus de rupture surprise
+- Journal de caisse **non modifiable** par le vendeur → détection des ventes non enregistrées
+- Alerte automatique quand un stock tombe sous le seuil critique
 
-**Ce que change ELMES-TEKA** :
-Chaque transaction enregistrée dans ELMES-TEKA construit automatiquement un historique financier structuré et vérifiable :
-- Flux de revenus sur 12 mois
-- Régularité des ventes
-- Capacité à gérer un stock
-- Comportement de remboursement des avances clients
+**La douleur que ça résout** :
+> 99 % des unités économiques en RDC sont informelles. Le vol en caisse et les stocks "disparus" sont les premières sources de perte documentées. *(MicroSave 2025)*
 
-**Le scoring ELMES-TEKA** :
-À partir de cet historique, ELMES-TEKA pourra produire un **score de crédibilité commerciale**, utilisable comme document d'appui auprès des partenaires microfinance.
-
-**Avantage concret pour l'entrepreneur** :
-> *"Avec 6 mois d'utilisation d'ELMES-TEKA, vous disposez d'un dossier financier réel pour demander un microcrédit ou un financement bancaire."*
+**Message clé** :
+> *"Sachez exactement ce qui se vend, par qui, quand — même si vous n'êtes pas sur place."*
 
 ---
 
-## 4.2 Sécurité — Protéger son activité contre les fraudes internes
+## 4.2 Fidéliser ses clients
 
-**Titre de slide** : *Votre activité protégée — à distance, en temps réel*
+**Titre de slide** : *Vos meilleurs clients reviennent — parce que vous les connaissez*
 
-**Les risques sans outil** :
-- Vendeur qui vend sans enregistrer et garde l'argent
-- Stock "disparu" sans explication
-- Commandes fantômes
-- Caisse manipulée en fin de journée
-- Impossible de détecter un problème sans être sur place
+**Ce que le marchand gagne** :
+- Base client centralisée avec historique d'achats
+- Identification automatique des clients fidèles, des clients à risque, des clients perdus
+- Ciblage de promotions sur les clients inactifs
+- Suivi des commandes en attente par client
+- Connaissance des produits préférés → ventes croisées
 
-**Comment ELMES-TEKA protège l'entrepreneur** :
+**La douleur que ça résout** :
+> 71 % des MPME digitalisées en RDC utilisent les données clients pour adapter leurs offres. Seuls 6 % des MPME ont aujourd'hui les outils pour le faire. *(MicroSave 2025)*
 
-| Risque | Solution ELMES-TEKA |
-|--------|---------------------|
-| Vente non enregistrée | Chaque vente déclenche un mouvement de stock visible |
-| Vol de stock | Inventaire périodique avec écart calculé automatiquement |
-| Caisse manipulée | Journal de caisse non modifiable côté vendeur |
-| Absence de contrôle | Dashboard tenant avec alertes temps réel |
-| Accès non autorisé | Isolation multi-tenant + rôles stricts |
-
-**Notification temps réel** :
-L'entrepreneur reçoit une alerte immédiate sur son dashboard pour :
-- Toute vente enregistrée dans n'importe quelle boutique
-- Tout stock tombant sous le seuil critique
-- Toute tentative d'accès anormale
+**Message clé** :
+> *"Un client qui revient coûte 5x moins cher qu'un nouveau client. ELMES-TEKA vous dit lequel va partir avant qu'il parte."*
 
 ---
 
-## 4.3 Connaissance client — Fidéliser et augmenter le panier moyen
+## 4.3 Connaître ses chiffres
 
-**Titre de slide** : *Transformez vos clients occasionnels en clients fidèles*
+**Titre de slide** : *Décidez sur des faits, pas sur des impressions*
 
-**Le constat** :
-Dans le commerce traditionnel, l'entrepreneur ne connaît pas vraiment ses clients. Il ne sait pas :
-- qui sont ses meilleurs clients
-- quand ils ont acheté pour la dernière fois
-- ce qu'ils préfèrent acheter
-- comment les récompenser ou les récupérer s'ils partent
+**Ce que le marchand gagne** :
+- Chiffre d'affaires global et par boutique, en temps réel
+- Marge brute par produit
+- Performance par vendeur
+- Évolution des ventes sur la période
+- Top produits, top clients, top boutiques
+- Comparaison avec la période précédente
 
-**Ce que permet ELMES-TEKA** :
+**La douleur que ça résout** :
+> 57 % des MPME congolaises ont du mal à collecter et organiser leurs données. 33 % ne savent pas les analyser. Résultat : décisions à l'instinct, croissance bloquée. *(MicroSave 2025)*
 
-**Segmentation automatique** :
-- Clients actifs (achat < 30 jours)
-- Clients à risque (inactifs depuis 30-90 jours)
-- Clients perdus (inactifs > 90 jours)
+**Message clé** :
+> *"Votre tableau de bord ELMES-TEKA vous dit en 10 secondes quel produit rapporte vraiment, et lequel vous coûte de l'argent."*
 
-**Promotions ciblées** :
-- Offre spéciale sur le produit préféré d'un client fidèle
-- Promotion de réactivation pour un client inactif
-- Réduction anniversaire ou fidélité
+---
 
-**Panier moyen** :
-Identifier les associations de produits fréquentes pour proposer des ventes groupées et augmenter le montant moyen par transaction.
+## 4.4 Préparer un dossier d'accès au crédit
 
-**Impact mesurable** :
-> *"Un entrepreneur qui connaît ses clients dépense moins en acquisition et gagne plus en rétention."*
+**Titre de slide** : *6 mois d'ELMES-TEKA = votre dossier de financement*
+
+**Ce que le marchand gagne** :
+- Historique complet de toutes ses transactions (ventes, achats, dépenses)
+- États financiers simplifiés exportables en PDF
+- Récapitulatifs mensuels et trimestriels
+- Base pour un **score de crédibilité commerciale** (roadmap)
+- Dossier exploitable par les institutions de microfinance
+
+**La douleur que ça résout** :
+> L'accès au crédit est le défi n°1 des PME congolaises. Les institutions de microfinance refusent les demandes faute de preuves d'activité — pas parce que l'entrepreneur n'est pas solvable, mais parce qu'il n'a rien pour le prouver. *(Banque Mondiale RDC, 2020)*
+
+**Message clé** :
+> *"Chaque transaction enregistrée dans ELMES-TEKA construit silencieusement votre dossier de crédit. Utilisez-le quand vous en avez besoin."*
 
 ---
 
 ## Notes de rédaction
 
-- [ ] Confirmer si le module de scoring est en roadmap ou déjà partiellement implémenté
-- [ ] Identifier un ou deux partenaires microfinance potentiels à mentionner nommément
-- [ ] Ajouter des statistiques sur la fraude interne dans le commerce informel congolais
-- [ ] Vérifier l'implémentation actuelle des promotions (module Promotion dans le schéma)
+- [ ] Confirmer si le module de scoring crédit est en roadmap ou abandonné
+- [ ] Ajouter coordonnées d'une institution microfinance partenaire si existante
+- [ ] Slide 4.1 : ajouter une capture d'écran du dashboard multi-boutiques en temps réel
+- [ ] Slide 4.3 : ajouter un exemple de rapport exporté (Excel ou PDF)

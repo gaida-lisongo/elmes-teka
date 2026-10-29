@@ -55,12 +55,15 @@ async function generate(sceneName?: string) {
     console.log(`Prompt: ${scene.prompt.slice(0, 80)}...`);
 
     try {
+      // Favori #1: alibaba/wan-3.0/text-to-video 480p — $0.020/s (60% OFF jusqu'au 31/10/2026)
+      // Favori #2 (permanent): minimax/hailuo-2.3/standard/text-to-video — $0.0476/s
       const jobSet = await hf.generate(
-        'kling-video/v3.0-turbo/text-to-video', // favori: 10.5s/$1, meilleur rapport qualité/prix
+        'alibaba/wan-3.0/text-to-video',
         {
           prompt: scene.prompt,
           duration: scene.duration,
           aspect_ratio: '16:9',
+          resolution: '480p',
         },
         { withPolling: true }
       );

@@ -3,79 +3,48 @@ import axios from 'axios';
 const [apiKey, apiSecret] = (process.env.HF_KEY || '').split(':');
 const headers = { 'hf-api-key': apiKey, 'hf-secret': apiSecret, 'Content-Type': 'application/json' };
 
-const BASE = 'https://api.higgsfield.ai/estimate';
-
-async function est(label: string, endpoint: string, body: object): Promise<{ usd: number } | null> {
-  try {
-    const r = await axios.post(`${BASE}/${endpoint}`, body, { headers });
-    const usd = parseFloat(r.data?.usd ?? '-1');
-    return { usd };
-  } catch (e: any) {
-    console.log(`  ERR ${label}: ${e?.response?.status} ${JSON.stringify(e?.response?.data)?.slice(0,80)}`);
-    return null;
-  }
-}
-
+// Test que Wan 3.0 accepte bien resolution + duration + génère
 async function main() {
-  const BUDGET = 5;
-  const TARGET_SECS = 300; // 5 minutes
+  console.log('=== Vérification paramètres Wan 3.0 ===\n');
 
-  console.log('=== ESTIMATION COÛTS HIGGSFIELD — Budget $5 pour 5 minutes ===\n');
-
-  // Test different durations on Kling 3.0
-  const tests = [
-    { label: 'Kling 3.0 Turbo  5s', ep: 'kling-video/v3.0-turbo/text-to-video', dur: 5 },
-    { label: 'Kling 3.0 Turbo 10s', ep: 'kling-video/v3.0-turbo/text-to-video', dur: 10 },
-    { label: 'Kling 3.0 Turbo 15s', ep: 'kling-video/v3.0-turbo/text-to-video', dur: 15 },
-    { label: 'Kling 3.0 Std    5s', ep: 'kling-video/v3.0/std/text-to-video',   dur: 5 },
-    { label: 'Kling 3.0 Std   10s', ep: 'kling-video/v3.0/std/text-to-video',   dur: 10 },
-    { label: 'Kling 3.0 Std   15s', ep: 'kling-video/v3.0/std/text-to-video',   dur: 15 },
-    { label: 'Kling 3.0 Pro    5s', ep: 'kling-video/v3.0/pro/text-to-video',   dur: 5 },
-    { label: 'Kling 3.0 Pro   15s', ep: 'kling-video/v3.0/pro/text-to-video',   dur: 15 },
+  // Check estimate avec résolution explicite
+  const variants = [
+    { resolution: '480p', duration: 10 },
+    { resolution: '720p', duration: 10 },
+    { resolution: '480p', duration: 30 },
+    { resolution: '720p', duration: 30 },
   ];
 
-  // Also try Seedance with correct endpoint formats
-  const seedanceTests = [
-    { label: 'Seedance 2.5  15s HD', ep: 'seedance-2.5/standard/text-to-video', body: { prompt: 'test', duration: 15, resolution: '1080p', aspect_ratio: '16:9' } },
-    { label: 'Seedance 2.5  15s',    ep: 'seedance/v2.5/text-to-video',          body: { prompt: 'test', duration: 15, resolution: '720p',  aspect_ratio: '16:9' } },
-    { label: 'Wan 2.1 T2V  14s',    ep: 'wan/v2.1/text-to-video',               body: { prompt: 'test', duration: 14, aspect_ratio: '16:9' } },
-  ];
-
-  console.log('--- Kling (modèles confirmés) ---');
-  const results: Array<{ label: string; dur: number; usd: number; secondsPerDollar: number; totalForTarget: number }> = [];
-
-  for (const t of tests) {
-    const r = await est(t.label, t.ep, { prompt: 'test', duration: t.dur, aspect_ratio: '16:9' });
-    if (r && r.usd > 0) {
-      const clips = Math.ceil(TARGET_SECS / t.dur);
-      const totalCost = r.usd * clips;
-      const secondsPerDollar = t.dur / r.usd;
-      results.push({ label: t.label, dur: t.dur, usd: r.usd, secondsPerDollar, totalForTarget: totalCost });
-      console.log(`  ${t.label.padEnd(22)} $${r.usd.toFixed(3)}/clip  ${secondsPerDollar.toFixed(1)}s/$1  → $${totalCost.toFixed(2)} pour 5min`);
+  for (const v of variants) {
+    try {
+      const r = await axios.post(
+        'https://api.higgsfield.ai/estimate/alibaba/wan-3.0/text-to-video',
+        { prompt: 'test', ...v, aspect_ratio: '16:9' },
+        { headers }
+      );
+      const desc = r.data?.pricing_description ?? JSON.stringify(r.data);
+      console.log(`  ${v.resolution} ${v.duration}s → ${desc?.slice(0, 80)}`);
+    } catch (e: any) {
+      console.log(`  ${v.resolution} ${v.duration}s → ERR ${e?.response?.status}: ${JSON.stringify(e?.response?.data)?.slice(0, 60)}`);
     }
   }
 
-  console.log('\n--- Autres modèles ---');
-  for (const t of seedanceTests) {
-    const r = await est(t.label, t.ep, t.body);
-    if (r && r.usd > 0) {
-      console.log(`  ${t.label.padEnd(22)} $${r.usd.toFixed(3)}/clip`);
-    }
-  }
-
-  if (results.length > 0) {
-    const best = results.sort((a, b) => b.secondsPerDollar - a.secondsPerDollar)[0];
-    const maxSecsWithBudget = Math.floor(BUDGET / best.usd) * best.dur;
-
-    console.log('\n=== RÉSULTAT ===');
-    console.log(`Meilleur modèle : ${best.label}`);
-    console.log(`  Coût/clip     : $${best.usd.toFixed(3)}`);
-    console.log(`  Efficacité    : ${best.secondsPerDollar.toFixed(1)} secondes par dollar`);
-    console.log(`  Avec $${BUDGET}   : ${Math.floor(BUDGET / best.usd)} clips × ${best.dur}s = ${maxSecsWithBudget}s (~${(maxSecsWithBudget/60).toFixed(1)} min)`);
-    console.log(`  Pour 5 min    : besoin de $${best.totalForTarget.toFixed(2)} (${(best.totalForTarget/BUDGET).toFixed(1)}× le budget)`);
-    console.log('\nConclusion : avec $5, production réaliste ≈ ' + maxSecsWithBudget + 's de vidéo AI');
-    console.log('Pour 5 min de contenu : compléter avec transitions/titres/music en post-prod');
-  }
+  // Récapitulatif Hailuo 2.3 vs Wan 3.0 (remise 60% jusqu'au 31/10)
+  console.log('\n=== CLASSEMENT DÉFINITIF pour $7.01 (au 29/10/2026) ===');
+  console.log('');
+  console.log('Avec discount 60% actif (expire 31 oct) :');
+  const w30_480 = 7.01 / 0.020;
+  const w30_720 = 7.01 / 0.040;
+  console.log(`  Wan 3.0 480p   $0.020/s → ${w30_480.toFixed(0)}s (${(w30_480/60).toFixed(1)} min) ← 5 min possible ✅`);
+  console.log(`  Wan 3.0 720p   $0.040/s → ${w30_720.toFixed(0)}s (${(w30_720/60).toFixed(1)} min)`);
+  console.log('');
+  console.log('Modèles sans discount (permanents) :');
+  const hailuo = Math.floor(7.01 / 0.476) * 10;
+  const pixverse = Math.floor(7.01 / 0.204) * 4;
+  const kling_t = Math.floor(7.01 / 0.476) * 5;
+  console.log(`  Hailuo 2.3 Std $0.0476/s → ${hailuo}s (${(hailuo/60).toFixed(1)} min) ← meilleur permanent`);
+  console.log(`  PixVerse V6    $0.0510/s → ${pixverse}s (${(pixverse/60).toFixed(1)} min)`);
+  console.log(`  Kling 3.0 Turbo $0.095/s → ${kling_t}s (${(kling_t/60).toFixed(1)} min)`);
 }
 
-main();
+main().catch(console.error);

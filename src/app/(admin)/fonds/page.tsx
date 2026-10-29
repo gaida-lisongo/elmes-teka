@@ -42,11 +42,26 @@ export default async function FondsPage() {
   const anneeId = anneeActive?._id.toString() ?? "";
   const shopId = storeActive?._id.toString() ?? "";
 
-  let initialData = null;
+  let initialData: any[] | null = null;
   try {
     if (anneeActive) {
       const result = await getFonds(anneeId);
-      if (result.success) initialData = result.data;
+      if (result.success && Array.isArray(result.data)) {
+        initialData = result.data.map((item: any) => ({
+          _id: item.id ?? item._id ?? "",
+          shopId: item.shopId ?? shopId,
+          anneeId: item.anneeId ?? anneeId,
+          libelle: item.libelle ?? "",
+          montant: item.montant ?? 0,
+          currency: item.currency ?? "CDF",
+          type: item.type ?? "APPORT",
+          reference: item.reference ?? "",
+          dateOperation: item.dateOperation ?? new Date().toISOString(),
+          status: item.status ?? "VALIDE",
+          description: item.description,
+          createdAt: item.createdAt ?? new Date().toISOString(),
+        }));
+      }
     }
   } catch {
     /* sera résolu après merge Agent 2 si le modèle n'est pas encore chargé */

@@ -51,18 +51,20 @@ export async function POST(request: NextRequest) {
     /* ── Boutique principale ── */
     const store1 = await Store.findOne({ tenantId }).sort({ createdAt: 1 }).lean();
     if (!store1) return NextResponse.json({ error: "No store found" }, { status: 404 });
-    const shopId = store1._id as Types.ObjectId;
+    const shopId = new Types.ObjectId(store1._id.toString());
 
     /* ── Exercice 2026 principal ── */
     const annee2026 = await Annee.findOne({ tenantId, status: "ACTIVE" }).lean();
     if (!annee2026) return NextResponse.json({ error: "No active annee found" }, { status: 404 });
-    const anneeId = annee2026._id as Types.ObjectId;
+    const anneeId = new Types.ObjectId(annee2026._id.toString());
 
     /* ── Saler pour les commandes ── */
     const saler = await Saler.findOne({ tenantId }).select("_id userId storeId").lean();
     if (!saler) return NextResponse.json({ error: "No saler found" }, { status: 404 });
-    const salerId = saler._id as Types.ObjectId;
-    const salerShopId = (saler.storeId as Types.ObjectId | undefined) ?? shopId;
+    const salerId = new Types.ObjectId(saler._id.toString());
+    const salerShopId = saler.storeId
+      ? new Types.ObjectId(saler.storeId.toString())
+      : shopId;
 
     /* ═══════════════════════════════════════
        NETTOYAGE des données de démo existantes
@@ -75,7 +77,7 @@ export async function POST(request: NextRequest) {
       Fonds.deleteMany({ tenantId }),
       Dette.deleteMany({ tenantId }),
       Creance.deleteMany({ tenantId }),
-      Stock.deleteMany({ tenantId }),
+      Stock.deleteMany({ shopId }),
       Commande.deleteMany({ tenantId }),
       Store.deleteMany({ tenantId, reference: { $ne: store1.reference } }),
     ]);
@@ -95,7 +97,7 @@ export async function POST(request: NextRequest) {
       photos: [],
     });
     await Tenant.updateOne({ _id: tenantId }, { $addToSet: { storesId: store2._id } });
-    const shopId2 = store2._id as Types.ObjectId;
+    const shopId2 = new Types.ObjectId(store2._id.toString());
 
     /* ═══════════════════════════════════════
        2. EXERCICE 2025 (historique)
@@ -122,7 +124,7 @@ export async function POST(request: NextRequest) {
       },
       { upsert: true, new: true }
     ).lean();
-    const anneeId2025 = annee2025!._id as Types.ObjectId;
+    const anneeId2025 = new Types.ObjectId(annee2025!._id.toString());
 
     /* ═══════════════════════════════════════
        3. PRODUITS (batch)

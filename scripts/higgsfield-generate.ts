@@ -56,7 +56,7 @@ async function generate(sceneName?: string) {
 
     try {
       const jobSet = await hf.generate(
-        'kling-video/v3.0/std/text-to-video',
+        'kling-video/v3.0-turbo/text-to-video', // favori: 10.5s/$1, meilleur rapport qualité/prix
         {
           prompt: scene.prompt,
           duration: scene.duration,

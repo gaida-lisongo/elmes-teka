@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import {
   BoltIcon,
   GroupIcon,
@@ -244,6 +245,99 @@ export default function HomePage() {
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CONTEXT PHOTOS ──────────────────────────────────────────── */}
+      <section style={{ background: "#0A0C1F" }} className="py-20 lg:py-28">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 xl:gap-16 items-center">
+
+            {/* Left — text */}
+            <div className="et-reveal">
+              <p
+                className="text-xs font-semibold uppercase tracking-widest mb-3"
+                style={{ color: "#F59E0B" }}
+              >
+                Notre marché
+              </p>
+              <h2 className="text-3xl lg:text-4xl font-bold text-white tracking-tight leading-tight">
+                Fait pour ceux qui
+                <br />
+                bâtissent l&apos;Afrique
+              </h2>
+              <p
+                className="mt-5 text-base leading-7"
+                style={{ color: "rgba(255,255,255,0.55)", maxWidth: "480px" }}
+              >
+                Des vendeurs de Kinshasa aux grossistes de Lubumbashi — ELMES-TEKA a été
+                conçu en observant la réalité des marchés congolais : plusieurs
+                boutiques, des vendeurs sur le terrain, et un propriétaire qui veut tout
+                voir depuis son téléphone.
+              </p>
+              <div className="mt-8 flex flex-col gap-4">
+                {[
+                  { n: "3 000+", l: "boutiques gérées sur la plateforme" },
+                  { n: "15 min", l: "pour démarrer, sans formation technique" },
+                  { n: "USD & CDF", l: "double devise native, aucune conversion manuelle" },
+                ].map(({ n, l }) => (
+                  <div key={n} className="flex items-center gap-4">
+                    <span
+                      className="text-xl font-extrabold"
+                      style={{
+                        background: "linear-gradient(135deg, #F59E0B, #fbbf24)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        backgroundClip: "text",
+                        minWidth: "80px",
+                      }}
+                    >
+                      {n}
+                    </span>
+                    <span className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+                      {l}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right — photos grid */}
+            <div className="grid grid-cols-2 gap-3 et-reveal et-delay-2">
+              {[
+                { id: "40045494", alt: "Vendeur au marché africain" },
+                { id: "38909237", alt: "Commerçante au marché de Lagos" },
+                { id: "35811623", alt: "Femme arrangeant ses produits" },
+                { id: "39916941", alt: "Boucher au marché" },
+              ].map(({ id, alt }, i) => (
+                <div
+                  key={id}
+                  className="relative overflow-hidden"
+                  style={{
+                    borderRadius: "16px",
+                    aspectRatio: "3/4",
+                    ...(i === 1 ? { marginTop: "24px" } : {}),
+                    ...(i === 3 ? { marginTop: "-24px" } : {}),
+                  }}
+                >
+                  <Image
+                    src={`https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=400&h=540&dpr=1`}
+                    alt={alt}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 45vw, 22vw"
+                  />
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background:
+                        "linear-gradient(to bottom, transparent 60%, rgba(8,10,26,0.5) 100%)",
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

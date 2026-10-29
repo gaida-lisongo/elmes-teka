@@ -29,13 +29,21 @@ export default function MarketingLayout({
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-start gap-10">
             <div className="max-w-xs">
-              <Image
-                src="/images/logo/auth-logo.svg"
-                alt="ELMES-TEKA"
-                width={140}
-                height={32}
-                className="h-8 w-auto"
-              />
+              <div className="flex items-center gap-2.5">
+                <Image
+                  src="/images/logo/logo-icon.svg"
+                  alt=""
+                  width={28}
+                  height={28}
+                  className="h-7 w-7"
+                />
+                <span
+                  className="text-white font-bold text-base tracking-tight"
+                  style={{ fontFamily: "var(--font-poppins, Poppins, system-ui)" }}
+                >
+                  ELMES<span style={{ color: "#93C5FD" }}>-TEKA</span>
+                </span>
+              </div>
               <p className="mt-4 text-sm leading-6" style={{ color: "rgba(255,255,255,0.45)" }}>
                 CRM de gestion commerciale conçu pour les entrepreneurs congolais formels et
                 informels. Ventes, stocks, clients — tout en temps réel.

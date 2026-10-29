@@ -18,15 +18,21 @@ export default function MarketingHeader() {
       className={`et-header ${scrolled ? "et-header-scrolled" : "et-header-transparent"}`}
     >
       <div className="max-w-7xl mx-auto px-6 lg:px-8 flex h-16 items-center justify-between">
-        <Link href="/" className="flex-shrink-0 flex items-center gap-2">
+        <Link href="/" className="flex-shrink-0 flex items-center gap-2.5">
           <Image
-            src="/images/logo/auth-logo.svg"
-            alt="ELMES-TEKA"
-            width={148}
-            height={32}
+            src="/images/logo/logo-icon.svg"
+            alt=""
+            width={30}
+            height={30}
             priority
-            className="h-8 w-auto"
+            className="h-[30px] w-[30px]"
           />
+          <span
+            className="text-white font-bold text-lg tracking-tight"
+            style={{ fontFamily: "var(--font-poppins, Poppins, system-ui)" }}
+          >
+            ELMES<span style={{ color: "#93C5FD" }}>-TEKA</span>
+          </span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">

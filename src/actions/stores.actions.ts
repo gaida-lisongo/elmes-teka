@@ -1092,3 +1092,139 @@ export async function getTenantAnneesForSelect(): Promise<
     return { success: false, message: error.message || "Erreur exercices." };
   }
 }
+
+/* ───── Abonnements ───── */
+
+const TRANSACTION_LIMITS: Record<"STARTER" | "BUSINESS" | "PREMIUM", number | null> = {
+  STARTER: 200,
+  BUSINESS: 1000,
+  PREMIUM: null,
+};
+
+export async function subscribeStore(
+  storeId: string,
+  pack: "STARTER" | "BUSINESS" | "PREMIUM",
+  anneeId: string
+): Promise<ActionResponse<null>> {
+  try {
+    const { tenantId } = await requireTenantSession();
+    await connectToDb();
+
+    if (!Types.ObjectId.isValid(storeId) || !Types.ObjectId.isValid(anneeId)) {
+      return { success: false, message: "Boutique ou exercice invalide." };
+    }
+    if (!["STARTER", "BUSINESS", "PREMIUM"].includes(pack)) {
+      return { success: false, message: "Pack invalide." };
+    }
+
+    const tenantOid = new Types.ObjectId(tenantId);
+    const storeOid = new Types.ObjectId(storeId);
+    const anneeOid = new Types.ObjectId(anneeId);
+
+    const [store, annee] = await Promise.all([
+      Store.findOne({ _id: storeOid, tenantId: tenantOid }).select("_id subscriptions").lean(),
+      Annee.findOne({ _id: anneeOid, tenantId: tenantOid }).select("_id").lean(),
+    ]);
+
+    if (!store) return { success: false, message: "Boutique introuvable." };
+    if (!annee) return { success: false, message: "Exercice introuvable." };
+
+    const transactionLimit = TRANSACTION_LIMITS[pack];
+
+    const existing = (store.subscriptions ?? []).find(
+      (s) => s.anneeId.toString() === anneeId
+    );
+
+    if (existing) {
+      /* Mettre à jour la subscription existante */
+      await Store.updateOne(
+        { _id: storeOid, "subscriptions.anneeId": anneeOid },
+        {
+          $set: {
+            "subscriptions.$.pack": pack,
+            "subscriptions.$.transactionLimit": transactionLimit,
+            "subscriptions.$.status": "ACTIVE",
+          },
+        }
+      );
+    } else {
+      /* Créer une nouvelle subscription */
+      await Store.updateOne(
+        { _id: storeOid },
+        {
+          $push: {
+            subscriptions: {
+              anneeId: anneeOid,
+              pack,
+              transactionCount: 0,
+              transactionLimit,
+              status: "ACTIVE",
+              createdAt: new Date(),
+            },
+          },
+        }
+      );
+    }
+
+    revalidatePath("/stores");
+    return { success: true, message: "Abonnement active.", data: null };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Erreur abonnement." };
+  }
+}
+
+export interface StoreSubscriptionInfo {
+  anneeId: string;
+  pack: "STARTER" | "BUSINESS" | "PREMIUM";
+  transactionCount: number;
+  transactionLimit: number | null;
+  status: "PENDING" | "ACTIVE";
+  createdAt: string;
+}
+
+export async function verifyStoreSubscription(
+  storeId: string,
+  anneeId: string
+): Promise<ActionResponse<StoreSubscriptionInfo | null>> {
+  try {
+    const { tenantId } = await requireTenantSession();
+    await connectToDb();
+
+    if (!Types.ObjectId.isValid(storeId) || !Types.ObjectId.isValid(anneeId)) {
+      return { success: false, message: "Boutique ou exercice invalide." };
+    }
+
+    const tenantOid = new Types.ObjectId(tenantId);
+    const storeOid = new Types.ObjectId(storeId);
+    const anneeOid = new Types.ObjectId(anneeId);
+
+    const store = await Store.findOne(
+      {
+        _id: storeOid,
+        tenantId: tenantOid,
+        subscriptions: { $elemMatch: { anneeId: anneeOid, status: "ACTIVE" } },
+      },
+      { "subscriptions.$": 1 }
+    ).lean();
+
+    if (!store || !store.subscriptions?.length) {
+      return { success: true, message: "Aucune subscription active.", data: null };
+    }
+
+    const sub = store.subscriptions[0];
+    return {
+      success: true,
+      message: "Subscription trouvee.",
+      data: {
+        anneeId: sub.anneeId.toString(),
+        pack: sub.pack,
+        transactionCount: sub.transactionCount,
+        transactionLimit: sub.transactionLimit,
+        status: sub.status,
+        createdAt: sub.createdAt.toISOString(),
+      },
+    };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Erreur verification abonnement." };
+  }
+}

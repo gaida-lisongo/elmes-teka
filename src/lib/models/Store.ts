@@ -32,6 +32,18 @@ export interface IStorePhoto {
   url: string;
 }
 
+export type SubscriptionPack = "STARTER" | "BUSINESS" | "PREMIUM";
+export type SubscriptionStatus = "PENDING" | "ACTIVE";
+
+export interface IStoreSubscription {
+  anneeId: Types.ObjectId;
+  pack: SubscriptionPack;
+  transactionCount: number;
+  transactionLimit: number | null;
+  status: SubscriptionStatus;
+  createdAt: Date;
+}
+
 export interface IStore {
   tenantId: Types.ObjectId;
   designation: string;
@@ -41,6 +53,7 @@ export interface IStore {
   reference: string;
   caisses: IStoreAmount[];
   photos?: IStorePhoto[];
+  subscriptions: IStoreSubscription[];
   status: StoreStatus;
   payment?: IStorePayment | null;
   createdAt: Date;
@@ -109,6 +122,40 @@ const StorePhotoSchema = new Schema<IStorePhoto>(
     },
   },
   { _id: false }
+);
+
+const StoreSubscriptionSchema = new Schema<IStoreSubscription>(
+  {
+    anneeId: {
+      type: Schema.Types.ObjectId,
+      ref: "Annee",
+      required: true,
+    },
+    pack: {
+      type: String,
+      enum: ["STARTER", "BUSINESS", "PREMIUM"],
+      required: true,
+    },
+    transactionCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    transactionLimit: {
+      type: Number,
+      default: null,
+    },
+    status: {
+      type: String,
+      enum: ["PENDING", "ACTIVE"],
+      default: "PENDING",
+    },
+    createdAt: {
+      type: Date,
+      default: () => new Date(),
+    },
+  },
+  { _id: true }
 );
 
 const StorePaymentSchema = new Schema<IStorePayment>(
@@ -191,6 +238,10 @@ const StoreSchema = new Schema<IStore>(
     },
     photos: {
       type: [StorePhotoSchema],
+      default: [],
+    },
+    subscriptions: {
+      type: [StoreSubscriptionSchema],
       default: [],
     },
     status: {

@@ -281,14 +281,12 @@ export async function createAnnee(input: {
 
     const errors: Record<string, string> = {};
 
-    const debut = new Date(input.debut);
-    const fin = new Date(input.fin);
+    /* Extraire l'année depuis la valeur saisie et forcer 1jan/31dec */
+    const parsedDebut = new Date(input.debut);
+    const parsedFin = new Date(input.fin);
 
-    if (isNaN(debut.getTime())) errors.debut = "Date de debut invalide.";
-    if (isNaN(fin.getTime())) errors.fin = "Date de fin invalide.";
-    if (!isNaN(debut.getTime()) && !isNaN(fin.getTime()) && fin <= debut) {
-      errors.fin = "La date de fin doit etre posterieure a la date de debut.";
-    }
+    if (isNaN(parsedDebut.getTime())) errors.debut = "Date de debut invalide.";
+    if (isNaN(parsedFin.getTime())) errors.fin = "Date de fin invalide.";
     if (!input.phone || input.phone.trim().length < 8) {
       errors.phone = "Numero de telephone invalide.";
     }
@@ -300,11 +298,21 @@ export async function createAnnee(input: {
       return { success: false, message: "Champs invalides.", errors };
     }
 
+    const anneeNumerique = parsedDebut.getFullYear();
+
+    /* Forcer les dates à 1er janvier / 31 décembre de l'année extraite */
+    const debut = new Date(anneeNumerique, 0, 1);
+    const fin = new Date(anneeNumerique, 11, 31);
+
     const slug = slugify(`${debut.getFullYear()}-${fin.getFullYear()}`);
 
-    const existing = await Annee.findOne({ tenantId, slug }).lean();
+    /* Unicité par tenant + année calendaire */
+    const existing = await Annee.findOne({
+      tenantId,
+      debut: { $gte: new Date(anneeNumerique, 0, 1), $lt: new Date(anneeNumerique + 1, 0, 1) },
+    }).lean();
     if (existing) {
-      return { success: false, message: "Un exercice avec ce slug existe deja." };
+      return { success: false, message: "Un exercice pour cette annee calendaire existe deja." };
     }
 
     const payment = getSubscriptionAmount(input.currency);
@@ -530,17 +538,30 @@ export async function updateAnnee(
     }
 
     const errors: Record<string, string> = {};
-    const debut = new Date(input.debut);
-    const fin = new Date(input.fin);
+    const parsedDebut = new Date(input.debut);
+    const parsedFin = new Date(input.fin);
 
-    if (isNaN(debut.getTime())) errors.debut = "Date de debut invalide.";
-    if (isNaN(fin.getTime())) errors.fin = "Date de fin invalide.";
-    if (!isNaN(debut.getTime()) && !isNaN(fin.getTime()) && fin <= debut) {
-      errors.fin = "La date de fin doit etre posterieure a la date de debut.";
-    }
+    if (isNaN(parsedDebut.getTime())) errors.debut = "Date de debut invalide.";
+    if (isNaN(parsedFin.getTime())) errors.fin = "Date de fin invalide.";
 
     if (Object.keys(errors).length > 0) {
       return { success: false, message: "Champs invalides.", errors };
+    }
+
+    const anneeNumerique = parsedDebut.getFullYear();
+
+    /* Forcer les dates à 1er janvier / 31 décembre de l'année extraite */
+    const debut = new Date(anneeNumerique, 0, 1);
+    const fin = new Date(anneeNumerique, 11, 31);
+
+    /* Vérifier l'unicité par année calendaire (exclure cet exercice) */
+    const duplicate = await Annee.findOne({
+      tenantId,
+      _id: { $ne: new Types.ObjectId(id) },
+      debut: { $gte: new Date(anneeNumerique, 0, 1), $lt: new Date(anneeNumerique + 1, 0, 1) },
+    }).lean();
+    if (duplicate) {
+      return { success: false, message: "Un exercice pour cette annee calendaire existe deja." };
     }
 
     await Annee.updateOne({ _id: id }, { $set: { debut, fin } });

@@ -42,8 +42,8 @@ export default async function AdminLayout({
     ],
   };
 
-  const tenantMenu: MenuAppSection = {
-    menuType: `${shell.account.designation || "TENANT"} TENANT`,
+  const tenantGestionMenu: MenuAppSection = {
+    menuType: "GESTION COMMERCIALE",
     navItems: [
       {
         icon: "user",
@@ -59,6 +59,66 @@ export default async function AdminLayout({
         icon: "folder",
         name: "Points de ventes",
         path: "/stores",
+      },
+      {
+        icon: "group",
+        name: "Clients",
+        path: "/clients",
+      },
+    ],
+  };
+
+  const tenantComptaMenu: MenuAppSection = {
+    menuType: "COMPTABILITÉ",
+    navItems: [
+      {
+        icon: "box",
+        name: "Immobilisations",
+        path: "/immobilisations",
+      },
+      {
+        icon: "boxCube",
+        name: "Stock",
+        path: "/stocks",
+      },
+      {
+        icon: "dollar",
+        name: "Liquidités",
+        subItems: annees.map((annee) => ({
+          name: formatAnneeLabel(annee.debut, annee.fin),
+          path: `/liquidites/${annee.slug}`,
+        })),
+      },
+      {
+        icon: "list",
+        name: "Créances",
+        subItems: annees.map((annee) => ({
+          name: formatAnneeLabel(annee.debut, annee.fin),
+          path: `/creances/${annee.slug}`,
+        })),
+      },
+      {
+        icon: "pie",
+        name: "Fonds",
+        path: "/fonds",
+      },
+      {
+        icon: "table",
+        name: "Dettes",
+        subItems: annees.map((annee) => ({
+          name: formatAnneeLabel(annee.debut, annee.fin),
+          path: `/dettes/${annee.slug}`,
+        })),
+      },
+      {
+        icon: "calendar",
+        name: "Journal",
+        path: "/comptabilite/journal",
+      },
+      {
+        icon: "folder",
+        name: "Clôture",
+        path: "/comptabilite/cloture",
       },
     ],
   };
@@ -94,14 +154,44 @@ export default async function AdminLayout({
           name: formatAnneeLabel(annee.debut, annee.fin),
           path: `/stocks/${annee.slug}`,
         })),
-      }
+      },
+    ],
+  };
+
+  const salerComptaMenu: MenuAppSection = {
+    menuType: "COMPTABILITÉ",
+    navItems: [
+      {
+        icon: "dollar",
+        name: "Liquidités",
+        subItems: annees.map((annee) => ({
+          name: formatAnneeLabel(annee.debut, annee.fin),
+          path: `/liquidites/${annee.slug}`,
+        })),
+      },
+      {
+        icon: "list",
+        name: "Créances",
+        subItems: annees.map((annee) => ({
+          name: formatAnneeLabel(annee.debut, annee.fin),
+          path: `/creances/${annee.slug}`,
+        })),
+      },
+      {
+        icon: "table",
+        name: "Dettes",
+        subItems: annees.map((annee) => ({
+          name: formatAnneeLabel(annee.debut, annee.fin),
+          path: `/dettes/${annee.slug}`,
+        })),
+      },
     ],
   };
 
   const menuApp: MenuAppSection[] =
     shell.account.type === "TENANT"
-      ? [dashboardMenu, tenantMenu]
-      : [salerMenu];
+      ? [dashboardMenu, tenantGestionMenu, tenantComptaMenu]
+      : [salerMenu, salerComptaMenu];
 
   return (
     <AdminShellProvider value={shell}>

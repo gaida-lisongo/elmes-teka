@@ -33,19 +33,38 @@ export default function AuthLayout({
                   ELMES-TEKA
                 </h2>
                 <p className="mt-4 text-base leading-7 text-gray-300 dark:text-white/70">
-                  Une plateforme de gestion commerciale adaptee aux TPE, PME et activites informelles congolaises.
+                  Une plateforme de gestion commerciale adaptée aux TPE, PME et
+                  activités informelles congolaises.
                 </p>
                 <ul className="mt-8 space-y-4 text-sm text-gray-300 dark:text-white/70">
                   <li className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3">
-                    Supervision des boutiques et des vendeurs.
+                    Sachez exactement ce qui se vend — même à distance.
                   </li>
                   <li className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3">
-                    Suivi des ventes, commandes, depenses et clients.
+                    Identifiez vos meilleurs clients automatiquement.
                   </li>
                   <li className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3">
-                    Gestion des stocks et preparation simplifiee des donnees comptables.
+                    Votre journal financier, exportable en un clic.
                   </li>
                 </ul>
+                <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3.5">
+                  <p className="text-xs text-gray-400 leading-5 italic">
+                    81 % des MPME congolaises n'ont pas encore d'outil de
+                    gestion des stocks.{" "}
+                    <span className="not-italic text-gray-500">
+                      MicroSave 2025
+                    </span>
+                  </p>
+                </div>
+                <div className="mt-6">
+                  <Link
+                    href="/"
+                    className="inline-flex items-center gap-2 text-sm text-brand-300 hover:text-white transition-colors"
+                  >
+                    <span>←</span>
+                    <span>Retour à l'accueil</span>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

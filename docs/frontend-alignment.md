@@ -1,81 +1,91 @@
-# Agent Frontend — Alignement UI/UX
+# Frontend Alignment — ELMES-TEKA
 
-> Objectif : aligner les pages ELMES-TEKA sur les promesses de la présentation.
-> Ordre de priorité : Login → Dashboard Tenant → Stores → Dashboard Saler → Commandes → Produits → Clients → Stock
-
----
-
-## Statut global
-
-| Page | Statut actuel | Cible | Priorité |
-|------|---------------|-------|---------|
-| Login / Authentification | ⬜ Non audité | UX fluide, branded | P1 |
-| Dashboard Tenant | ⬜ Non audité | KPIs clairs, temps réel | P1 |
-| Gestion des Stores | ⬜ Non audité | Vue multi-boutiques intuitive | P2 |
-| Dashboard Saler | ⬜ Non audité | Espace de travail vendeur simple | P2 |
-| Commandes | ⬜ Non audité | Saisie rapide, validation visuelle | P3 |
-| Produits | ⬜ Non audité | Catalogue clair, stock visible | P3 |
-| Clients | ⬜ Non audité | Fiche client, historique, segmentation | P4 |
-| Stock | ⬜ Non audité | Niveaux visuels, alertes | P4 |
+Alignement de chaque écran sur les 4 bénéfices clés du produit :
+1. **Supervision 360°** — voir tout ce qui se passe dans chaque boutique
+2. **Fidéliser les clients** — récompenser les meilleurs acheteurs
+3. **Connaître ses chiffres** — métriques claires en temps réel
+4. **Accès au crédit** — prouver la santé financière de l'activité
 
 ---
 
-## P1 — Login
+## Statut par écran
 
-### Ce que la présentation promet
-- Démarrage en moins de 15 minutes
-- Interface accessible sans formation
-
-### Ce que l'UI doit montrer
-- Formulaire épuré : matricule + mot de passe
-- Logo ELMES-TEKA visible et rassurant
-- Message d'accueil contextuel
-- Gestion d'erreur claire (mauvais identifiants, compte inactif)
-- Redirection automatique selon le rôle (tenant → dashboard tenant, saler → dashboard saler)
-
-### Tâches techniques
-- [ ] Auditer la page Login actuelle (`src/app/(auth)/login`)
-- [ ] Vérifier la gestion des erreurs côté client
-- [ ] S'assurer que la redirection post-login est correcte pour chaque rôle
+| Écran | Route | Priorité | Statut | Bénéfices ciblés |
+|---|---|---|---|---|
+| Dashboard Tenant | `/` | P1 | ✅ Redesigné | 1, 3, 4 |
+| Workspace Vendeur | (non trouvé) | P1 | ❌ Route absente | — |
+| Stocks | `/stocks` | P2 | ✅ Redesigné | 1, 3 |
+| Clients & Promotions | `/clients` | P2 | ✅ Redesigné | 2, 3 |
+| Commandes | `/commandes` | P3 | ⬜ Non traité | 1, 3 |
+| Produits | `/produits` | P3 | ⬜ Non traité | 3 |
 
 ---
 
-## P1 — Dashboard Tenant
+## P1 — Dashboard Tenant (`/`)
 
-### Ce que la présentation promet
-- Supervision de toutes les boutiques depuis un seul endroit
-- Chiffre d'affaires global et par boutique
-- Alertes temps réel
-- Marge brute, top produits, top clients
+### Fichiers modifiés
+- `src/lib/dashboard/types.ts` — nouveaux types `TodayMetrics`, `StoreMetric`, `DashboardAlert`, `TopClientItem`
+- `src/lib/dashboard/data.ts` — Promise.all étendu à 13 requêtes (today, stores, alerts, topClients)
+- `src/components/ecommerce/EcommerceMetrics.tsx` — 4 KPI cards (CA, Dépenses, Résultat net, Ventes)
+- `src/components/ecommerce/DashboardAlerts.tsx` — bandeau d'alertes (commandes pending, approvisionnements)
+- `src/components/ecommerce/StoreSupervision.tsx` — tableau de supervision par boutique (TENANT only)
+- `src/components/ecommerce/TopClients.tsx` — top 5 clients par CA
+- `src/app/(admin)/page.tsx` — nouveau layout (Alerts → KPIs → StoreSupervision → Charts → TopClients)
 
-### Ce que l'UI doit montrer
-- Cartes KPI : CA global, CA du jour, Dépenses, Résultat net
-- Liste des boutiques avec statut (actif, stock critique)
-- Graphique d'évolution des ventes
-- Dernières transactions en temps réel
-- Alertes stock critique
-
-### Tâches techniques
-- [ ] Auditer le dashboard tenant actuel
-- [ ] Identifier les KPIs manquants vs promis dans la présentation
-- [ ] Vérifier les composants Pusher (temps réel fonctionnel ?)
-- [ ] Ajouter les graphiques manquants
+### Ce que le redesign apporte
+- **Supervision 360°** : tableau `StoreSupervision` montre CA, ventes et vendeurs actifs par boutique aujourd'hui
+- **Connaître ses chiffres** : 4 KPI cards du jour (CA, dépenses, résultat net, nombre de ventes)
+- **Accès au crédit** : TopClients prouve la fidélité et la récurrence
+- **Alertes proactives** : `DashboardAlerts` signale les commandes en attente depuis 24h+
 
 ---
 
-## Notes pour l'Agent Frontend
+## P2 — Stocks (`/stocks`)
 
-- Stack : Next.js 15 App Router + TailAdmin v2.0 + TypeScript
-- Icônes : SVG dans `/icons` uniquement — pas d'emojis
-- Composants existants TailAdmin à réutiliser avant de créer
-- Données initiales : chargement SSR (Server Components), mutations via Server Actions
-- Ne jamais utiliser `useEffect` pour le chargement initial
+### Fichiers modifiés
+- `src/app/(admin)/stocks/StocksOverviewClient.tsx` — redesign complet
+- `src/app/(admin)/stocks/page.tsx` — inclut maintenant les items `qte === 0`
+
+### Ce que le redesign apporte
+- **Métriques enrichies** : lignes de stock, valorisation totale, nombre de boutiques, indicateur ruptures/faible/OK
+- **Coloration sémantique** :
+  - Rouge (`error`) : `qte === 0` → badge "Rupture"
+  - Orange (`warning`) : `qte ≤ 5` → badge "Faible"
+  - Normal : OK sans badge
+- **Filtre boutique** : sélecteur affiché si plusieurs boutiques, filtre le tableau et recalcule les métriques
+- **Pied de tableau** : valorisation totale de la sélection
+
+### Limites / hypothèses
+- Seuil critique fixé à 5 (pas de champ `seuilCritique` dans le modèle `Product`)
+- Le filtre boutique est client-side (données déjà chargées côté serveur)
 
 ---
 
-## Démarrage recommandé
+## P2 — Clients & Promotions (`/clients`)
 
-1. Lire `AGENTS.md` et `CONTEXT.md`
-2. Auditer `src/app/(admin)` et `src/app/(full-width-pages)`
-3. Commencer par Login (P1), puis Dashboard Tenant (P1)
-4. Soumettre chaque page modifiée pour validation avant de passer à la suivante
+### Fichiers modifiés
+- `src/app/(admin)/clients/ClientsClient.tsx` — redesign complet
+
+### Ce que le redesign apporte
+- **KPI colorés** :
+  - Neutre : total clients
+  - Vert (`success`) : clients acheteurs avec pourcentage du total
+  - Rouge (`error`) : sans achat avec badge "À réactiver"
+  - Brand (`brand`) : CA cumulé + nombre de commandes
+- **Cartes promotion enrichies** :
+  - Badge de statut coloré (vert = Active, gris = Inactive)
+  - 3 stats visuelles : réduction %, seuil produits, crédits actifs
+  - Support optionnel `eligibleCount` / `usedCount` si fournis par la page
+- **Typage TypeScript** : interfaces `PromotionItem`, `ClientMetrics`, `InitialData` remplacent `any`
+
+---
+
+## P1 — Workspace Vendeur
+
+Route group `(saler)` introuvable dans `src/app/`. Le workspace vendeur n'existe pas encore comme route dédiée ou est servi via une autre structure. Traitement différé.
+
+---
+
+## P3 — Commandes & Produits
+
+Non traités dans cette itération.

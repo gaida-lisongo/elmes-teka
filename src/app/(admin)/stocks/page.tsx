@@ -93,7 +93,7 @@ export default async function StocksOverviewPage() {
     for (const item of stock.stocks) {
       const pid = item.product.toString();
       const prod = productMap.get(pid);
-      if (!prod || item.qte === 0) continue;
+      if (!prod) continue;
       rows.push({
         storeId: stock.shopId.toString(),
         storeDesignation,

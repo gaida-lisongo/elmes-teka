@@ -37,7 +37,7 @@ export default async function AdminLayout({
       {
         icon: "grid",
         name: "Dashboard",
-        path: "/",
+        path: "/dashboard",
       },
     ],
   };
@@ -129,7 +129,7 @@ export default async function AdminLayout({
       {
         icon: "grid",
         name: "Espace de travail",
-        path: "/",
+        path: "/dashboard",
       },
       {
         icon: "dollar",

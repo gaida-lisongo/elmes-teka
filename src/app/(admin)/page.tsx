@@ -3,6 +3,8 @@ import { EcommerceMetrics } from "@/components/ecommerce/EcommerceMetrics";
 import MonthlySalesChart from "@/components/ecommerce/MonthlySalesChart";
 import MonthlyTarget from "@/components/ecommerce/MonthlyTarget";
 import RecentOrders from "@/components/ecommerce/RecentOrders";
+import DashboardRealtimeUpdater from "@/components/ecommerce/DashboardRealtimeUpdater";
+import TopClientsWidget from "@/components/ecommerce/TopClientsWidget";
 import { getDashboardData } from "@/lib/dashboard/data";
 
 export const metadata: Metadata = {
@@ -33,6 +35,7 @@ export default async function DashboardPage({
   const exchange = Number(process.env.EXCHANGE) || 0;
   return (
     <div className="grid grid-cols-12 gap-4 md:gap-6">
+      <DashboardRealtimeUpdater />
       <div className="col-span-12 space-y-6 xl:col-span-7">
         <EcommerceMetrics metrics={data.metrics} />
         <MonthlySalesChart
@@ -50,12 +53,15 @@ export default async function DashboardPage({
           exchange={exchange}
         />
       </div>
-      <div className="col-span-12">
+      <div className="col-span-12 xl:col-span-7">
         <RecentOrders
           ranking={data.ranking}
           exercises={data.exercises}
           selected={data.selectedRankingExercise}
         />
+      </div>
+      <div className="col-span-12 xl:col-span-5">
+        <TopClientsWidget topClients={data.topClients} />
       </div>
     </div>
   );

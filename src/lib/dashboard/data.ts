@@ -6,6 +6,7 @@ import { requireTenantSession } from "@/lib/auth/require-tenant";
 import Annee from "@/lib/models/Annee";
 import Commande from "@/lib/models/Commande";
 import Depense from "@/lib/models/Depense";
+import Customer from "@/lib/models/Customer";
 import type { DashboardData, ExerciseBalance } from "./types";
 
 const VALID_ORDER_STATUSES = ["CONFIRMED", "PAID", "DELIVERED"];
@@ -76,6 +77,7 @@ export async function getDashboardData(input: {
     revenueBalances,
     expenseBalances,
     rankingResult,
+    topClientsRaw,
   ] = await Promise.all([
     Commande.aggregate([
       { $match: { ...base, status: { $in: VALID_ORDER_STATUSES } } },
@@ -214,6 +216,36 @@ export async function getDashboardData(input: {
         },
       },
     ]),
+    active
+      ? Commande.aggregate([
+          {
+            $match: {
+              ...base,
+              anneeId: oid(active.id),
+              status: { $in: VALID_ORDER_STATUSES },
+            },
+          },
+          {
+            $group: {
+              _id: { clientId: "$clientId", currency: "$currency" },
+              totalRevenue: { $sum: "$totalAmount" },
+              orderCount: { $sum: 1 },
+            },
+          },
+          { $sort: { totalRevenue: -1 } },
+          { $limit: 5 },
+          {
+            $lookup: {
+              from: "customers",
+              localField: "_id.clientId",
+              foreignField: "_id",
+              as: "customer",
+            },
+          },
+          { $set: { customer: { $first: "$customer" } } },
+          { $match: { customer: { $ne: null } } },
+        ])
+      : [],
   ]);
 
   const chart = ["USD", "CDF"].map((currency) => ({
@@ -306,5 +338,15 @@ export async function getDashboardData(input: {
       totalPages: Math.max(1, Math.ceil(totalItems / 10)),
       search,
     },
+    topClients: (topClientsRaw as any[])
+      .filter((row) => row?.customer?._id)
+      .map((row) => ({
+        clientId: row._id.clientId.toString(),
+        name: row.customer.name ?? "Client",
+        phone: row.customer.phone ?? "",
+        totalRevenue: row.totalRevenue ?? 0,
+        currency: row._id.currency ?? "CDF",
+        orderCount: row.orderCount ?? 0,
+      })),
   };
 }

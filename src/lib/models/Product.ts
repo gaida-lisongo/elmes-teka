@@ -26,6 +26,7 @@ export interface IProduct {
   code: string;
   description?: IProductDescription[];
   status: ProductStatus;
+  seuilCritique?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -133,6 +134,11 @@ const ProductSchema = new Schema<IProduct>(
       enum: ["ACTIVE", "INACTIVE", "ARCHIVED"],
       default: "ACTIVE",
       index: true,
+    },
+    seuilCritique: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
   },
   {

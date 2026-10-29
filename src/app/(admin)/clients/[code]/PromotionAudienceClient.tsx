@@ -74,7 +74,33 @@ export default function PromotionAudienceClient({ initialData }: { initialData: 
       toolbar={<div className="space-y-3"><div className="flex flex-wrap items-center gap-3"><form className="min-w-60 flex-1"><Input name="search" placeholder="Nom, téléphone ou matricule..." /></form><button onClick={toggleAll} className="rounded-lg border px-4 py-2 text-sm dark:border-gray-700">{selected.length === initialData.selectionIds.length && selected.length ? "Tout désélectionner" : `Sélectionner les résultats (${initialData.selectionIds.length}/50 max.)`}</button><button onClick={() => { setStep(1); setMessage(""); setRechargeOpen(true); }} className="rounded-lg border border-brand-500 px-4 py-2 text-sm text-brand-500">Recharger</button></div><div><Label>Message SMS</Label><textarea rows={3} value={template} onChange={(event) => setTemplate(event.target.value)} className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900" /><p className="mt-1 text-xs text-gray-500">Variables : {"{{name}}"}, {"{{promotion}}"}, {"{{code}}"}, {"{{reduction}}"}</p></div><div className="flex flex-wrap gap-2"><button disabled={loading || !selected.length || promotion.status !== "ACTIVE"} onClick={send} className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{loading ? "Envoi en cours..." : `Envoyer à ${selected.length} client(s)`}</button><button onClick={async () => { if (confirm("Retirer cette promotion de tous les clients ?")) { const result = await removePromotionFromAllCustomers(promotion.id); setMessage(result.message); router.refresh(); } }} className="rounded-lg border px-4 py-2 text-sm dark:border-gray-700">Retirer de tous les clients</button><button onClick={async () => { if (confirm("Archiver cette promotion et retirer toutes ses associations ?")) { const result = await archivePromotion(promotion.id); if (result.success) router.push("/clients"); else setMessage(result.message); } }} className="rounded-lg border border-error-500 px-4 py-2 text-sm text-error-500">Archiver</button></div></div>}
       content={
         <div className="space-y-3">
-          {items.map((client: any) => <label key={client.id} className="flex cursor-pointer flex-col justify-between gap-3 rounded-xl border border-gray-200 p-4 sm:flex-row sm:items-center dark:border-gray-800 bg-white dark:bg-white/[0.03]"><div className="flex items-center gap-3"><input type="checkbox" checked={selected.includes(client.id)} disabled={client.associated} onChange={() => setSelected((current) => current.includes(client.id) ? current.filter((id) => id !== client.id) : [...current, client.id])} className="h-4 w-4" /><div><h3 className="font-medium text-gray-900 dark:text-white">{client.name}</h3><p className="text-sm text-gray-500">{client.phone} · {client.matricule}</p></div></div><div className="flex flex-wrap gap-4 text-sm"><span>{client.commandes} produits</span><span>{client.ventes} ventes</span><span>{client.associated ? "Déjà associé" : "Éligible"}</span></div></label>)}</div>}
+          {items.map((client: any) => {
+            const lastDate = client.derniereCommande ? new Date(client.derniereCommande) : null;
+            const daysInactive = lastDate ? Math.floor((Date.now() - lastDate.getTime()) / 86400000) : null;
+            return (
+              <label key={client.id} className="flex cursor-pointer flex-col justify-between gap-3 rounded-xl border border-gray-200 p-4 sm:flex-row sm:items-center dark:border-gray-800 bg-white dark:bg-white/[0.03]">
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" checked={selected.includes(client.id)} disabled={client.associated} onChange={() => setSelected((current) => current.includes(client.id) ? current.filter((id) => id !== client.id) : [...current, client.id])} className="h-4 w-4" />
+                  <div>
+                    <h3 className="font-medium text-gray-900 dark:text-white">{client.name}</h3>
+                    <p className="text-sm text-gray-500">{client.phone} · {client.matricule}</p>
+                    {daysInactive !== null && daysInactive > 30 && (
+                      <span className="mt-1 inline-block rounded-full bg-warning-50 px-2 py-0.5 text-xs text-warning-700 dark:bg-warning-500/15 dark:text-warning-400">
+                        Inactif depuis {daysInactive} j
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-4 text-sm">
+                  <span>{client.commandes} produits</span>
+                  <span>{client.ventes} ventes</span>
+                  <span className="font-medium">{(client.chiffreAffaires ?? 0).toLocaleString("fr-FR")} CDF</span>
+                  {lastDate && <span className="text-gray-400">dernier achat {lastDate.toLocaleDateString("fr-CD")}</span>}
+                  <span>{client.associated ? "Déjà associé" : "Éligible"}</span>
+                </div>
+              </label>
+            );
+          })}</div>}
       emptyState={!items.length ? <div className="p-12 text-center text-sm text-gray-500">Aucun client ne remplit les critères de cette promotion.</div> : undefined}
       pagination={<div className="flex justify-between p-4"><button disabled={initialData.page <= 1} onClick={() => navigatePage(initialData.page - 1)} className="rounded-lg border px-3 py-2 disabled:opacity-40 dark:border-gray-700">Précédent</button><span className="text-sm">Page {initialData.page} sur {initialData.totalPages}</span><button disabled={initialData.page >= initialData.totalPages} onClick={() => navigatePage(initialData.page + 1)} className="rounded-lg border px-3 py-2 disabled:opacity-40 dark:border-gray-700">Suivant</button></div>}
     />

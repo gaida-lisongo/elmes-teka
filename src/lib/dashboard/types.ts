@@ -40,6 +40,15 @@ export interface ProductRankingItem {
   revenue: number;
   currency: string;
 }
+export interface TopClientItem {
+  clientId: string;
+  name: string;
+  phone: string;
+  totalRevenue: number;
+  currency: string;
+  orderCount: number;
+}
+
 export interface DashboardData {
   scope: "TENANT" | "SALER";
   metrics: {
@@ -60,4 +69,5 @@ export interface DashboardData {
     totalPages: number;
     search: string;
   };
+  topClients: TopClientItem[];
 }

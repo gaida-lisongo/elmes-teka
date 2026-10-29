@@ -366,7 +366,7 @@ export default function ImmobilisationsClient({
                 <Label>Valeur d'achat *</Label>
                 <Input
                   type="number"
-                  min={0}
+                  min="0"
                   value={form.valeurAchat}
                   onChange={(e) =>
                     setForm({ ...form, valeurAchat: Number(e.target.value) })

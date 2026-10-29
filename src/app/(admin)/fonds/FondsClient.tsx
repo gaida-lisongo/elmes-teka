@@ -237,7 +237,7 @@ export default function FondsClient({
               <Label>Montant *</Label>
               <Input
                 type="number"
-                min={0}
+                min="0"
                 value={form.montant}
                 onChange={(e) =>
                   setForm({ ...form, montant: Number(e.target.value) })

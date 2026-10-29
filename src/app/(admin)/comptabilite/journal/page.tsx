@@ -85,5 +85,5 @@ export default async function JournalPage({
     /* sera résolu après merge Agent 2 si le modèle n'est pas encore chargé */
   }
 
-  return <JournalClient initialData={initialData} />;
+  return <JournalClient initialData={initialData} anneeId={anneeActive?._id.toString() ?? null} />;
 }

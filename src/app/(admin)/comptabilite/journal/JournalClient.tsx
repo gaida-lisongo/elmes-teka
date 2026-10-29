@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import ResourcePageShell from "@/components/common/ResourcePageShell";
+import { exportDossierFinancement } from "@/actions/exports.actions";
 
 /* ── Types locaux ─────────────────────────────────────────── */
 
@@ -59,12 +60,37 @@ const typeColor: Record<OperationType, string> = {
 
 export default function JournalClient({
   initialData,
+  anneeId,
 }: {
   initialData: JournalData | null;
+  anneeId: string | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
+  const handlePdfExport = async () => {
+    if (!anneeId) return;
+    setPdfLoading(true);
+    setPdfError(null);
+    try {
+      const result = await exportDossierFinancement(anneeId);
+      if (!result.success) { setPdfError(result.message); return; }
+      const blob = new Blob([new Uint8Array(result.data.buffer)], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = result.data.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setPdfError("Erreur lors de la génération du PDF.");
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
   const currentType = searchParams.get("type") ?? "";
   const currentPage = Number(searchParams.get("page") ?? "1");
@@ -104,6 +130,16 @@ export default function JournalClient({
               {initialData.total} opération{initialData.total !== 1 ? "s" : ""}
             </span>
           )}
+          {anneeId && (
+            <button
+              onClick={handlePdfExport}
+              disabled={pdfLoading}
+              className="ml-auto rounded-lg border border-gray-300 px-4 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              {pdfLoading ? "Génération..." : "Dossier PDF"}
+            </button>
+          )}
+          {pdfError && <span className="text-xs text-error-500">{pdfError}</span>}
         </div>
       }
       content={

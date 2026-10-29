@@ -425,7 +425,7 @@ export async function createTenantAccount(
       data: {
         userId: user._id.toString(),
         tenantId: tenant._id.toString(),
-        redirectTo: "/",
+        redirectTo: "/dashboard",
       },
     };
   } catch (error) {
@@ -507,7 +507,7 @@ export async function authenticateUser(
       success: true,
       message: "Connexion reussie.",
       data: {
-        redirectTo: "/",
+        redirectTo: "/dashboard",
         accountType: account.accountType,
       },
     };

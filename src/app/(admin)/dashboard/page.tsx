@@ -3,6 +3,10 @@ import { EcommerceMetrics } from "@/components/ecommerce/EcommerceMetrics";
 import MonthlySalesChart from "@/components/ecommerce/MonthlySalesChart";
 import MonthlyTarget from "@/components/ecommerce/MonthlyTarget";
 import RecentOrders from "@/components/ecommerce/RecentOrders";
+import DashboardRealtimeUpdater from "@/components/ecommerce/DashboardRealtimeUpdater";
+import { DashboardAlerts } from "@/components/ecommerce/DashboardAlerts";
+import { StoreSupervision } from "@/components/ecommerce/StoreSupervision";
+import { TopClients } from "@/components/ecommerce/TopClients";
 import { getDashboardData } from "@/lib/dashboard/data";
 
 export const metadata: Metadata = {
@@ -33,8 +37,21 @@ export default async function DashboardPage({
   const exchange = Number(process.env.EXCHANGE) || 0;
   return (
     <div className="grid grid-cols-12 gap-4 md:gap-6">
-      <div className="col-span-12 space-y-6 xl:col-span-7">
-        <EcommerceMetrics metrics={data.metrics} />
+      <DashboardRealtimeUpdater />
+      {data.alerts.length > 0 && (
+        <div className="col-span-12">
+          <DashboardAlerts alerts={data.alerts} />
+        </div>
+      )}
+      <div className="col-span-12">
+        <EcommerceMetrics today={data.today} />
+      </div>
+      {data.scope === "TENANT" && data.stores.length > 0 && (
+        <div className="col-span-12">
+          <StoreSupervision stores={data.stores} />
+        </div>
+      )}
+      <div className="col-span-12 xl:col-span-7">
         <MonthlySalesChart
           series={data.chart}
           exercises={data.exercises}
@@ -50,13 +67,24 @@ export default async function DashboardPage({
           exchange={exchange}
         />
       </div>
-      <div className="col-span-12">
+      <div
+        className={
+          data.topClients.length > 0
+            ? "col-span-12 xl:col-span-8"
+            : "col-span-12"
+        }
+      >
         <RecentOrders
           ranking={data.ranking}
           exercises={data.exercises}
           selected={data.selectedRankingExercise}
         />
       </div>
+      {data.topClients.length > 0 && (
+        <div className="col-span-12 xl:col-span-4">
+          <TopClients clients={data.topClients} />
+        </div>
+      )}
     </div>
   );
 }

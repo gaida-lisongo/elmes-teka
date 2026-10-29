@@ -6,7 +6,15 @@ import { requireTenantSession } from "@/lib/auth/require-tenant";
 import Annee from "@/lib/models/Annee";
 import Commande from "@/lib/models/Commande";
 import Depense from "@/lib/models/Depense";
-import type { DashboardData, ExerciseBalance } from "./types";
+import Store from "@/lib/models/Store";
+import SupplyRequest from "@/lib/models/SupplyRequest";
+import type {
+  DashboardData,
+  ExerciseBalance,
+  StoreMetric,
+  DashboardAlert,
+  TopClientItem,
+} from "./types";
 
 const VALID_ORDER_STATUSES = ["CONFIRMED", "PAID", "DELIVERED"];
 const VALID_EXPENSE_STATUSES = ["APPROVED"];
@@ -41,6 +49,13 @@ export async function getDashboardData(input: {
     tenantId: oid(scope.tenantId),
     ...(scope.accountType === "SALER" ? { shopId: oid(scope.storeId) } : {}),
   };
+
+  const todayStart = new Date();
+  todayStart.setUTCHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setUTCHours(23, 59, 59, 999);
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
   const exercisesRaw = await Annee.find({
     tenantId: scope.tenantId,
     status: { $in: ["ACTIVE", "COMPLETED"] },
@@ -76,6 +91,13 @@ export async function getDashboardData(input: {
     revenueBalances,
     expenseBalances,
     rankingResult,
+    todayRevenueGroups,
+    todayExpenseGroups,
+    storeRevenueGroups,
+    pendingOrdersCount,
+    pendingSupplyCount,
+    storeList,
+    topClientsRaw,
   ] = await Promise.all([
     Commande.aggregate([
       { $match: { ...base, status: { $in: VALID_ORDER_STATUSES } } },
@@ -214,6 +236,113 @@ export async function getDashboardData(input: {
         },
       },
     ]),
+    // Today's revenue
+    Commande.aggregate([
+      {
+        $match: {
+          ...base,
+          status: { $in: VALID_ORDER_STATUSES },
+          createdAt: { $gte: todayStart, $lte: todayEnd },
+        },
+      },
+      {
+        $group: {
+          _id: "$currency",
+          amount: { $sum: "$totalAmount" },
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    // Today's expenses
+    Depense.aggregate([
+      {
+        $match: {
+          ...base,
+          status: { $in: VALID_EXPENSE_STATUSES },
+          createdAt: { $gte: todayStart, $lte: todayEnd },
+        },
+      },
+      {
+        $group: {
+          _id: "$currency",
+          amount: { $sum: "$totalAmount" },
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    // Per-store revenue today (TENANT only)
+    scope.accountType === "TENANT"
+      ? Commande.aggregate([
+          {
+            $match: {
+              tenantId: oid(scope.tenantId),
+              status: { $in: VALID_ORDER_STATUSES },
+              createdAt: { $gte: todayStart, $lte: todayEnd },
+            },
+          },
+          {
+            $group: {
+              _id: { shopId: "$shopId", currency: "$currency" },
+              amount: { $sum: "$totalAmount" },
+              count: { $sum: 1 },
+              agentIds: { $addToSet: "$agentId" },
+            },
+          },
+        ])
+      : Promise.resolve([]),
+    // Pending orders older than 24h
+    Commande.countDocuments({
+      ...base,
+      status: "PENDING",
+      createdAt: { $lt: twentyFourHoursAgo },
+    }),
+    // Pending supply requests (TENANT only)
+    scope.accountType === "TENANT"
+      ? SupplyRequest.countDocuments({
+          tenantId: oid(scope.tenantId),
+          status: "PENDING",
+        })
+      : Promise.resolve(0),
+    // Store list (TENANT only)
+    scope.accountType === "TENANT"
+      ? Store.find({
+          tenantId: oid(scope.tenantId),
+          status: { $in: ["ACTIVE", "PENDING_PAYMENT"] },
+        })
+          .select("_id designation")
+          .lean()
+      : Promise.resolve([]),
+    // Top 5 clients by total revenue
+    active
+      ? Commande.aggregate([
+          {
+            $match: {
+              ...base,
+              anneeId: oid(active.id),
+              status: { $in: VALID_ORDER_STATUSES },
+            },
+          },
+          {
+            $group: {
+              _id: { clientId: "$clientId", currency: "$currency" },
+              totalRevenue: { $sum: "$totalAmount" },
+              orderCount: { $sum: 1 },
+            },
+          },
+          { $sort: { totalRevenue: -1 } },
+          { $limit: 5 },
+          {
+            $lookup: {
+              from: "customers",
+              localField: "_id.clientId",
+              foreignField: "_id",
+              as: "customer",
+            },
+          },
+          { $set: { customer: { $first: "$customer" } } },
+          { $match: { customer: { $ne: null } } },
+        ])
+      : [],
   ]);
 
   const chart = ["USD", "CDF"].map((currency) => ({
@@ -258,6 +387,87 @@ export async function getDashboardData(input: {
   });
   const ranking = rankingResult[0] ?? { items: [], meta: [] };
   const totalItems = ranking.meta[0]?.total ?? 0;
+
+  // Today metrics
+  const today = {
+    revenue: {
+      totals: (todayRevenueGroups as any[]).map((row) => ({
+        currency: row._id as string,
+        amount: row.amount as number,
+      })),
+      transactionCount: (todayRevenueGroups as any[]).reduce(
+        (sum, row) => sum + (row.count as number),
+        0,
+      ),
+    },
+    expenses: {
+      totals: (todayExpenseGroups as any[]).map((row) => ({
+        currency: row._id as string,
+        amount: row.amount as number,
+      })),
+      expenseCount: (todayExpenseGroups as any[]).reduce(
+        (sum, row) => sum + (row.count as number),
+        0,
+      ),
+    },
+  };
+
+  // Per-store metrics (TENANT only)
+  const stores: StoreMetric[] = (storeList as any[]).map((store) => {
+    const sid = store._id.toString();
+    const groups = (storeRevenueGroups as any[]).filter(
+      (row) => row._id.shopId?.toString() === sid,
+    );
+    const todayRevenue = groups.map((row) => ({
+      currency: row._id.currency as string,
+      amount: row.amount as number,
+    }));
+    const todayOrderCount = groups.reduce(
+      (sum: number, row) => sum + (row.count as number),
+      0,
+    );
+    const agentSet = new Set<string>(
+      groups.flatMap((row) =>
+        (row.agentIds as any[]).map((id) => id.toString()),
+      ),
+    );
+    return {
+      storeId: sid,
+      designation: store.designation as string,
+      todayRevenue,
+      todayOrderCount,
+      activeSalersToday: agentSet.size,
+    };
+  });
+
+  // Alerts
+  const alerts: DashboardAlert[] = [];
+  if ((pendingOrdersCount as number) > 0) {
+    alerts.push({
+      type: "pending_orders",
+      message: `${pendingOrdersCount} commande(s) en attente depuis plus de 24h`,
+      count: pendingOrdersCount as number,
+    });
+  }
+  if ((pendingSupplyCount as number) > 0) {
+    alerts.push({
+      type: "supply_requests",
+      message: `${pendingSupplyCount} demande(s) d'approvisionnement en attente de validation`,
+      count: pendingSupplyCount as number,
+    });
+  }
+
+  const topClients: TopClientItem[] = (topClientsRaw as any[])
+    .filter((row) => row?.customer?._id)
+    .map((row) => ({
+      clientId: row._id.clientId.toString(),
+      name: (row.customer.name as string) ?? "Client",
+      phone: (row.customer.phone as string) ?? "",
+      totalRevenue: (row.totalRevenue as number) ?? 0,
+      currency: (row._id.currency as string) ?? "CDF",
+      orderCount: (row.orderCount as number) ?? 0,
+    }));
+
   return {
     scope: scope.accountType,
     metrics: {
@@ -279,6 +489,10 @@ export async function getDashboardData(input: {
         expenseCount: expenseGroups.reduce((sum, row) => sum + row.count, 0),
       },
     },
+    today,
+    stores,
+    alerts,
+    topClients,
     exercises,
     selectedChartExercise: chartAnnee,
     selectedTargetExercise: targetAnnee,

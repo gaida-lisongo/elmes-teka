@@ -42,9 +42,11 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
+    "@higgsfield/client": "^0.2.6",
     "@svgr/webpack": "^8.1.0",
     "@types/node": "^20.19.25",
     "@types/nodemailer": "^8.0.1",
+    "@types/pdfmake": "^0.3.3",
     "@types/react": "^19.2.1",
     "@types/react-dom": "^19.2.1",
     "@types/react-transition-group": "^4.4.12",

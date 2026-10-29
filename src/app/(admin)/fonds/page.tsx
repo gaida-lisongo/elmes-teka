@@ -1,24 +1,41 @@
 import { redirect } from "next/navigation";
+import { Types } from "mongoose";
 
 import { requireTenantSession } from "@/lib/auth/require-tenant";
+import connectToDb from "@/lib/utils/db";
+import Annee from "@/lib/models/Annee";
 import FondsClient from "./FondsClient";
 
 // @ts-ignore – actions créées par Agent 2
 import { getFonds } from "@/actions/fonds.actions";
 
 export default async function FondsPage() {
+  let tenantId: string;
   try {
-    await requireTenantSession();
+    const session = await requireTenantSession();
+    tenantId = session.tenantId;
   } catch {
     redirect("/");
   }
 
+  await connectToDb();
+
+  const anneeActive = await Annee.findOne({
+    tenantId: new Types.ObjectId(tenantId!),
+    status: "ACTIVE",
+  })
+    .select("_id")
+    .sort({ debut: -1 })
+    .lean();
+
   let initialData = null;
   try {
-    const result = await getFonds();
-    if (result.success) initialData = result.data;
+    if (anneeActive) {
+      const result = await getFonds(anneeActive._id.toString());
+      if (result.success) initialData = result.data;
+    }
   } catch {
-    /* actions pas encore disponibles – sera résolu après merge Agent 2 */
+    /* sera résolu après merge Agent 2 si le modèle n'est pas encore chargé */
   }
 
   return <FondsClient initialData={initialData} />;

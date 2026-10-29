@@ -7,7 +7,7 @@ import { Types } from "mongoose";
 import ClotureClient from "./ClotureClient";
 
 // @ts-ignore – actions créées par Agent 2
-import { getClotureStats } from "@/actions/comptabilite.actions";
+import { getClosureData } from "@/actions/comptabilite.actions";
 
 export default async function CloturePage() {
   let tenantId: string;
@@ -34,11 +34,19 @@ export default async function CloturePage() {
   let stats = null;
   try {
     if (anneeActive) {
-      const result = await getClotureStats(anneeActive._id.toString());
-      if (result.success) stats = result.data;
+      const result = await getClosureData(anneeActive._id.toString());
+      if (result.success && result.data) {
+        const d = result.data;
+        stats = {
+          nbCommandesPending: d.commandesEnAttente,
+          nbCreancesEnCours: d.creancesEnCours,
+          nbDettesEnCours: d.dettesEnCours,
+          stocksValides: 0,
+        };
+      }
     }
   } catch {
-    /* actions pas encore disponibles – sera résolu après merge Agent 2 */
+    /* sera résolu après merge Agent 2 si le modèle n'est pas encore chargé */
   }
 
   return (

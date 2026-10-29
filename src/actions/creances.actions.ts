@@ -161,7 +161,7 @@ export async function createCreance(data: {
       clientId: new Types.ObjectId(data.clientId),
       commandeId: data.commandeId && Types.ObjectId.isValid(data.commandeId)
         ? new Types.ObjectId(data.commandeId)
-        : null,
+        : undefined,
       montant: data.montant,
       currency: data.currency?.toUpperCase() ?? "CDF",
       dateEcheance: new Date(data.dateEcheance),

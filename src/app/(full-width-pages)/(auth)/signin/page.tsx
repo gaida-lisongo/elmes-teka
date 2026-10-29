@@ -12,7 +12,7 @@ export default async function SignIn() {
   const shell = await getAdminShellAccount();
 
   if (shell) {
-    redirect("/");
+    redirect("/dashboard");
   }
 
   return <SignInForm />;

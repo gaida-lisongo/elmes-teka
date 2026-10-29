@@ -12,7 +12,7 @@ export default async function SignUp() {
   const shell = await getAdminShellAccount();
 
   if (shell) {
-    redirect("/");
+    redirect("/dashboard");
   }
 
   return <SignUpForm />;

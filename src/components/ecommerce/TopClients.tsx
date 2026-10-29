@@ -38,7 +38,7 @@ export function TopClients({ clients }: { clients: TopClientItem[] }) {
               </div>
               <div className="text-right">
                 <p className="font-semibold text-gray-800 dark:text-white/90">
-                  {formatRevenue(client.revenue, client.currency)}
+                  {formatRevenue(client.totalRevenue, client.currency)}
                 </p>
                 <p className="text-xs text-gray-500">
                   {client.orderCount} commande(s)

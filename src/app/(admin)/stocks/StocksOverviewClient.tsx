@@ -11,6 +11,7 @@ interface StockRow {
   qte: number;
   prixUnitaire: number;
   valeurTotale: number;
+  seuilCritique: number;
 }
 
 interface Props {
@@ -19,14 +20,25 @@ interface Props {
   totalValeur: number;
 }
 
-function getQteLevel(qte: number): "critical" | "low" | "ok" {
+function stockStatus(qte: number, seuil: number): "critical" | "warning" | "ok" {
   if (qte === 0) return "critical";
-  if (qte <= 5) return "low";
+  if (seuil > 0) {
+    if (qte <= seuil) return "critical";
+    if (qte <= seuil * 2) return "warning";
+    return "ok";
+  }
+  if (qte <= 5) return "warning";
   return "ok";
 }
 
-function QteBadge({ qte }: { qte: number }) {
-  const level = getQteLevel(qte);
+const statusDot: Record<"critical" | "warning" | "ok", string> = {
+  critical: "bg-error-500",
+  warning: "bg-warning-400",
+  ok: "bg-success-500",
+};
+
+function QteBadge({ qte, seuil }: { qte: number; seuil: number }) {
+  const level = stockStatus(qte, seuil);
   if (level === "critical") {
     return (
       <span className="inline-flex items-center rounded-full bg-error-50 px-2.5 py-0.5 text-xs font-semibold text-error-700 tabular-nums dark:bg-error-500/10 dark:text-error-400">
@@ -34,7 +46,7 @@ function QteBadge({ qte }: { qte: number }) {
       </span>
     );
   }
-  if (level === "low") {
+  if (level === "warning") {
     return (
       <span className="inline-flex items-center rounded-full bg-warning-50 px-2.5 py-0.5 text-xs font-semibold text-warning-700 tabular-nums dark:bg-warning-500/10 dark:text-warning-400">
         {qte.toLocaleString()} — Faible
@@ -64,8 +76,12 @@ export default function StocksOverviewClient({
       ? rows
       : rows.filter((r) => r.storeId === selectedStore);
 
-  const criticalCount = filtered.filter((r) => r.qte === 0).length;
-  const lowCount = filtered.filter((r) => r.qte > 0 && r.qte <= 5).length;
+  const criticalCount = filtered.filter(
+    (r) => stockStatus(r.qte, r.seuilCritique) === "critical",
+  ).length;
+  const warningCount = filtered.filter(
+    (r) => stockStatus(r.qte, r.seuilCritique) === "warning",
+  ).length;
   const filteredValeur = filtered.reduce((sum, r) => sum + r.valeurTotale, 0);
 
   return (
@@ -88,21 +104,18 @@ export default function StocksOverviewClient({
             value={new Set(filtered.map((r) => r.storeId)).size}
           />
           {criticalCount > 0 ? (
-            <div className="rounded-xl border border-error-200 bg-error-50 p-3 dark:border-error-500/30 dark:bg-error-500/10">
-              <small className="text-error-600 dark:text-error-400">
-                Ruptures de stock
-              </small>
-              <strong className="block text-error-700 dark:text-error-300">
-                {criticalCount} produit(s)
-              </strong>
-            </div>
-          ) : lowCount > 0 ? (
+            <Metric
+              label="Ruptures de stock"
+              value={`${criticalCount} produit${criticalCount > 1 ? "s" : ""}`}
+              highlight
+            />
+          ) : warningCount > 0 ? (
             <div className="rounded-xl border border-warning-200 bg-warning-50 p-3 dark:border-warning-500/30 dark:bg-warning-500/10">
               <small className="text-warning-600 dark:text-warning-400">
                 Stock faible
               </small>
               <strong className="block text-warning-700 dark:text-warning-300">
-                {lowCount} produit(s)
+                {warningCount} produit{warningCount > 1 ? "s" : ""}
               </strong>
             </div>
           ) : (
@@ -153,36 +166,52 @@ export default function StocksOverviewClient({
                   <th className="px-4 py-3 text-right">Quantité</th>
                   <th className="px-4 py-3 text-right">Prix unitaire</th>
                   <th className="px-4 py-3 text-right">Valeur totale</th>
+                  <th className="px-4 py-3 text-center">Statut</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {filtered.map((row, i) => (
-                  <tr
-                    key={`${row.storeId}-${row.productId}-${i}`}
-                    className="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800"
-                  >
-                    <td className="px-4 py-3 text-gray-700 dark:text-gray-200">
-                      {row.storeDesignation}
-                    </td>
-                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
-                      {row.productDesignation}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <QteBadge qte={row.qte} />
-                    </td>
-                    <td className="px-4 py-3 text-right tabular-nums">
-                      {row.prixUnitaire.toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3 text-right tabular-nums font-medium">
-                      {row.valeurTotale.toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
+                {filtered.map((row, i) => {
+                  const status = stockStatus(row.qte, row.seuilCritique);
+                  return (
+                    <tr
+                      key={`${row.storeId}-${row.productId}-${i}`}
+                      className="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    >
+                      <td className="px-4 py-3 text-gray-700 dark:text-gray-200">
+                        {row.storeDesignation}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
+                        {row.productDesignation}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <QteBadge qte={row.qte} seuil={row.seuilCritique} />
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums">
+                        {row.prixUnitaire.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums font-medium">
+                        {row.valeurTotale.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span
+                          title={
+                            status === "critical"
+                              ? "Stock critique"
+                              : status === "warning"
+                                ? "Stock faible"
+                                : "Stock suffisant"
+                          }
+                          className={`inline-block h-3 w-3 rounded-full ${statusDot[status]}`}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
               <tfoot className="border-t border-gray-200 dark:border-gray-700">
                 <tr className="bg-gray-50 font-semibold dark:bg-gray-800">
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="px-4 py-3 text-right text-gray-700 dark:text-gray-200"
                   >
                     Valorisation totale
@@ -200,11 +229,33 @@ export default function StocksOverviewClient({
   );
 }
 
-function Metric({ label, value }: { label: string; value: string | number }) {
+function Metric({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string | number;
+  highlight?: boolean;
+}) {
   return (
-    <div className="rounded-xl border border-gray-100 p-3 dark:border-gray-800">
+    <div
+      className={`rounded-xl border p-3 dark:border-gray-800 ${
+        highlight
+          ? "border-error-200 bg-error-50 dark:bg-error-500/10"
+          : "border-gray-100"
+      }`}
+    >
       <small className="text-gray-500">{label}</small>
-      <strong className="block text-gray-900 dark:text-white">{value}</strong>
+      <strong
+        className={`block ${
+          highlight
+            ? "text-error-600 dark:text-error-400"
+            : "text-gray-900 dark:text-white"
+        }`}
+      >
+        {value}
+      </strong>
     </div>
   );
 }

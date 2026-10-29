@@ -97,7 +97,7 @@ export async function getDashboardData(input: {
     pendingOrdersCount,
     pendingSupplyCount,
     storeList,
-    topClientsResult,
+    topClientsRaw,
   ] = await Promise.all([
     Commande.aggregate([
       { $match: { ...base, status: { $in: VALID_ORDER_STATUSES } } },
@@ -313,28 +313,36 @@ export async function getDashboardData(input: {
           .lean()
       : Promise.resolve([]),
     // Top 5 clients by total revenue
-    Commande.aggregate([
-      { $match: { ...base, status: { $in: VALID_ORDER_STATUSES } } },
-      {
-        $group: {
-          _id: "$clientId",
-          revenue: { $sum: "$totalAmount" },
-          orderCount: { $sum: 1 },
-          currency: { $first: "$currency" },
-        },
-      },
-      { $sort: { revenue: -1 } },
-      { $limit: 5 },
-      {
-        $lookup: {
-          from: "customers",
-          localField: "_id",
-          foreignField: "_id",
-          as: "customer",
-        },
-      },
-      { $set: { customer: { $first: "$customer" } } },
-    ]),
+    active
+      ? Commande.aggregate([
+          {
+            $match: {
+              ...base,
+              anneeId: oid(active.id),
+              status: { $in: VALID_ORDER_STATUSES },
+            },
+          },
+          {
+            $group: {
+              _id: { clientId: "$clientId", currency: "$currency" },
+              totalRevenue: { $sum: "$totalAmount" },
+              orderCount: { $sum: 1 },
+            },
+          },
+          { $sort: { totalRevenue: -1 } },
+          { $limit: 5 },
+          {
+            $lookup: {
+              from: "customers",
+              localField: "_id.clientId",
+              foreignField: "_id",
+              as: "customer",
+            },
+          },
+          { $set: { customer: { $first: "$customer" } } },
+          { $match: { customer: { $ne: null } } },
+        ])
+      : [],
   ]);
 
   const chart = ["USD", "CDF"].map((currency) => ({
@@ -449,17 +457,16 @@ export async function getDashboardData(input: {
     });
   }
 
-  // Top clients
-  const topClients: TopClientItem[] = (topClientsResult as any[]).map(
-    (row) => ({
-      clientId: row._id?.toString() ?? "",
-      name: (row.customer?.name as string) ?? "Client inconnu",
-      phone: (row.customer?.phone as string) ?? "",
+  const topClients: TopClientItem[] = (topClientsRaw as any[])
+    .filter((row) => row?.customer?._id)
+    .map((row) => ({
+      clientId: row._id.clientId.toString(),
+      name: (row.customer.name as string) ?? "Client",
+      phone: (row.customer.phone as string) ?? "",
+      totalRevenue: (row.totalRevenue as number) ?? 0,
+      currency: (row._id.currency as string) ?? "CDF",
       orderCount: (row.orderCount as number) ?? 0,
-      revenue: (row.revenue as number) ?? 0,
-      currency: (row.currency as string) ?? "CDF",
-    }),
-  );
+    }));
 
   return {
     scope: scope.accountType,

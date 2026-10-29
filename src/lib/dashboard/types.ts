@@ -60,9 +60,9 @@ export interface TopClientItem {
   clientId: string;
   name: string;
   phone: string;
-  orderCount: number;
-  revenue: number;
+  totalRevenue: number;
   currency: string;
+  orderCount: number;
 }
 export interface DashboardData {
   scope: "TENANT" | "SALER";

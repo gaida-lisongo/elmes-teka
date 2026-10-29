@@ -17,6 +17,7 @@ interface StockRow {
   qte: number;
   prixUnitaire: number;
   valeurTotale: number;
+  seuilCritique: number;
 }
 
 export default async function StocksOverviewPage() {
@@ -75,13 +76,13 @@ export default async function StocksOverviewPage() {
   ];
 
   const products = await Product.find({ _id: { $in: productIds } })
-    .select("_id designation price")
+    .select("_id designation price seuilCritique")
     .lean();
 
   const productMap = new Map(
     products.map((p) => [
       p._id.toString(),
-      { designation: p.designation, price: (p as any).price ?? 0 },
+      { designation: p.designation, price: (p as any).price ?? 0, seuilCritique: (p as any).seuilCritique ?? 0 },
     ])
   );
 
@@ -101,6 +102,7 @@ export default async function StocksOverviewPage() {
         qte: item.qte,
         prixUnitaire: prod.price,
         valeurTotale: item.qte * prod.price,
+        seuilCritique: prod.seuilCritique,
       });
     }
   }

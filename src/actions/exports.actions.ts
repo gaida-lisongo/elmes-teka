@@ -8,6 +8,8 @@ import connectToDb from "@/lib/utils/db";
 import Annee from "@/lib/models/Annee";
 import Commande from "@/lib/models/Commande";
 import Depense from "@/lib/models/Depense";
+import Creance from "@/lib/models/Creance";
+import Dette from "@/lib/models/Dette";
 import Store from "@/lib/models/Store";
 import Product from "@/lib/models/Product";
 import { Saler, Tenant } from "@/lib/models/User";
@@ -107,10 +109,7 @@ export async function exportAnneeJournal(
       .select("designation")
       .lean();
 
-    const totalRecettes = commandes.reduce((sum, c) => {
-      const items = c.commandes || [];
-      return sum + items.reduce((s, i) => s + i.qte, 0);
-    }, 0);
+    const totalRecettes = commandes.reduce((sum, c) => sum + (c.totalAmount ?? 0), 0);
 
     const totalDepenses = depenses.reduce((sum, d) => {
       const items = d.depenses || [];
@@ -164,7 +163,7 @@ export async function exportAnneeJournal(
           boutique: (c.shopId as any)?.designation ?? "",
           agent: "",
           libelle: `Commande ${c.reference}`,
-          montant: item.qte,
+          montant: item.total,
           devise: c.currency,
           statut: c.status,
         });
@@ -378,5 +377,181 @@ export async function exportProductSales(
     };
   } catch (error: any) {
     return { success: false, message: error.message || "Erreur export." };
+  }
+}
+
+/* ───── Export dossier financement PDF ───── */
+
+export async function exportDossierFinancement(
+  anneeId: string
+): Promise<ActionResponse<{ buffer: number[]; filename: string }>> {
+  try {
+    const { tenantId } = await requireTenantSession();
+    await connectToDb();
+
+    if (!Types.ObjectId.isValid(anneeId)) {
+      return { success: false, message: "Exercice invalide." };
+    }
+
+    const tenantOid = new Types.ObjectId(tenantId);
+    const anneeOid = new Types.ObjectId(anneeId);
+
+    const annee = await Annee.findOne({ _id: anneeOid, tenantId }).lean();
+    if (!annee) return { success: false, message: "Exercice introuvable." };
+
+    const tenant = await Tenant.findOne({ userId: tenantOid }).select("designation logo").lean();
+
+    const [commandesByMonth, depensesByMonth, top10Commandes, creancesTotal, dettesTotal] =
+      await Promise.all([
+        Commande.aggregate([
+          { $match: { tenantId: tenantOid, anneeId: anneeOid, status: { $nin: ["CANCELLED", "DRAFT"] } } },
+          { $group: { _id: { month: { $month: "$createdAt" }, currency: "$currency" }, total: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
+          { $sort: { "_id.month": 1 } },
+        ]),
+        Depense.aggregate([
+          { $match: { tenantId: tenantOid, anneeId: anneeOid, status: "APPROVED" } },
+          { $group: { _id: { month: { $month: "$createdAt" }, currency: "$currency" }, total: { $sum: "$totalAmount" }, count: { $sum: 1 } } },
+          { $sort: { "_id.month": 1 } },
+        ]),
+        Commande.find({ tenantId: tenantOid, anneeId: anneeOid, status: { $nin: ["CANCELLED", "DRAFT"] } })
+          .sort({ totalAmount: -1 })
+          .limit(10)
+          .select("reference totalAmount currency createdAt")
+          .lean(),
+        Creance.aggregate([
+          { $match: { tenantId: tenantOid, anneeId: anneeOid, status: "EN_COURS" } },
+          { $group: { _id: "$currency", total: { $sum: "$montant" }, count: { $sum: 1 } } },
+        ]),
+        Dette.aggregate([
+          { $match: { tenantId: tenantOid, anneeId: anneeOid, status: "EN_COURS" } },
+          { $group: { _id: "$currency", total: { $sum: "$montant" }, count: { $sum: 1 } } },
+        ]),
+      ]);
+
+    const monthNames = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Aoû", "Sep", "Oct", "Nov", "Déc"];
+
+    const months = Array.from({ length: 12 }, (_, i) => {
+      const m = i + 1;
+      const ca = commandesByMonth.find((r) => r._id.month === m)?. total ?? 0;
+      const dep = depensesByMonth.find((r) => r._id.month === m)?.total ?? 0;
+      return { label: monthNames[i], ca, dep, result: ca - dep };
+    });
+
+    const totalCA = months.reduce((s, m) => s + m.ca, 0);
+    const totalDep = months.reduce((s, m) => s + m.dep, 0);
+    const totalResult = totalCA - totalDep;
+
+    const PdfPrinter = (await import("pdfmake")).default;
+    const fonts = {
+      Helvetica: {
+        normal: "Helvetica",
+        bold: "Helvetica-Bold",
+        italics: "Helvetica-Oblique",
+        bolditalics: "Helvetica-BoldOblique",
+      },
+    };
+    const printer = new PdfPrinter(fonts);
+
+    const docDefinition: any = {
+      defaultStyle: { font: "Helvetica", fontSize: 10 },
+      pageMargins: [40, 60, 40, 60],
+      content: [
+        { text: tenant?.designation ?? "ELMES-TEKA", style: "title" },
+        { text: "Dossier de Financement", style: "subtitle" },
+        { text: `Exercice : ${formatDate(annee.debut)} — ${formatDate(annee.fin)}`, style: "meta" },
+        { text: `Généré le ${formatDate(new Date())}`, style: "meta" },
+        { text: " " },
+        { text: "1. Tableau mensuel des opérations (CDF)", style: "sectionTitle" },
+        {
+          table: {
+            headerRows: 1,
+            widths: ["*", "*", "*", "*"],
+            body: [
+              [
+                { text: "Mois", bold: true },
+                { text: "Recettes", bold: true },
+                { text: "Dépenses", bold: true },
+                { text: "Résultat net", bold: true },
+              ],
+              ...months.map((m) => [
+                m.label,
+                m.ca.toLocaleString("fr-FR"),
+                m.dep.toLocaleString("fr-FR"),
+                { text: m.result.toLocaleString("fr-FR"), color: m.result < 0 ? "#dc2626" : "#16a34a" },
+              ]),
+              [
+                { text: "TOTAL", bold: true },
+                { text: totalCA.toLocaleString("fr-FR"), bold: true },
+                { text: totalDep.toLocaleString("fr-FR"), bold: true },
+                { text: totalResult.toLocaleString("fr-FR"), bold: true, color: totalResult < 0 ? "#dc2626" : "#16a34a" },
+              ],
+            ],
+          },
+          layout: "lightHorizontalLines",
+        },
+        { text: " " },
+        { text: "2. Top 10 ventes de l'exercice", style: "sectionTitle" },
+        {
+          table: {
+            headerRows: 1,
+            widths: ["*", 120, 60, 100],
+            body: [
+              [
+                { text: "Référence", bold: true },
+                { text: "Date", bold: true },
+                { text: "Devise", bold: true },
+                { text: "Montant", bold: true },
+              ],
+              ...top10Commandes.map((c) => [
+                c.reference,
+                formatDate(c.createdAt),
+                c.currency,
+                c.totalAmount.toLocaleString("fr-FR"),
+              ]),
+            ],
+          },
+          layout: "lightHorizontalLines",
+        },
+        { text: " " },
+        { text: "3. Créances et dettes en cours", style: "sectionTitle" },
+        {
+          ul: [
+            ...creancesTotal.map((r: any) => `Créances (${r._id}) : ${r.total.toLocaleString("fr-FR")} — ${r.count} dossier(s)`),
+            ...(creancesTotal.length === 0 ? ["Aucune créance en cours"] : []),
+            ...dettesTotal.map((r: any) => `Dettes (${r._id}) : ${r.total.toLocaleString("fr-FR")} — ${r.count} dossier(s)`),
+            ...(dettesTotal.length === 0 ? ["Aucune dette en cours"] : []),
+          ],
+        },
+        { text: " " },
+        { text: "Document généré par ELMES-TEKA — usage interne et financement", style: "footer" },
+      ],
+      styles: {
+        title: { fontSize: 18, bold: true, margin: [0, 0, 0, 4] },
+        subtitle: { fontSize: 14, color: "#465FFF", margin: [0, 0, 0, 6] },
+        meta: { fontSize: 9, color: "#6b7280", margin: [0, 0, 0, 2] },
+        sectionTitle: { fontSize: 12, bold: true, margin: [0, 10, 0, 6], color: "#374151" },
+        footer: { fontSize: 8, color: "#9ca3af", italics: true },
+      },
+    };
+
+    const doc = printer.createPdfKitDocument(docDefinition);
+    const chunks: Buffer[] = [];
+    await new Promise<void>((resolve, reject) => {
+      doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+      doc.on("end", resolve);
+      doc.on("error", reject);
+      doc.end();
+    });
+
+    const buffer = Buffer.concat(chunks);
+    const filename = `dossier-financement-${annee.slug}-elmes-teka.pdf`;
+
+    return {
+      success: true,
+      message: "Dossier PDF généré.",
+      data: { buffer: Array.from(new Uint8Array(buffer)), filename },
+    };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Erreur génération PDF." };
   }
 }

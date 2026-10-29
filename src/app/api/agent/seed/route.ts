@@ -179,6 +179,17 @@ export async function POST(request: NextRequest) {
     /* ═══════════════════════════════════════
        5. DONNÉES FINANCIÈRES (parallèle)
     ═══════════════════════════════════════ */
+    // diagnostic guard — should never trigger if ObjectId construction worked
+    if (!shopId || !shopId2 || !anneeId || !agentUserId) {
+      return NextResponse.json({
+        error: "diagnostic: null ObjectId",
+        shopId: shopId?.toString(),
+        shopId2: shopId2?.toString(),
+        anneeId: anneeId?.toString(),
+        agentUserId: agentUserId?.toString(),
+      }, { status: 500 });
+    }
+
     await Promise.all([
       /* Immobilisations */
       Immobilisation.insertMany([

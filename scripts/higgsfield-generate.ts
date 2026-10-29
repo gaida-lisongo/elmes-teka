@@ -1,96 +1,124 @@
 /**
- * Higgsfield video generation utility for ELMES-TEKA promo content.
- * Usage: npx tsx scripts/higgsfield-generate.ts
+ * Higgsfield video generation for ELMES-TEKA brand content.
+ * Usage: npx tsx scripts/higgsfield-generate.ts [scene-name]
  *
- * Credentials loaded from env: HF_API_KEY_ID + HF_API_KEY_SECRET
+ * Credentials: HF_KEY=KEY_ID:KEY_SECRET (or HF_CREDENTIALS, or HF_API_KEY + HF_API_SECRET)
  */
 
 import { HiggsfieldClient, JobStatus } from '@higgsfield/client';
+import { writeFileSync, mkdirSync } from 'fs';
+import path from 'path';
 
-const SCENES: Array<{ name: string; prompt: string; duration: number }> = [
+const SCENES: Array<{
+  name: string;
+  prompt: string;
+  duration: number;
+  aspect_ratio?: string;
+  resolution?: string;
+}> = [
   {
-    name: 'hero-dashboard',
+    name: 'brand-icon',
     prompt:
-      'Cinematic close-up of a modern B2B CRM dashboard on a dark navy blue screen. ' +
-      'Clean data tables with green success badges, blue KPI cards glowing softly. ' +
-      'A hand scrolls through real-time sales metrics. Professional, minimal, African business context. ' +
-      'Camera slowly zooms in. 4K, smooth motion.',
+      'Minimal 2D motion design animation on a very dark navy background. ' +
+      'A perfect blue rounded square with three white vertical bars of ascending height rising smoothly from the bottom — ' +
+      'shortest bar on the right, tallest on the left, like a growing bar chart. ' +
+      'Clean, flat, geometric. Professional brand logo animation. No text, no people.',
     duration: 5,
+    aspect_ratio: '1:1',
+    resolution: '480p',
   },
   {
-    name: 'multi-store',
+    name: 'entrepreneur-kinshasa',
     prompt:
-      'Split screen showing three boutiques in a Congolese market, each with a tablet displaying ' +
-      'the ELMES-TEKA app. Real-time sales notifications appear simultaneously on all screens. ' +
-      'Modern, professional, energetic. Camera pans across the screens. Clean UI visible.',
-    duration: 5,
+      'Cinematic documentary footage. Confident African businesswoman in her 30s wearing a colorful kitenge blouse, ' +
+      'checking her smartphone at a well-organized market boutique in Kinshasa DRC. ' +
+      'The phone screen shows a dark blue CRM dashboard with green sales numbers. ' +
+      'Warm golden morning light, colorful fabric bolts in background. ' +
+      'She smiles as a sales notification appears. Slow cinematic push-in. 4K, warm color grading.',
+    duration: 8,
+    aspect_ratio: '16:9',
+    resolution: '480p',
   },
   {
-    name: 'entrepreneur-success',
+    name: 'hero-ambient',
     prompt:
-      'African entrepreneur in a well-lit office, smiling confidently at a laptop showing ' +
-      'a financial dashboard. Charts in green, positive trend lines. Modern Kinshasa skyline visible ' +
-      'through window. Professional attire. Warm but professional lighting. Slow push-in.',
-    duration: 5,
+      'Abstract minimal motion design. Dark navy blue background. ' +
+      'Soft glowing blue particles and light rays flowing slowly, like data streams. ' +
+      'Professional technology atmosphere. No text, no faces. Seamless loop-friendly motion.',
+    duration: 6,
+    aspect_ratio: '16:9',
+    resolution: '480p',
   },
 ];
 
-async function generate(sceneName?: string) {
-  const apiKey = process.env.HF_API_KEY_ID;
-  const apiSecret = process.env.HF_API_KEY_SECRET;
+type GeneratedVideo = { name: string; url: string; duration: number };
 
-  if (!apiKey || !apiSecret) {
-    console.error('Missing HF_API_KEY_ID or HF_API_KEY_SECRET env vars');
+async function generate(sceneName?: string) {
+  // HiggsfieldClient reads HF_KEY or HF_CREDENTIALS from env automatically
+  const hf = new HiggsfieldClient();
+
+  const scenes = sceneName
+    ? SCENES.filter(s => s.name === sceneName)
+    : SCENES.slice(0, 2);
+
+  if (scenes.length === 0) {
+    console.error(`Scene "${sceneName}" not found. Available: ${SCENES.map(s => s.name).join(', ')}`);
     process.exit(1);
   }
 
-  const hf = new HiggsfieldClient({ apiKey, apiSecret });
-
-  const scenes = sceneName
-    ? SCENES.filter((s) => s.name === sceneName)
-    : SCENES.slice(0, 1); // By default generate only first scene (budget safety)
+  const results: GeneratedVideo[] = [];
 
   for (const scene of scenes) {
-    console.log(`\nGenerating: ${scene.name}`);
-    console.log(`Prompt: ${scene.prompt.slice(0, 80)}...`);
+    const cost = (scene.duration * 0.020).toFixed(3);
+    console.log(`\n⏳ Generating: ${scene.name} (${scene.duration}s, est. $${cost})`);
+    console.log(`Prompt: ${scene.prompt.slice(0, 100)}...`);
 
     try {
-      // Favori #1: alibaba/wan-3.0/text-to-video 480p — $0.020/s (60% OFF jusqu'au 31/10/2026)
-      // Favori #2 (permanent): minimax/hailuo-2.3/standard/text-to-video — $0.0476/s
       const jobSet = await hf.generate(
         'alibaba/wan-3.0/text-to-video',
         {
           prompt: scene.prompt,
           duration: scene.duration,
-          aspect_ratio: '16:9',
-          resolution: '480p',
+          aspect_ratio: scene.aspect_ratio ?? '16:9',
+          resolution: scene.resolution ?? '480p',
         },
         { withPolling: true }
       );
 
       const job = jobSet.data.jobs[0];
       if (!job) {
-        console.error(`No job returned for ${scene.name}`);
+        console.error(`  No job returned`);
         continue;
       }
 
       if (job.status === JobStatus.COMPLETED && job.results) {
-        const url = job.results.min?.url ?? job.results.raw?.url;
-        console.log(`✓ ${scene.name} → ${url}`);
+        const url = job.results.min?.url ?? job.results.raw?.url ?? '';
+        console.log(`✅ ${scene.name} → ${url}`);
+        results.push({ name: scene.name, url, duration: scene.duration });
       } else if (job.status === JobStatus.FAILED) {
-        console.error(`✗ ${scene.name} → generation failed (no credit charge)`);
+        console.error(`✗ ${scene.name} → failed (no charge)`);
       } else if (job.status === JobStatus.NSFW) {
-        console.error(`✗ ${scene.name} → content moderated (no credit charge)`);
+        console.error(`✗ ${scene.name} → NSFW (no charge)`);
       } else {
         console.log(`? ${scene.name} → status: ${job.status}`);
       }
-    } catch (err) {
-      console.error(`Error generating ${scene.name}:`, err);
+    } catch (err: unknown) {
+      const e = err as { message?: string; statusCode?: number; responseData?: unknown };
+      console.error(`  Error: ${e?.message} (${e?.statusCode}) — ${JSON.stringify(e?.responseData ?? '')?.slice(0, 200)}`);
     }
+  }
+
+  if (results.length > 0) {
+    const outputDir = path.join(process.cwd(), 'public', 'videos');
+    mkdirSync(outputDir, { recursive: true });
+    const manifest = path.join(outputDir, 'generated-manifest.json');
+    writeFileSync(manifest, JSON.stringify(results, null, 2));
+    console.log(`\n📄 Manifest → ${manifest}`);
+    results.forEach(r => console.log(`  ${r.name}: ${r.url}`));
   }
 
   hf.close();
 }
 
-const target = process.argv[2]; // optional: pass scene name as arg
+const target = process.argv[2];
 generate(target).catch(console.error);

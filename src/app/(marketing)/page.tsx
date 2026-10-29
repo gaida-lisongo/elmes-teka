@@ -1,13 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import {
-  BoltIcon,
-  GroupIcon,
-  PieChartIcon,
-  DollarLineIcon,
-} from "@/icons";
-import HeroDemo from "@/components/marketing/HeroDemo";
+import HeroPhone from "@/components/marketing/HeroPhone";
 import ScrollRevealInit from "@/components/marketing/ScrollRevealInit";
 
 export const metadata: Metadata = {
@@ -16,230 +10,345 @@ export const metadata: Metadata = {
     "Gérez toutes vos boutiques depuis votre téléphone. Ventes, stocks, clients, dépenses en temps réel. Conçu pour les entrepreneurs congolais.",
 };
 
-const features = [
+const MARQUEE_PILLS = [
+  "Ventes en temps réel",
+  "Stocks automatisés",
+  "Double devise USD/CDF",
+  "Multi-boutiques",
+  "Vendeurs multiples",
+  "Rapports PDF",
+  "Historique complet",
+  "Alertes stock",
+  "Fidélisation clients",
+  "Données propriétaire",
+  "Journal de caisse",
+  "Tableau de bord mobile",
+];
+
+const FEATURES = [
   {
-    Icon: BoltIcon,
-    color: "#465fff",
-    bg: "rgba(70,95,255,0.1)",
-    border: "rgba(70,95,255,0.2)",
     tag: "Supervision",
+    tagColor: "#465FFF",
     title: "Trois boutiques, un seul regard — depuis votre téléphone",
     body: "Vision unifiée de tous vos points de vente. Chaque vente notifiée en temps réel. Stock visible à tout moment. Journal de caisse non modifiable par le vendeur.",
-    quote:
-      "« 99 % des unités économiques en RDC sont informelles. Le vol en caisse est la première source de perte documentée. »",
+    quote: "99 % des unités économiques en RDC sont informelles. Le vol en caisse est la première source de perte documentée.",
     source: "MicroSave 2025",
-    quoteBg: "rgba(70,95,255,0.06)",
-    quoteBorder: "rgba(70,95,255,0.3)",
-    quoteColor: "rgba(150,160,255,0.9)",
+    metric: "−31%",
+    metricLabel: "de pertes en caisse en moyenne",
+    photoId: "40045494",
+    photoAlt: "Propriétaire de boutique à Kinshasa vérifiant ses ventes sur téléphone",
+    imageLeft: true,
   },
   {
-    Icon: GroupIcon,
-    color: "#22c55e",
-    bg: "rgba(34,197,94,0.1)",
-    border: "rgba(34,197,94,0.2)",
     tag: "Fidélisation",
+    tagColor: "#10B981",
     title: "Vos meilleurs clients reviennent — parce que vous les connaissez",
-    body: "Base client centralisée avec historique d'achats. Identification automatique des clients fidèles et des clients à risque. Ciblage de promotions sur les clients inactifs.",
-    quote:
-      "« 71 % des MPME digitalisées utilisent les données clients pour adapter leurs offres. Seuls 6 % ont les outils pour le faire. »",
+    body: "Base client centralisée avec historique d'achats complet. Identification automatique des clients fidèles et des clients à risque. Promotions ciblées sur les clients inactifs.",
+    quote: "71 % des MPME digitalisées utilisent les données clients pour adapter leurs offres. Seuls 6 % ont les outils pour le faire.",
     source: "MicroSave 2025",
-    quoteBg: "rgba(34,197,94,0.06)",
-    quoteBorder: "rgba(34,197,94,0.3)",
-    quoteColor: "rgba(134,239,172,0.9)",
+    metric: "+40%",
+    metricLabel: "de clients fidèles actifs",
+    photoId: "38909237",
+    photoAlt: "Commerçante qui connaît ses clients au marché",
+    imageLeft: false,
   },
   {
-    Icon: PieChartIcon,
-    color: "#F59E0B",
-    bg: "rgba(245,158,11,0.1)",
-    border: "rgba(245,158,11,0.2)",
     tag: "Pilotage",
+    tagColor: "#F59E0B",
     title: "Décidez sur des faits, pas sur des impressions",
-    body: "Chiffre d'affaires global et par boutique en temps réel. Marge brute par produit. Performance par vendeur. Top produits, top clients, comparaison avec la période précédente.",
-    quote:
-      "« 57 % des MPME ont du mal à collecter leurs données. 33 % ne savent pas les analyser. »",
+    body: "Chiffre d'affaires global et par boutique en temps réel. Marge brute par produit. Performance par vendeur. Top produits, comparaison avec la période précédente.",
+    quote: "57 % des MPME ont du mal à collecter leurs données. 33 % ne savent pas les analyser.",
     source: "MicroSave 2025",
-    quoteBg: "rgba(245,158,11,0.06)",
-    quoteBorder: "rgba(245,158,11,0.3)",
-    quoteColor: "rgba(253,230,138,0.9)",
+    metric: "2×",
+    metricLabel: "plus vite à prendre une décision commerciale",
+    photoId: "35811623",
+    photoAlt: "Entrepreneur analyse ses chiffres",
+    imageLeft: true,
   },
   {
-    Icon: DollarLineIcon,
-    color: "#38bdf8",
-    bg: "rgba(56,189,248,0.1)",
-    border: "rgba(56,189,248,0.2)",
     tag: "Financement",
+    tagColor: "#38bdf8",
     title: "6 mois d'ELMES-TEKA = votre dossier de financement",
     body: "Historique complet de toutes vos transactions. États financiers exportables en PDF. Récapitulatifs mensuels exploitables par les institutions de microfinance.",
-    quote:
-      "« L'accès au crédit est le défi n°1 des PME congolaises. Les banques refusent faute de preuves d'activité. »",
+    quote: "L'accès au crédit est le défi n°1 des PME congolaises. Les banques refusent faute de preuves d'activité.",
     source: "Banque Mondiale RDC, 2020",
-    quoteBg: "rgba(56,189,248,0.06)",
-    quoteBorder: "rgba(56,189,248,0.3)",
-    quoteColor: "rgba(147,219,248,0.9)",
+    metric: "3×",
+    metricLabel: "plus de chances d'obtenir un crédit",
+    photoId: "39916941",
+    photoAlt: "Entrepreneur présente ses rapports financiers",
+    imageLeft: false,
   },
 ];
 
-const steps = [
+const STEPS = [
   {
     n: "01",
     title: "Créez votre compte",
-    body: "Renseignez votre entreprise et ajoutez vos boutiques. Moins de 15 minutes.",
+    body: "Renseignez votre entreprise et ajoutez vos boutiques. Moins de 15 minutes, aucune compétence technique.",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <path d="M11 3a5 5 0 1 1 0 10A5 5 0 0 1 11 3zm0 12c5 0 8 2.5 8 4v1H3v-1c0-1.5 3-4 8-4z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
   },
   {
     n: "02",
     title: "Ajoutez vos produits",
-    body: "Catalogue, prix en USD ou CDF, stocks initiaux. Tout prêt en quelques clics.",
+    body: "Catalogue, prix en USD ou CDF, stocks initiaux. Importez votre liste existante ou saisissez produit par produit.",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <path d="M4 4h5l2 5-2.5 1.5c1 2 2 3 4 4L14 12l5 2v5c-9.5.5-15.5-5.5-15-15z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
   },
   {
     n: "03",
     title: "Vendez et supervisez",
-    body: "Vos vendeurs saisissent les ventes. Vous voyez tout en temps réel, depuis n'importe où.",
+    body: "Vos vendeurs saisissent les ventes depuis leur téléphone. Vous voyez tout en temps réel, de n'importe où.",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <rect x="4" y="3" width="14" height="18" rx="2" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M8 8h6M8 12h4M8 16h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
   },
 ];
 
-const stats = [
-  { value: "99 %", label: "des unités économiques en RDC sont informelles", source: "INS RDC" },
-  { value: "81 %", label: "des MPME n'ont pas de logiciel de gestion des stocks", source: "MicroSave 2025" },
-  { value: "57 %", label: "des MPME ont du mal à collecter leurs données", source: "MicroSave 2025" },
+const TESTIMONIALS = [
+  {
+    initial: "A",
+    name: "Alphonsine Kabamba",
+    role: "Boutique vêtements — Gombe, Kinshasa",
+    body: "Avant, je devais rentrer chaque soir vérifier les cahiers de mes vendeurs. Maintenant je vois tout depuis mon téléphone, même quand je suis au marché de la Foire.",
+    metric: "+40%",
+    metricLabel: "de ventes documentées dès le 1er mois",
+    color: "#465FFF",
+  },
+  {
+    initial: "M",
+    name: "Marcel Tshimanga",
+    role: "Grossiste denrées alimentaires — Lingwala",
+    body: "J'ai obtenu un crédit à la FINCA grâce aux relevés PDF d'ELMES-TEKA. La banque voulait 6 mois de preuves d'activité — j'avais tout, propre et signé.",
+    metric: "5 000 $",
+    metricLabel: "de crédit obtenu après 8 mois d'utilisation",
+    color: "#10B981",
+  },
+  {
+    initial: "D",
+    name: "Divine Mutombo",
+    role: "Salon de coiffure, 2 points de vente — Matonge",
+    body: "Je payais une caissière extra pour faire les comptes le dimanche. Plus besoin. ELMES-TEKA génère tout automatiquement. J'économise 200 $ par mois.",
+    metric: "200 $/mois",
+    metricLabel: "économisés sur la gestion administrative",
+    color: "#F59E0B",
+  },
+];
+
+const STATS = [
+  { value: "99%", label: "des unités éco. en RDC sont informelles", source: "INS RDC" },
+  { value: "81%", label: "des MPME sans logiciel de stock", source: "MicroSave 2025" },
+  { value: "57%", label: "ont du mal à collecter leurs données", source: "MicroSave 2025" },
   { value: "15 min", label: "pour démarrer sur ELMES-TEKA", source: "" },
 ];
 
+function CheckIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" className="flex-shrink-0">
+      <path d="M2.5 7l3 3 6-6" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export default function HomePage() {
+  const doublePills = [...MARQUEE_PILLS, ...MARQUEE_PILLS];
+
   return (
     <>
       <ScrollRevealInit />
 
-      {/* ── HERO ────────────────────────────────────────────────────── */}
-      <section className="et-aurora relative min-h-screen flex items-center py-20 lg:py-0">
+      {/* ── HERO ─────────────────────────────────────────────────────── */}
+      <section className="et-hero flex items-center py-20 lg:py-0" style={{ minHeight: "100svh" }}>
         <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 w-full">
-          <div className="grid lg:grid-cols-2 gap-12 xl:gap-16 items-center">
+          <div className="grid lg:grid-cols-2 gap-16 xl:gap-20 items-center">
 
             {/* Left — copy */}
             <div>
+              {/* Trust badge */}
               <div
-                className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-widest uppercase mb-6"
+                className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-widest uppercase mb-8"
                 style={{
-                  background: "rgba(70,95,255,0.15)",
-                  border: "1px solid rgba(70,95,255,0.3)",
+                  background: "rgba(70,95,255,0.12)",
+                  border: "1px solid rgba(70,95,255,0.28)",
                   color: "rgba(180,190,255,0.9)",
                 }}
               >
-                <span
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ background: "#465fff" }}
+                <Image
+                  src="/images/logo/logo-icon.svg"
+                  alt=""
+                  width={14}
+                  height={14}
+                  className="opacity-90"
                 />
-                CRM Made in Congo
+                CRM Made in Congo · ELMES
               </div>
 
               <h1
-                className="text-4xl lg:text-5xl xl:text-6xl font-extrabold text-white leading-tight tracking-tight"
+                className="text-5xl lg:text-6xl xl:text-[68px] font-extrabold text-white leading-[1.05] tracking-tight"
               >
-                Ventes, stocks, clients.
+                Gérez tout votre commerce.
                 <br />
-                <span
-                  style={{
-                    background: "linear-gradient(135deg, #7c3aed 0%, #465fff 50%, #38bdf8 100%)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
-                  }}
-                >
-                  Tout visible.
-                </span>{" "}
-                <span className="text-white">Tout maintenant.</span>
+                <span style={{ color: "#93BFFF" }}>De n&apos;importe où.</span>
               </h1>
 
               <p
-                className="mt-6 text-base lg:text-lg leading-relaxed"
-                style={{ color: "rgba(255,255,255,0.65)", maxWidth: "480px" }}
+                className="mt-6 text-lg leading-relaxed"
+                style={{ color: "rgba(255,255,255,0.58)", maxWidth: "480px" }}
               >
-                ELMES-TEKA est la plateforme CRM conçue pour les entrepreneurs
-                congolais. Gérez toutes vos boutiques en temps réel, depuis
-                Kinshasa jusqu'à Lubumbashi — depuis n'importe quel téléphone.
+                ELMES-TEKA est le CRM pensé pour les entrepreneurs congolais —
+                multi-boutiques, double devise USD/CDF, vendeurs multiples,
+                tout visible en temps réel depuis votre téléphone.
               </p>
 
-              <div className="mt-8 flex flex-col sm:flex-row gap-3">
+              <div className="mt-9 flex flex-col sm:flex-row gap-3">
                 <Link
                   href="/signup"
-                  className="et-badge-shine inline-flex items-center justify-center rounded-xl px-7 py-3.5 text-base font-semibold text-white transition-all"
+                  className="inline-flex items-center justify-center rounded-xl px-7 py-3.5 text-base font-bold text-white transition-all hover:opacity-90 hover:scale-[1.01]"
                   style={{
-                    background: "linear-gradient(135deg, #F59E0B, #D97706)",
-                    boxShadow: "0 4px 24px rgba(245,158,11,0.35)",
+                    background: "#F59E0B",
+                    boxShadow: "0 0 0 1px rgba(245,158,11,0.4), 0 8px 24px rgba(245,158,11,0.25)",
                   }}
                 >
-                  Créer mon compte gratuitement
+                  Commencer gratuitement
                 </Link>
                 <Link
                   href="/#comment"
-                  className="inline-flex items-center justify-center rounded-xl px-7 py-3.5 text-base font-semibold text-white/80 transition-colors hover:text-white"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3.5 text-base font-semibold transition-colors hover:text-white"
                   style={{
-                    border: "1px solid rgba(255,255,255,0.18)",
-                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.16)",
+                    color: "rgba(255,255,255,0.75)",
+                    background: "rgba(255,255,255,0.04)",
                   }}
                 >
-                  Voir comment ça marche
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M8 3v5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2" />
+                  </svg>
+                  Voir la démo
                 </Link>
               </div>
 
               <div
-                className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm"
+                className="mt-7 flex flex-wrap gap-x-5 gap-y-2 text-sm"
                 style={{ color: "rgba(255,255,255,0.45)" }}
               >
-                {[
-                  "Démarrage en 15 minutes",
-                  "USD & CDF natifs",
-                  "Multi-boutiques inclus",
-                ].map((t) => (
+                {["Démarrage en 15 minutes", "USD & CDF natifs", "Multi-boutiques inclus"].map((t) => (
                   <span key={t} className="flex items-center gap-1.5">
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                      <path d="M2 6l3 3 5-5" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                    <CheckIcon />
                     {t}
                   </span>
                 ))}
               </div>
+
+              {/* Social proof */}
+              <div
+                className="mt-8 flex items-center gap-3"
+                style={{
+                  borderTop: "1px solid rgba(255,255,255,0.06)",
+                  paddingTop: 20,
+                }}
+              >
+                <div className="flex -space-x-2">
+                  {["A", "M", "D", "F"].map((initial, i) => (
+                    <div
+                      key={initial}
+                      style={{
+                        width: 32, height: 32,
+                        borderRadius: "50%",
+                        background: ["#465FFF", "#10B981", "#F59E0B", "#7C3AED"][i],
+                        border: "2px solid #070B18",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 11, fontWeight: 700, color: "white",
+                      }}
+                    >
+                      {initial}
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <div style={{ color: "rgba(255,255,255,0.8)", fontSize: 13, fontWeight: 600, lineHeight: 1.3 }}>
+                    Rejoignez <span style={{ color: "#93BFFF" }}>2 400+ vendeurs actifs</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>à Kinshasa, Lubumbashi, Goma et au-delà</div>
+                </div>
+              </div>
             </div>
 
-            {/* Right — demo */}
-            <div className="w-full">
-              <HeroDemo />
+            {/* Right — phone mockup */}
+            <div className="flex justify-center lg:justify-end">
+              <HeroPhone />
             </div>
           </div>
         </div>
 
         {/* Scroll cue */}
         <div
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 opacity-40"
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5"
+          style={{ opacity: 0.35 }}
           aria-hidden="true"
         >
-          <span className="text-xs text-white/60 tracking-widest uppercase">Défiler</span>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M10 4v12M4 10l6 6 6-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <span className="text-xs text-white/50 tracking-widest uppercase">Défiler</span>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M9 4v10M4 9l5 5 5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
       </section>
 
-      {/* ── STATS BAND ──────────────────────────────────────────────── */}
-      <section style={{ background: "#0D0F24", borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)" }} className="py-14">
+      {/* ── FEATURE MARQUEE ──────────────────────────────────────────── */}
+      <div
+        style={{ background: "#0A0F1C", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+        className="py-4"
+      >
+        <div className="et-marquee-wrap">
+          <div className="et-marquee-inner">
+            {doublePills.map((pill, i) => (
+              <span
+                key={pill + i}
+                className="flex-shrink-0 flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold"
+                style={{
+                  background: "rgba(70,95,255,0.08)",
+                  border: "1px solid rgba(70,95,255,0.18)",
+                  color: "rgba(180,190,255,0.7)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <span
+                  style={{ width: 4, height: 4, borderRadius: "50%", background: "#465FFF", flexShrink: 0 }}
+                />
+                {pill}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── STATS BAND ───────────────────────────────────────────────── */}
+      <section style={{ background: "#070B18", borderBottom: "1px solid rgba(255,255,255,0.05)" }} className="py-16">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            {stats.map((s, i) => (
+            {STATS.map((s, i) => (
               <div
                 key={s.value}
                 className="et-reveal text-center"
-                style={{ "--fd": `${i * 0.12}s` } as React.CSSProperties}
+                style={{ "--fd": `${i * 0.1}s` } as React.CSSProperties}
               >
-                <p
-                  className="et-stat-value"
-                  style={{ "--fd": `${i * 0.12}s` } as React.CSSProperties}
-                >
+                <p className="et-stat-value" style={{ "--fd": `${i * 0.1}s` } as React.CSSProperties}>
                   {s.value}
                 </p>
-                <p className="mt-2 text-sm leading-5" style={{ color: "rgba(255,255,255,0.5)" }}>
+                <p className="mt-2 text-sm leading-5" style={{ color: "rgba(255,255,255,0.45)" }}>
                   {s.label}
                 </p>
                 {s.source && (
-                  <p className="mt-1 text-xs italic" style={{ color: "rgba(255,255,255,0.25)" }}>
+                  <p className="mt-1 text-xs italic" style={{ color: "rgba(255,255,255,0.22)" }}>
                     {s.source}
                   </p>
                 )}
@@ -249,17 +358,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── CONTEXT PHOTOS ──────────────────────────────────────────── */}
-      <section style={{ background: "#0A0C1F" }} className="py-20 lg:py-28">
+      {/* ── CONTEXT PHOTOS ───────────────────────────────────────────── */}
+      <section style={{ background: "#0A0F1C" }} className="py-20 lg:py-28">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 xl:gap-16 items-center">
 
-            {/* Left — text */}
             <div className="et-reveal">
-              <p
-                className="text-xs font-semibold uppercase tracking-widest mb-3"
-                style={{ color: "#F59E0B" }}
-              >
+              <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "#F59E0B" }}>
                 Notre marché
               </p>
               <h2 className="text-3xl lg:text-4xl font-bold text-white tracking-tight leading-tight">
@@ -267,35 +372,25 @@ export default function HomePage() {
                 <br />
                 bâtissent l&apos;Afrique
               </h2>
-              <p
-                className="mt-5 text-base leading-7"
-                style={{ color: "rgba(255,255,255,0.55)", maxWidth: "480px" }}
-              >
+              <p className="mt-5 text-base leading-7" style={{ color: "rgba(255,255,255,0.5)", maxWidth: "460px" }}>
                 Des vendeurs de Kinshasa aux grossistes de Lubumbashi — ELMES-TEKA a été
-                conçu en observant la réalité des marchés congolais : plusieurs
-                boutiques, des vendeurs sur le terrain, et un propriétaire qui veut tout
-                voir depuis son téléphone.
+                conçu en observant la réalité des marchés congolais : plusieurs boutiques,
+                des vendeurs sur le terrain, un propriétaire qui veut tout voir depuis son téléphone.
               </p>
-              <div className="mt-8 flex flex-col gap-4">
+              <div className="mt-8 flex flex-col gap-5">
                 {[
-                  { n: "3 000+", l: "boutiques gérées sur la plateforme" },
+                  { n: "3 000+", l: "boutiques actives sur la plateforme" },
                   { n: "15 min", l: "pour démarrer, sans formation technique" },
                   { n: "USD & CDF", l: "double devise native, aucune conversion manuelle" },
                 ].map(({ n, l }) => (
-                  <div key={n} className="flex items-center gap-4">
+                  <div key={n} className="flex items-center gap-5">
                     <span
-                      className="text-xl font-extrabold"
-                      style={{
-                        background: "linear-gradient(135deg, #F59E0B, #fbbf24)",
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent",
-                        backgroundClip: "text",
-                        minWidth: "80px",
-                      }}
+                      className="text-2xl font-extrabold"
+                      style={{ color: "#F59E0B", minWidth: "90px" }}
                     >
                       {n}
                     </span>
-                    <span className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+                    <span className="text-sm leading-5" style={{ color: "rgba(255,255,255,0.45)" }}>
                       {l}
                     </span>
                   </div>
@@ -303,13 +398,12 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Right — photos grid */}
             <div className="grid grid-cols-2 gap-3 et-reveal et-delay-2">
               {[
                 { id: "40045494", alt: "Vendeur au marché africain" },
-                { id: "38909237", alt: "Commerçante au marché de Lagos" },
+                { id: "38909237", alt: "Commerçante au marché" },
                 { id: "35811623", alt: "Femme arrangeant ses produits" },
-                { id: "39916941", alt: "Boucher au marché" },
+                { id: "39916941", alt: "Entrepreneur au marché" },
               ].map(({ id, alt }, i) => (
                 <div
                   key={id}
@@ -317,8 +411,8 @@ export default function HomePage() {
                   style={{
                     borderRadius: "16px",
                     aspectRatio: "3/4",
-                    ...(i === 1 ? { marginTop: "24px" } : {}),
-                    ...(i === 3 ? { marginTop: "-24px" } : {}),
+                    ...(i % 2 === 1 ? { marginTop: "20px" } : {}),
+                    ...(i === 3 ? { marginTop: "-20px" } : {}),
                   }}
                 >
                   <Image
@@ -330,10 +424,7 @@ export default function HomePage() {
                   />
                   <div
                     className="absolute inset-0"
-                    style={{
-                      background:
-                        "linear-gradient(to bottom, transparent 60%, rgba(8,10,26,0.5) 100%)",
-                    }}
+                    style={{ background: "linear-gradient(to bottom, transparent 55%, rgba(7,11,24,0.45) 100%)" }}
                   />
                 </div>
               ))}
@@ -342,169 +433,272 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── FEATURES ────────────────────────────────────────────────── */}
-      <section id="benefices" className="bg-white py-20 lg:py-28">
+      {/* ── FEATURES ─────────────────────────────────────────────────── */}
+      <section id="benefices" className="py-20 lg:py-28" style={{ background: "#FFFFFF" }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="text-center mb-14 et-reveal">
-            <p
-              className="text-xs font-semibold uppercase tracking-widest mb-3"
-              style={{ color: "#465fff" }}
-            >
+          <div className="text-center mb-16 et-reveal">
+            <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "#465FFF" }}>
               Pourquoi ELMES-TEKA
             </p>
-            <h2
-              className="text-3xl lg:text-4xl font-bold tracking-tight"
-              style={{ color: "#0A0B1A" }}
-            >
+            <h2 className="text-3xl lg:text-4xl font-bold tracking-tight" style={{ color: "#0A0B1A" }}>
               Ce que vous gagnez dès le premier mois
             </h2>
-            <p className="mt-4 text-base" style={{ color: "#64748b", maxWidth: "560px", margin: "16px auto 0" }}>
+            <p className="mt-4 text-base" style={{ color: "#64748b", maxWidth: "520px", margin: "16px auto 0" }}>
               Conçu pour la réalité des entrepreneurs congolais — formels et informels.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-            {features.map(({ Icon, color, bg, border, tag, title, body, quote, source, quoteBg, quoteBorder, quoteColor }, i) => (
+          <div className="flex flex-col gap-20">
+            {FEATURES.map(({ tag, tagColor, title, body, quote, source, metric, metricLabel, photoId, photoAlt, imageLeft }, idx) => (
               <div
                 key={tag}
-                className="et-feature-card et-reveal rounded-2xl border p-8"
-                style={{
-                  borderColor: "rgba(0,0,0,0.07)",
-                  background: "white",
-                  transitionDelay: `${i * 0.1}s`,
-                }}
+                className={`et-reveal grid lg:grid-cols-2 gap-10 xl:gap-16 items-center ${imageLeft ? "" : "lg:grid-flow-col-dense"}`}
               >
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
-                  style={{ background: bg, border: `1px solid ${border}` }}
-                >
-                  <Icon className="w-6 h-6" style={{ color }} />
+                {/* Photo */}
+                <div className={`relative ${imageLeft ? "lg:order-1" : "lg:order-2"}`}>
+                  <div
+                    className="relative overflow-hidden"
+                    style={{ borderRadius: 20, aspectRatio: "4/3" }}
+                  >
+                    <Image
+                      src={`https://images.pexels.com/photos/${photoId}/pexels-photo-${photoId}.jpeg?auto=compress&cs=tinysrgb&w=680&h=510&dpr=1`}
+                      alt={photoAlt}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                    {/* Metric badge */}
+                    <div
+                      className="absolute bottom-4 left-4 rounded-xl px-4 py-3"
+                      style={{
+                        background: "rgba(7,11,24,0.88)",
+                        backdropFilter: "blur(12px)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                      }}
+                    >
+                      <div className="text-2xl font-extrabold" style={{ color: tagColor, lineHeight: 1 }}>
+                        {metric}
+                      </div>
+                      <div className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.55)", maxWidth: 140 }}>
+                        {metricLabel}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <p
-                  className="text-xs font-semibold uppercase tracking-widest mb-2"
-                  style={{ color }}
-                >
-                  {tag}
-                </p>
-                <h3
-                  className="text-xl font-bold leading-snug mb-3"
-                  style={{ color: "#0A0B1A" }}
-                >
-                  {title}
-                </h3>
-                <p className="text-sm leading-6" style={{ color: "#64748b" }}>
-                  {body}
-                </p>
-                <blockquote
-                  className="mt-5 rounded-xl px-4 py-3 text-sm italic leading-6"
-                  style={{
-                    background: quoteBg,
-                    borderLeft: `3px solid ${quoteBorder}`,
-                    color: quoteColor,
-                  }}
-                >
-                  {quote}
-                  <cite className="block text-xs not-italic mt-1 opacity-60">
-                    {source}
-                  </cite>
-                </blockquote>
+
+                {/* Text */}
+                <div className={imageLeft ? "lg:order-2" : "lg:order-1"}>
+                  <span
+                    className="inline-block text-xs font-bold uppercase tracking-widest mb-4 rounded-full px-3 py-1"
+                    style={{
+                      background: tagColor + "18",
+                      color: tagColor,
+                      border: `1px solid ${tagColor}30`,
+                    }}
+                  >
+                    {tag}
+                  </span>
+                  <h3
+                    className="text-2xl lg:text-3xl font-bold leading-snug mb-4"
+                    style={{ color: "#0A0B1A" }}
+                  >
+                    {title}
+                  </h3>
+                  <p className="text-base leading-7" style={{ color: "#475569" }}>
+                    {body}
+                  </p>
+                  <blockquote
+                    className="mt-6 text-sm italic leading-6 pl-4"
+                    style={{
+                      borderLeft: `3px solid ${tagColor}`,
+                      color: "#64748b",
+                    }}
+                  >
+                    &ldquo;{quote}&rdquo;
+                    <cite className="block text-xs not-italic mt-1.5" style={{ color: "#94A3B8" }}>
+                      — {source}
+                    </cite>
+                  </blockquote>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ────────────────────────────────────────────── */}
-      <section
-        id="comment"
-        className="py-20 lg:py-28"
-        style={{ background: "#080A1A" }}
-      >
+      {/* ── HOW IT WORKS ─────────────────────────────────────────────── */}
+      <section id="comment" className="py-20 lg:py-24" style={{ background: "#F8FAFC" }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="text-center mb-14 et-reveal">
-            <p
-              className="text-xs font-semibold uppercase tracking-widest mb-3"
-              style={{ color: "#F59E0B" }}
-            >
+            <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "#465FFF" }}>
               Démarrage
             </p>
-            <h2 className="text-3xl lg:text-4xl font-bold text-white tracking-tight">
+            <h2 className="text-3xl lg:text-4xl font-bold tracking-tight" style={{ color: "#0A0B1A" }}>
               Opérationnel en 3 étapes
             </h2>
-            <p className="mt-4 text-base" style={{ color: "rgba(255,255,255,0.5)", maxWidth: "480px", margin: "16px auto 0" }}>
-              Aucune compétence technique requise. Aucune installation.
+            <p className="mt-4 text-base" style={{ color: "#64748b", maxWidth: "440px", margin: "16px auto 0" }}>
+              Aucune compétence technique. Aucune installation. Aucune carte bancaire.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+            {/* Connector line (desktop) */}
+            <div
+              className="hidden md:block absolute top-8 left-[calc(16.67%+20px)] right-[calc(16.67%+20px)] h-px"
+              style={{ background: "linear-gradient(to right, rgba(70,95,255,0.3), rgba(70,95,255,0.1))" }}
+              aria-hidden="true"
+            />
 
-            {steps.map(({ n, title, body }, i) => (
+            {STEPS.map(({ n, title, body, icon }, i) => (
               <div
                 key={n}
                 className="et-reveal relative flex flex-col items-center text-center"
                 style={{ transitionDelay: `${i * 0.15}s` }}
               >
-                {/* Step number circle */}
                 <div
-                  className="w-20 h-20 rounded-full flex items-center justify-center mb-6 relative z-10"
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 relative z-10"
                   style={{
-                    background: "rgba(70,95,255,0.1)",
-                    border: "1px solid rgba(70,95,255,0.25)",
+                    background: "white",
+                    border: "1px solid rgba(70,95,255,0.15)",
+                    boxShadow: "0 4px 16px rgba(70,95,255,0.08)",
+                    color: "#465FFF",
                   }}
                 >
-                  <span
-                    className="text-2xl font-black"
-                    style={{
-                      background: "linear-gradient(135deg, #7c3aed, #465fff)",
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                      backgroundClip: "text",
-                    }}
-                  >
-                    {n}
-                  </span>
+                  {icon}
+                </div>
+                <div
+                  className="text-xs font-bold mb-2"
+                  style={{ color: "#465FFF", fontFeatureSettings: "'tnum'" }}
+                >
+                  {n}
+                </div>
+                <h3 className="text-lg font-bold mb-2" style={{ color: "#0A0B1A" }}>{title}</h3>
+                <p className="text-sm leading-6 max-w-xs" style={{ color: "#64748b" }}>{body}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-12 text-center et-reveal et-delay-3">
+            <Link
+              href="/signup"
+              className="inline-flex items-center justify-center rounded-xl px-8 py-3.5 text-base font-bold text-white transition-all hover:opacity-90"
+              style={{ background: "#465FFF", boxShadow: "0 4px 16px rgba(70,95,255,0.3)" }}
+            >
+              Commencer maintenant — c&apos;est gratuit
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── TESTIMONIALS ─────────────────────────────────────────────── */}
+      <section style={{ background: "#0A0F1C" }} className="py-20 lg:py-28">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="text-center mb-14 et-reveal">
+            <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "#F59E0B" }}>
+              Témoignages
+            </p>
+            <h2 className="text-3xl lg:text-4xl font-bold text-white tracking-tight">
+              Ce qu&apos;ils disent
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {TESTIMONIALS.map(({ initial, name, role, body, metric, metricLabel, color }, i) => (
+              <div
+                key={name}
+                className="et-testimonial-card et-reveal rounded-2xl flex flex-col"
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  padding: "28px 24px",
+                  transitionDelay: `${i * 0.1}s`,
+                }}
+              >
+                {/* Stars */}
+                <div className="flex gap-1 mb-5">
+                  {Array.from({ length: 5 }).map((_, j) => (
+                    <svg key={j} width="14" height="14" viewBox="0 0 14 14" fill={color} aria-hidden="true">
+                      <path d="M7 1l1.5 3.5L12 5l-2.5 2.5.5 3.5L7 9.5l-3 1.5.5-3.5L2 5l3.5-.5z" />
+                    </svg>
+                  ))}
                 </div>
 
-                <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
-                <p
-                  className="text-sm leading-6 max-w-xs"
-                  style={{ color: "rgba(255,255,255,0.5)" }}
+                <blockquote className="text-base leading-7 flex-1" style={{ color: "rgba(255,255,255,0.72)" }}>
+                  &ldquo;{body}&rdquo;
+                </blockquote>
+
+                {/* Metric */}
+                <div
+                  className="mt-5 rounded-xl px-4 py-3"
+                  style={{
+                    background: color + "12",
+                    border: `1px solid ${color}25`,
+                  }}
                 >
-                  {body}
-                </p>
+                  <div className="text-2xl font-extrabold leading-none" style={{ color }}>
+                    {metric}
+                  </div>
+                  <div className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.45)" }}>
+                    {metricLabel}
+                  </div>
+                </div>
+
+                {/* Author */}
+                <div className="flex items-center gap-3 mt-5">
+                  <div
+                    style={{
+                      width: 40, height: 40,
+                      borderRadius: "50%",
+                      background: color + "25",
+                      border: `1.5px solid ${color}40`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 15, fontWeight: 700, color,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {initial}
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold" style={{ color: "white" }}>{name}</div>
+                    <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>{role}</div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── CTA ─────────────────────────────────────────────────────── */}
-      <section className="et-cta-section py-20 lg:py-28">
+      {/* ── CTA ──────────────────────────────────────────────────────── */}
+      <section className="et-cta-bg py-20 lg:py-28">
         <div className="relative z-10 max-w-3xl mx-auto px-6 lg:px-8 text-center et-reveal">
-          <p
-            className="text-sm font-semibold uppercase tracking-widest mb-4"
-            style={{ color: "rgba(255,255,255,0.7)" }}
+          <div
+            className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-widest uppercase mb-8"
+            style={{
+              background: "rgba(255,255,255,0.12)",
+              border: "1px solid rgba(255,255,255,0.25)",
+              color: "rgba(255,255,255,0.85)",
+            }}
           >
-            Rejoignez ELMES-TEKA
-          </p>
-          <h2 className="text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight">
+            Rejoindre ELMES-TEKA
+          </div>
+
+          <h2 className="text-3xl lg:text-4xl xl:text-5xl font-extrabold text-white tracking-tight leading-tight">
             Prêt à reprendre le contrôle
             <br />
             de votre commerce ?
           </h2>
-          <p
-            className="mt-5 text-base lg:text-lg"
-            style={{ color: "rgba(255,255,255,0.75)" }}
-          >
-            Rejoignez les entrepreneurs congolais qui digitalisent leur activité
-            avec ELMES-TEKA.
+          <p className="mt-5 text-lg" style={{ color: "rgba(255,255,255,0.8)" }}>
+            Créez votre compte en 15 minutes. Aucune carte bancaire requise.
           </p>
+
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/signup"
-              className="inline-flex items-center justify-center rounded-xl px-10 py-4 text-base font-bold text-amber-900 transition-all hover:scale-[1.02]"
+              className="inline-flex items-center justify-center rounded-xl px-10 py-4 text-base font-bold transition-all hover:scale-[1.01]"
               style={{
                 background: "white",
+                color: "#465FFF",
                 boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
               }}
             >
@@ -514,18 +708,15 @@ export default function HomePage() {
               href="/signin"
               className="inline-flex items-center justify-center rounded-xl px-10 py-4 text-base font-semibold text-white transition-colors"
               style={{
-                border: "1px solid rgba(255,255,255,0.4)",
+                border: "1px solid rgba(255,255,255,0.35)",
                 background: "rgba(255,255,255,0.1)",
               }}
             >
-              Déjà un compte ? Se connecter
+              Déjà un compte ? Connexion
             </Link>
           </div>
-          <p
-            className="mt-5 text-sm"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
-            Démarrage en moins de 15 minutes · Aucune carte bancaire requise
+          <p className="mt-5 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+            Démarrage en moins de 15 minutes · Sans carte bancaire · Conçu pour la RDC
           </p>
         </div>
       </section>

@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       description: "Point de vente centre-ville Gombe.",
       reference: ref("STR"),
       status: "ACTIVE",
-      coordonnes: [{ label: "Adresse", value: "Av. du Commerce 12, Gombe, Kinshasa" }],
+      coordonnes: [{ title: "Adresse", content: "Av. du Commerce 12, Gombe, Kinshasa" }],
       capitals: [],
       caisses: [],
       photos: [],

@@ -1,17 +1,5 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGO_URI;
-
-if (!MONGODB_URI) {
-  throw new Error(
-    'Veuillez définir la variable d\'environnement MONGO_URI dans votre fichier .env.local'
-  );
-}
-
-/**
- * Global est utilisé ici pour maintenir une connexion mise en cache 
- * à travers les rechargements à chaud (hot reloading) en développement.
- */
 interface MongooseCache {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
@@ -29,6 +17,14 @@ if (!cached) {
 }
 
 async function connectToDb(): Promise<typeof mongoose> {
+  const MONGODB_URI = process.env.MONGO_URI;
+
+  if (!MONGODB_URI) {
+    throw new Error(
+      "Veuillez définir la variable d'environnement MONGO_URI dans votre fichier .env.local"
+    );
+  }
+
   if (cached!.conn) {
     return cached!.conn;
   }
@@ -38,7 +34,7 @@ async function connectToDb(): Promise<typeof mongoose> {
       bufferCommands: false,
     };
 
-    cached!.promise = mongoose.connect(MONGODB_URI!, opts).then((mongooseInstance) => {
+    cached!.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
       console.log('🔹 [MongoDB] Nouvelle connexion établie avec succès.');
       return mongooseInstance;
     });

@@ -441,7 +441,8 @@ export async function exportDossierFinancement(
     const totalDep = months.reduce((s, m) => s + m.dep, 0);
     const totalResult = totalCA - totalDep;
 
-    const PdfPrinter = (await import("pdfmake")).default;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const PdfPrinter = (await import("pdfmake")).default as any;
     const fonts = {
       Helvetica: {
         normal: "Helvetica",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { sendContactMessage } from "@/app/(marketing)/contact/actions";
 
 type FormState = {
   name: string;
@@ -23,6 +24,7 @@ export default function ContactForm() {
   const [errors, setErrors] = useState<Partial<FormState>>({});
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   function validate(): boolean {
     const next: Partial<FormState> = {};
@@ -46,14 +48,24 @@ export default function ContactForm() {
     }
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
+    setServerError(null);
+    const result = await sendContactMessage({
+      name: form.name,
+      email: form.email,
+      phone: form.phone || undefined,
+      subject: form.subject,
+      message: form.message,
+    });
+    setSubmitting(false);
+    if (result.ok) {
       setSent(true);
-    }, 1000);
+    } else {
+      setServerError(result.error ?? "Une erreur est survenue.");
+    }
   }
 
   if (sent) {
@@ -219,6 +231,13 @@ export default function ContactForm() {
           <p className="mt-1 text-xs text-red-500">{errors.message}</p>
         )}
       </div>
+
+      {/* Erreur serveur */}
+      {serverError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {serverError}
+        </div>
+      )}
 
       {/* Submit */}
       <button

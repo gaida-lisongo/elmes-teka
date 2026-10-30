@@ -216,6 +216,33 @@ export default function HomePage() {
 
       {/* ── HERO ─────────────────────────────────────────────────────── */}
       <section className="et-hero flex items-center py-20 lg:py-0" style={{ minHeight: "100svh" }}>
+
+        {/* Background video — aerial African city night */}
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            poster="https://images.pexels.com/videos/33646479/aerial-cape-town-drone-south-africa-33646479.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080"
+            className="absolute inset-0 w-full h-full object-cover"
+          >
+            <source
+              src="https://videos.pexels.com/video-files/33646479/14298459_2560_1440_24fps.mp4"
+              type="video/mp4"
+            />
+          </video>
+          {/* Dark overlay to keep text legible */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(7,11,24,0.82) 0%, rgba(7,11,24,0.88) 60%, rgba(7,11,24,0.96) 100%)",
+            }}
+          />
+        </div>
+
         <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 w-full">
           <div className="grid lg:grid-cols-2 gap-16 xl:gap-20 items-center">
 

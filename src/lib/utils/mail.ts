@@ -88,12 +88,12 @@ export class Mail {
   }
 
   getConfig(): MailConfig {
-    const host = readEnv("MAIL_HOST");
-    const port = parsePort(readEnv("MAIL_PORT", "MAIL-PORT"));
-    const secure = parseSecure(readEnv("MAIL_SECURE"));
-    const user = readEnv("MAIL_USER");
-    const pass = readEnv("MAIL_PASS");
-    const from = readEnv("MAIL_FROM", "MAIL_USER");
+    const host = readEnv("MAIL_HOST", "EMAIL_HOST");
+    const port = parsePort(readEnv("MAIL_PORT", "MAIL-PORT", "EMAIL_PORT"));
+    const secure = parseSecure(readEnv("MAIL_SECURE", "EMAIL_SECURE"));
+    const user = readEnv("MAIL_USER", "EMAIL_USER");
+    const pass = readEnv("MAIL_PASS", "EMAIL_PASS");
+    const from = readEnv("MAIL_FROM", "MAIL_USER", "EMAIL_FROM", "EMAIL_USER");
 
     if (!host) {
       throw new Error("mail_host_missing");

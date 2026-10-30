@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import HeroPhone from "@/components/marketing/HeroPhone";
-import HeroCarousel from "@/components/marketing/HeroCarousel";
+import HeroSection from "@/components/marketing/HeroSection";
 import ScrollRevealInit from "@/components/marketing/ScrollRevealInit";
 
 export const metadata: Metadata = {
@@ -30,54 +29,6 @@ const STATS = [
   { value: "81%", label: "des MPME sans logiciel de stock", source: "MicroSave 2025" },
   { value: "57%", label: "ont du mal à collecter leurs données", source: "MicroSave 2025" },
   { value: "15 min", label: "pour démarrer sur ELMES-TEKA", source: "" },
-];
-
-const PROBLEM_CARDS = [
-  {
-    title: "Vous vendez, mais ne savez pas combien vous gagnez",
-    body: "Cahiers, calculs à la main, totaux qui ne correspondent jamais. Le soir, vous recomptez tout depuis zéro.",
-    color: "#ef4444",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-        <path d="M9 2v5l3 3M3 9a6 6 0 1 0 12 0A6 6 0 0 0 3 9z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-  {
-    title: "Vos stocks disparaissent sans explication",
-    body: "Ruptures surprise, inventaires incorrects. Vous gérez à l'œil, pas à la donnée — et vous perdez de l'argent.",
-    color: "#F59E0B",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-        <path d="M3 5h12M3 9h8M3 13h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        <circle cx="14" cy="13.5" r="2.5" stroke="currentColor" strokeWidth="1.4" />
-        <path d="M14 12.5v1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    title: "Supervision impossible quand vous n'êtes pas là",
-    body: "Dès que vous quittez la boutique, vous perdez le contrôle. Avec plusieurs boutiques, c'est encore pire.",
-    color: "#8b5cf6",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-        <path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M1.5 9S4 3 9 3s7.5 6 7.5 6-2.5 6-7.5 6S1.5 9 1.5 9z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M3 15L15 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    title: "Les banques refusent vos demandes de crédit",
-    body: "Pas d'historique financier structuré. Votre activité est réelle, mais vous ne pouvez pas le prouver sur papier.",
-    color: "#38bdf8",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-        <rect x="1.5" y="4" width="15" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M1.5 7.5h15M5 11h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      </svg>
-    ),
-  },
 ];
 
 const BENEFIT_CARDS = [
@@ -217,58 +168,7 @@ export default function HomePage() {
       <ScrollRevealInit />
 
       {/* ── HERO ─────────────────────────────────────────────────────── */}
-      <section className="et-hero flex items-center py-20 lg:py-0" style={{ minHeight: "100svh" }}>
-
-        {/* Background video — aerial African city night */}
-        <div className="absolute inset-0 z-0 overflow-hidden">
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            poster="https://images.pexels.com/videos/33646479/aerial-cape-town-drone-south-africa-33646479.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080"
-            className="absolute inset-0 w-full h-full object-cover"
-          >
-            <source
-              src="https://videos.pexels.com/video-files/33646479/14298459_2560_1440_24fps.mp4"
-              type="video/mp4"
-            />
-          </video>
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(180deg, rgba(16,43,80,0.82) 0%, rgba(16,43,80,0.88) 60%, rgba(16,43,80,0.96) 100%)",
-            }}
-          />
-        </div>
-
-        <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 w-full">
-          <div className="grid lg:grid-cols-2 gap-16 xl:gap-20 items-center">
-
-            {/* Left — carousel */}
-            <HeroCarousel />
-
-            {/* Right — phone mockup */}
-            <div className="flex justify-center lg:justify-end">
-              <HeroPhone />
-            </div>
-          </div>
-        </div>
-
-        {/* Scroll cue */}
-        <div
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5"
-          style={{ opacity: 0.35 }}
-          aria-hidden="true"
-        >
-          <span className="text-xs text-white/50 tracking-widest uppercase">Défiler</span>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M9 4v10M4 9l5 5 5-5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
-      </section>
+      <HeroSection />
 
       {/* ── FEATURE MARQUEE ──────────────────────────────────────────── */}
       <div
@@ -321,150 +221,6 @@ export default function HomePage() {
                 )}
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── LE PROBLÈME ──────────────────────────────────────────────── */}
-      <section style={{ background: "#060A16" }} className="py-20 lg:py-28">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="text-center mb-16 et-reveal">
-            <div
-              className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest mb-6"
-              style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.22)", color: "#f87171" }}
-            >
-              La réalité du terrain
-            </div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-white tracking-tight leading-tight">
-              Ce que vivent chaque jour<br />les entrepreneurs congolais
-            </h2>
-            <p className="mt-4 text-base" style={{ color: "rgba(255,255,255,0.42)", maxWidth: "520px", margin: "16px auto 0" }}>
-              Ces problèmes ne sont pas des exceptions — ils sont la norme.
-              ELMES-TEKA les résout tous, dès le premier jour.
-            </p>
-          </div>
-
-          <div className="grid lg:grid-cols-2 gap-12 items-start">
-            {/* Left: Problem cards */}
-            <div className="flex flex-col gap-4">
-              {PROBLEM_CARDS.map(({ icon, title, body, color }, i) => (
-                <div
-                  key={title}
-                  className="et-reveal rounded-2xl p-5 flex gap-4 items-start"
-                  style={{
-                    background: "rgba(255,255,255,0.03)",
-                    border: "1px solid rgba(255,255,255,0.07)",
-                    transitionDelay: `${i * 0.08}s`,
-                  }}
-                >
-                  <div
-                    className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center"
-                    style={{ background: color + "18", border: `1px solid ${color}28`, color }}
-                  >
-                    {icon}
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold mb-1.5 leading-5" style={{ color: "rgba(255,255,255,0.9)" }}>
-                      {title}
-                    </h3>
-                    <p className="text-sm leading-6" style={{ color: "rgba(255,255,255,0.44)" }}>
-                      {body}
-                    </p>
-                  </div>
-                </div>
-              ))}
-
-              {/* Solution bridge */}
-              <div
-                className="et-reveal rounded-2xl p-5 mt-2"
-                style={{ background: "rgba(70,95,255,0.08)", border: "1px solid rgba(70,95,255,0.22)" }}
-              >
-                <p className="text-sm font-semibold leading-6" style={{ color: "#93BFFF" }}>
-                  ELMES-TEKA résout ces 4 problèmes simultanément — depuis un seul téléphone, en moins de 15 minutes de démarrage.
-                </p>
-              </div>
-            </div>
-
-            {/* Right: Videos mosaic */}
-            <div className="et-reveal et-delay-2 grid grid-cols-2 gap-3">
-              {/* Tall left video */}
-              <div className="relative overflow-hidden rounded-2xl row-span-2" style={{ aspectRatio: "9/16" }}>
-                <video
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="metadata"
-                  poster="https://images.pexels.com/videos/37080143/counting-money-lagos-market-marina-market-market-woman-37080143.jpeg?auto=compress&w=360&h=640"
-                  className="absolute inset-0 w-full h-full object-cover"
-                >
-                  <source src="https://videos.pexels.com/video-files/37080143/15708450_2560_1440_60fps.mp4" type="video/mp4" />
-                </video>
-                <div
-                  className="absolute inset-0"
-                  style={{ background: "linear-gradient(to top, rgba(6,10,22,0.88) 0%, rgba(6,10,22,0.1) 55%, transparent 100%)" }}
-                />
-                <div className="absolute bottom-4 left-4 right-4">
-                  <span
-                    className="inline-block text-xs font-bold rounded-full px-2.5 py-0.5 mb-1.5"
-                    style={{ background: "rgba(239,68,68,0.22)", border: "1px solid rgba(239,68,68,0.35)", color: "#f87171" }}
-                  >
-                    Problème
-                  </span>
-                  <p className="text-xs leading-4 font-medium" style={{ color: "rgba(255,255,255,0.72)" }}>
-                    Comptabilité manuelle chaque soir
-                  </p>
-                </div>
-              </div>
-
-              {/* Top right */}
-              <div className="relative overflow-hidden rounded-2xl" style={{ aspectRatio: "4/3" }}>
-                <video
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="metadata"
-                  poster="https://images.pexels.com/videos/27165007/abuja-market-african-market-bariga-market-business-woman-27165007.jpeg?auto=compress&w=360&h=270"
-                  className="absolute inset-0 w-full h-full object-cover"
-                >
-                  <source src="https://videos.pexels.com/video-files/27165007/12087873_2560_1440_25fps.mp4" type="video/mp4" />
-                </video>
-                <div
-                  className="absolute inset-0"
-                  style={{ background: "linear-gradient(to top, rgba(6,10,22,0.82) 0%, transparent 60%)" }}
-                />
-                <div className="absolute bottom-3 left-3 right-3">
-                  <p className="text-xs font-medium leading-4" style={{ color: "rgba(255,255,255,0.68)" }}>
-                    Marché animé — sans données
-                  </p>
-                </div>
-              </div>
-
-              {/* Bottom right */}
-              <div className="relative overflow-hidden rounded-2xl" style={{ aspectRatio: "4/3" }}>
-                <video
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="metadata"
-                  poster="https://images.pexels.com/videos/20450812/aboki-selling-to-buyer-20450812.jpeg?auto=compress&w=360&h=270"
-                  className="absolute inset-0 w-full h-full object-cover"
-                >
-                  <source src="https://videos.pexels.com/video-files/20450812/20450812-hd_1920_1080_30fps.mp4" type="video/mp4" />
-                </video>
-                <div
-                  className="absolute inset-0"
-                  style={{ background: "linear-gradient(to top, rgba(6,10,22,0.82) 0%, transparent 60%)" }}
-                />
-                <div className="absolute bottom-3 left-3 right-3">
-                  <p className="text-xs font-medium leading-4" style={{ color: "rgba(255,255,255,0.68)" }}>
-                    Ventes sans traçabilité
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>

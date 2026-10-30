@@ -39,3 +39,4 @@ next-env.d.ts
 # python cache (skills)
 __pycache__/
 *.py[cod]
+.claude/worktrees/

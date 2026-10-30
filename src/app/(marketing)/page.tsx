@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import HeroPhone from "@/components/marketing/HeroPhone";
+import HeroCarousel from "@/components/marketing/HeroCarousel";
 import ScrollRevealInit from "@/components/marketing/ScrollRevealInit";
 
 export const metadata: Metadata = {
@@ -23,125 +23,6 @@ const MARQUEE_PILLS = [
   "Données propriétaire",
   "Journal de caisse",
   "Tableau de bord mobile",
-];
-
-const FEATURES = [
-  {
-    tag: "Supervision",
-    tagColor: "#124A99",
-    title: "Trois boutiques, un seul regard — depuis votre téléphone",
-    body: "Vision unifiée de tous vos points de vente. Chaque vente notifiée en temps réel. Stock visible à tout moment. Journal de caisse non modifiable par le vendeur.",
-    quote: "99 % des unités économiques en RDC sont informelles. Le vol en caisse est la première source de perte documentée.",
-    source: "MicroSave 2025",
-    metric: "−31%",
-    metricLabel: "de pertes en caisse en moyenne",
-    photoId: "https://images.pexels.com/videos/27165007/abuja-market-african-market-bariga-market-business-woman-27165007.jpeg?auto=compress&cs=tinysrgb&w=680&h=510&dpr=1",
-    photoAlt: "Marché africain animé avec commerçantes",
-    imageLeft: true,
-  },
-  {
-    tag: "Fidélisation",
-    tagColor: "#10B981",
-    title: "Vos meilleurs clients reviennent — parce que vous les connaissez",
-    body: "Base client centralisée avec historique d'achats complet. Identification automatique des clients fidèles et des clients à risque. Promotions ciblées sur les clients inactifs.",
-    quote: "71 % des MPME digitalisées utilisent les données clients pour adapter leurs offres. Seuls 6 % ont les outils pour le faire.",
-    source: "MicroSave 2025",
-    metric: "+40%",
-    metricLabel: "de clients fidèles actifs",
-    photoId: "https://images.pexels.com/videos/37080143/counting-money-lagos-market-marina-market-market-woman-37080143.jpeg?auto=compress&cs=tinysrgb&w=680&h=510&dpr=1",
-    photoAlt: "Marchande comptant son argent au marché",
-    imageLeft: false,
-  },
-  {
-    tag: "Pilotage",
-    tagColor: "#F59E0B",
-    title: "Décidez sur des faits, pas sur des impressions",
-    body: "Chiffre d'affaires global et par boutique en temps réel. Marge brute par produit. Performance par vendeur. Top produits, comparaison avec la période précédente.",
-    quote: "57 % des MPME ont du mal à collecter leurs données. 33 % ne savent pas les analyser.",
-    source: "MicroSave 2025",
-    metric: "2×",
-    metricLabel: "plus vite à prendre une décision commerciale",
-    photoId: "https://images.pexels.com/videos/20450812/aboki-selling-to-buyer-20450812.jpeg?auto=compress&cs=tinysrgb&w=680&h=510&dpr=1",
-    photoAlt: "Vendeur africain avec un acheteur",
-    imageLeft: true,
-  },
-  {
-    tag: "Financement",
-    tagColor: "#38bdf8",
-    title: "6 mois d'ELMES-TEKA = votre dossier de financement",
-    body: "Historique complet de toutes vos transactions. États financiers exportables en PDF. Récapitulatifs mensuels exploitables par les institutions de microfinance.",
-    quote: "L'accès au crédit est le défi n°1 des PME congolaises. Les banques refusent faute de preuves d'activité.",
-    source: "Banque Mondiale RDC, 2020",
-    metric: "3×",
-    metricLabel: "plus de chances d'obtenir un crédit",
-    photoId: "https://images.pexels.com/photos/39916941/pexels-photo-39916941.jpeg?auto=compress&cs=tinysrgb&w=680&h=510&dpr=1",
-    photoAlt: "Entrepreneur au marché africain",
-    imageLeft: false,
-  },
-];
-
-const STEPS = [
-  {
-    n: "01",
-    title: "Créez votre compte",
-    body: "Renseignez votre entreprise et ajoutez vos boutiques. Moins de 15 minutes, aucune compétence technique.",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-        <path d="M11 3a5 5 0 1 1 0 10A5 5 0 0 1 11 3zm0 12c5 0 8 2.5 8 4v1H3v-1c0-1.5 3-4 8-4z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-  {
-    n: "02",
-    title: "Ajoutez vos produits",
-    body: "Catalogue, prix en USD ou CDF, stocks initiaux. Importez votre liste existante ou saisissez produit par produit.",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-        <path d="M4 4h5l2 5-2.5 1.5c1 2 2 3 4 4L14 12l5 2v5c-9.5.5-15.5-5.5-15-15z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-  {
-    n: "03",
-    title: "Vendez et supervisez",
-    body: "Vos vendeurs saisissent les ventes depuis leur téléphone. Vous voyez tout en temps réel, de n'importe où.",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-        <rect x="4" y="3" width="14" height="18" rx="2" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M8 8h6M8 12h4M8 16h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-];
-
-const TESTIMONIALS = [
-  {
-    initial: "A",
-    name: "Alphonsine Kabamba",
-    role: "Boutique vêtements — Gombe, Kinshasa",
-    body: "Avant, je devais rentrer chaque soir vérifier les cahiers de mes vendeurs. Maintenant je vois tout depuis mon téléphone, même quand je suis au marché de la Foire.",
-    metric: "+40%",
-    metricLabel: "de ventes documentées dès le 1er mois",
-    color: "#124A99",
-  },
-  {
-    initial: "M",
-    name: "Marcel Tshimanga",
-    role: "Grossiste denrées alimentaires — Lingwala",
-    body: "J'ai obtenu un crédit à la FINCA grâce aux relevés PDF d'ELMES-TEKA. La banque voulait 6 mois de preuves d'activité — j'avais tout, propre et signé.",
-    metric: "5 000 $",
-    metricLabel: "de crédit obtenu après 8 mois d'utilisation",
-    color: "#10B981",
-  },
-  {
-    initial: "D",
-    name: "Divine Mutombo",
-    role: "Salon de coiffure, 2 points de vente — Matonge",
-    body: "Je payais une caissière extra pour faire les comptes le dimanche. Plus besoin. ELMES-TEKA génère tout automatiquement. J'économise 200 $ par mois.",
-    metric: "200 $/mois",
-    metricLabel: "économisés sur la gestion administrative",
-    color: "#F59E0B",
-  },
 ];
 
 const STATS = [
@@ -199,10 +80,131 @@ const PROBLEM_CARDS = [
   },
 ];
 
-function CheckIcon() {
+const BENEFIT_CARDS = [
+  {
+    tag: "Supervision",
+    tagColor: "#124A99",
+    metric: "-31%",
+    metricLabel: "de pertes en caisse",
+    title: "Trois boutiques, un seul regard — depuis votre téléphone",
+    body: "Vision unifiée de tous vos points de vente. Chaque vente notifiée en temps réel.",
+    delay: "",
+  },
+  {
+    tag: "Fidélisation",
+    tagColor: "#10B981",
+    metric: "+40%",
+    metricLabel: "de clients fidèles",
+    title: "Vos meilleurs clients reviennent — parce que vous les connaissez",
+    body: "Base client centralisée avec historique d'achats. Identification automatique des clients fidèles.",
+    delay: "et-delay-1",
+  },
+  {
+    tag: "Pilotage",
+    tagColor: "#F59E0B",
+    metric: "2×",
+    metricLabel: "plus vite pour décider",
+    title: "Décidez sur des faits, pas sur des impressions",
+    body: "CA par boutique en temps réel. Marge brute par produit. Top produits et performance vendeur.",
+    delay: "et-delay-2",
+  },
+  {
+    tag: "Financement",
+    tagColor: "#38bdf8",
+    metric: "3×",
+    metricLabel: "plus de chances d'obtenir un crédit",
+    title: "6 mois d'ELMES-TEKA = votre dossier de financement",
+    body: "Historique complet exportable en PDF. Récapitulatifs exploitables par les institutions de microfinance.",
+    delay: "et-delay-3",
+  },
+];
+
+const STEPS = [
+  {
+    n: "01",
+    title: "Créez votre compte",
+    body: "Renseignez votre entreprise et ajoutez vos boutiques. Moins de 15 minutes, aucune compétence technique.",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <path d="M11 3a5 5 0 1 1 0 10A5 5 0 0 1 11 3zm0 12c5 0 8 2.5 8 4v1H3v-1c0-1.5 3-4 8-4z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    n: "02",
+    title: "Ajoutez vos produits",
+    body: "Catalogue, prix en USD ou CDF, stocks initiaux. Importez votre liste existante ou saisissez produit par produit.",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <path d="M4 4h5l2 5-2.5 1.5c1 2 2 3 4 4L14 12l5 2v5c-9.5.5-15.5-5.5-15-15z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    n: "03",
+    title: "Vendez et supervisez",
+    body: "Vos vendeurs saisissent les ventes depuis leur téléphone. Vous voyez tout en temps réel, de n'importe où.",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <rect x="4" y="3" width="14" height="18" rx="2" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M8 8h6M8 12h4M8 16h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    n: "04",
+    title: "Choisissez votre formule",
+    body: "Un abonnement annuel par exercice comptable (année fiscale). Payez une fois, gérez toute l'année.",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <rect x="3" y="4" width="16" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M11 8v6M8 11h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+];
+
+const PRICING_INCLUDES = [
+  "Boutiques illimitées",
+  "Vendeurs illimités",
+  "Rapports PDF",
+  "Support prioritaire",
+];
+
+const TESTIMONIALS = [
+  {
+    initial: "A",
+    name: "Alphonsine Kabamba",
+    role: "Boutique vêtements — Gombe, Kinshasa",
+    body: "Avant, je devais rentrer chaque soir vérifier les cahiers de mes vendeurs. Maintenant je vois tout depuis mon téléphone, même quand je suis au marché de la Foire.",
+    metric: "+40%",
+    metricLabel: "de ventes documentées dès le 1er mois",
+    color: "#124A99",
+  },
+  {
+    initial: "M",
+    name: "Marcel Tshimanga",
+    role: "Grossiste denrées alimentaires — Lingwala",
+    body: "J'ai obtenu un crédit à la FINCA grâce aux relevés PDF d'ELMES-TEKA. La banque voulait 6 mois de preuves d'activité — j'avais tout, propre et signé.",
+    metric: "5 000 $",
+    metricLabel: "de crédit obtenu après 8 mois d'utilisation",
+    color: "#10B981",
+  },
+  {
+    initial: "D",
+    name: "Divine Mutombo",
+    role: "Salon de coiffure, 2 points de vente — Matonge",
+    body: "Je payais une caissière extra pour faire les comptes le dimanche. Plus besoin. ELMES-TEKA génère tout automatiquement. J'économise 200 $ par mois.",
+    metric: "200 $/mois",
+    metricLabel: "économisés sur la gestion administrative",
+    color: "#F59E0B",
+  },
+];
+
+function CheckIcon({ color = "#22c55e" }: { color?: string }) {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" className="flex-shrink-0">
-      <path d="M2.5 7l3 3 6-6" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M2.5 7l3 3 6-6" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -233,7 +235,6 @@ export default function HomePage() {
               type="video/mp4"
             />
           </video>
-          {/* Dark overlay to keep text legible */}
           <div
             className="absolute inset-0"
             style={{
@@ -246,117 +247,8 @@ export default function HomePage() {
         <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 w-full">
           <div className="grid lg:grid-cols-2 gap-16 xl:gap-20 items-center">
 
-            {/* Left — copy */}
-            <div>
-              {/* Trust badge */}
-              <div
-                className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-widest uppercase mb-8"
-                style={{
-                  background: "rgba(70,95,255,0.12)",
-                  border: "1px solid rgba(70,95,255,0.28)",
-                  color: "rgba(180,190,255,0.9)",
-                }}
-              >
-                <Image
-                  src="/images/logo/logo-icon.svg"
-                  alt=""
-                  width={14}
-                  height={14}
-                  className="opacity-90"
-                />
-                CRM Made in Congo · ELMES
-              </div>
-
-              <h1
-                className="text-5xl lg:text-6xl xl:text-[68px] font-extrabold text-white leading-[1.05] tracking-tight"
-              >
-                Gérez tout votre commerce.
-                <br />
-                <span style={{ color: "#93BFFF" }}>De n&apos;importe où.</span>
-              </h1>
-
-              <p
-                className="mt-6 text-lg leading-relaxed"
-                style={{ color: "rgba(255,255,255,0.58)", maxWidth: "480px" }}
-              >
-                ELMES-TEKA est le CRM pensé pour les entrepreneurs congolais —
-                multi-boutiques, double devise USD/CDF, vendeurs multiples,
-                tout visible en temps réel depuis votre téléphone.
-              </p>
-
-              <div className="mt-9 flex flex-col sm:flex-row gap-3">
-                <Link
-                  href="/signup"
-                  className="inline-flex items-center justify-center rounded-xl px-7 py-3.5 text-base font-bold text-white transition-all hover:opacity-90 hover:scale-[1.01]"
-                  style={{
-                    background: "#F59E0B",
-                    boxShadow: "0 0 0 1px rgba(245,158,11,0.4), 0 8px 24px rgba(245,158,11,0.25)",
-                  }}
-                >
-                  Commencer gratuitement
-                </Link>
-                <Link
-                  href="/#comment"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3.5 text-base font-semibold transition-colors hover:text-white"
-                  style={{
-                    border: "1px solid rgba(255,255,255,0.16)",
-                    color: "rgba(255,255,255,0.75)",
-                    background: "rgba(255,255,255,0.04)",
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M8 3v5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2" />
-                  </svg>
-                  Voir la démo
-                </Link>
-              </div>
-
-              <div
-                className="mt-7 flex flex-wrap gap-x-5 gap-y-2 text-sm"
-                style={{ color: "rgba(255,255,255,0.45)" }}
-              >
-                {["Démarrage en 15 minutes", "USD & CDF natifs", "Multi-boutiques inclus"].map((t) => (
-                  <span key={t} className="flex items-center gap-1.5">
-                    <CheckIcon />
-                    {t}
-                  </span>
-                ))}
-              </div>
-
-              {/* Social proof */}
-              <div
-                className="mt-8 flex items-center gap-3"
-                style={{
-                  borderTop: "1px solid rgba(255,255,255,0.06)",
-                  paddingTop: 20,
-                }}
-              >
-                <div className="flex -space-x-2">
-                  {["A", "M", "D", "F"].map((initial, i) => (
-                    <div
-                      key={initial}
-                      style={{
-                        width: 32, height: 32,
-                        borderRadius: "50%",
-                        background: ["#124A99", "#10B981", "#F59E0B", "#7C3AED"][i],
-                        border: "2px solid #102B50",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 11, fontWeight: 700, color: "white",
-                      }}
-                    >
-                      {initial}
-                    </div>
-                  ))}
-                </div>
-                <div>
-                  <div style={{ color: "rgba(255,255,255,0.8)", fontSize: 13, fontWeight: 600, lineHeight: 1.3 }}>
-                    Rejoignez <span style={{ color: "#93BFFF" }}>2 400+ vendeurs actifs</span>
-                  </div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>à Kinshasa, Lubumbashi, Goma et au-delà</div>
-                </div>
-              </div>
-            </div>
+            {/* Left — carousel */}
+            <HeroCarousel />
 
             {/* Right — phone mockup */}
             <div className="flex justify-center lg:justify-end">
@@ -495,7 +387,7 @@ export default function HomePage() {
 
             {/* Right: Videos mosaic */}
             <div className="et-reveal et-delay-2 grid grid-cols-2 gap-3">
-              {/* Tall left video: femme qui compte son argent */}
+              {/* Tall left video */}
               <div className="relative overflow-hidden rounded-2xl row-span-2" style={{ aspectRatio: "9/16" }}>
                 <video
                   autoPlay
@@ -525,7 +417,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Top right: scène de marché animé */}
+              {/* Top right */}
               <div className="relative overflow-hidden rounded-2xl" style={{ aspectRatio: "4/3" }}>
                 <video
                   autoPlay
@@ -549,7 +441,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Bottom right: vendeur avec acheteur */}
+              {/* Bottom right */}
               <div className="relative overflow-hidden rounded-2xl" style={{ aspectRatio: "4/3" }}>
                 <video
                   autoPlay
@@ -577,94 +469,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── CONTEXT PHOTOS ───────────────────────────────────────────── */}
-      <section style={{ background: "#102B50" }} className="py-20 lg:py-28">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 xl:gap-16 items-center">
-
-            <div className="et-reveal">
-              <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "#F59E0B" }}>
-                Notre marché
-              </p>
-              <h2 className="text-3xl lg:text-4xl font-bold text-white tracking-tight leading-tight">
-                Fait pour ceux qui
-                <br />
-                bâtissent l&apos;Afrique
-              </h2>
-              <p className="mt-5 text-base leading-7" style={{ color: "rgba(255,255,255,0.5)", maxWidth: "460px" }}>
-                Des vendeurs de Kinshasa aux grossistes de Lubumbashi — ELMES-TEKA a été
-                conçu en observant la réalité des marchés congolais : plusieurs boutiques,
-                des vendeurs sur le terrain, un propriétaire qui veut tout voir depuis son téléphone.
-              </p>
-              <div className="mt-8 flex flex-col gap-5">
-                {[
-                  { n: "3 000+", l: "boutiques actives sur la plateforme" },
-                  { n: "15 min", l: "pour démarrer, sans formation technique" },
-                  { n: "USD & CDF", l: "double devise native, aucune conversion manuelle" },
-                ].map(({ n, l }) => (
-                  <div key={n} className="flex items-center gap-5">
-                    <span
-                      className="text-2xl font-extrabold"
-                      style={{ color: "#F59E0B", minWidth: "90px" }}
-                    >
-                      {n}
-                    </span>
-                    <span className="text-sm leading-5" style={{ color: "rgba(255,255,255,0.45)" }}>
-                      {l}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 et-reveal et-delay-2">
-              {[
-                {
-                  src: "https://images.pexels.com/videos/37080143/counting-money-lagos-market-marina-market-market-woman-37080143.jpeg?auto=compress&cs=tinysrgb&w=400&h=540&dpr=1",
-                  alt: "Marchande comptant son argent au marché de Lagos",
-                },
-                {
-                  src: "https://images.pexels.com/videos/27165007/abuja-market-african-market-bariga-market-business-woman-27165007.jpeg?auto=compress&cs=tinysrgb&w=400&h=540&dpr=1",
-                  alt: "Marché africain animé",
-                },
-                {
-                  src: "https://images.pexels.com/videos/20450812/aboki-selling-to-buyer-20450812.jpeg?auto=compress&cs=tinysrgb&w=400&h=540&dpr=1",
-                  alt: "Vendeur africain avec un acheteur",
-                },
-                {
-                  src: "https://images.pexels.com/photos/39916941/pexels-photo-39916941.jpeg?auto=compress&cs=tinysrgb&w=400&h=540&dpr=1",
-                  alt: "Entrepreneur au marché",
-                },
-              ].map(({ src, alt }, i) => (
-                <div
-                  key={src}
-                  className="relative overflow-hidden"
-                  style={{
-                    borderRadius: "16px",
-                    aspectRatio: "3/4",
-                    ...(i % 2 === 1 ? { marginTop: "20px" } : {}),
-                    ...(i === 3 ? { marginTop: "-20px" } : {}),
-                  }}
-                >
-                  <Image
-                    src={src}
-                    alt={alt}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 45vw, 22vw"
-                  />
-                  <div
-                    className="absolute inset-0"
-                    style={{ background: "linear-gradient(to bottom, transparent 55%, rgba(16,43,80,0.45) 100%)" }}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── FEATURES ─────────────────────────────────────────────────── */}
+      {/* ── BÉNÉFICES (cartes animées sans photos) ───────────────────── */}
       <section id="benefices" className="py-20 lg:py-28" style={{ background: "#FFFFFF" }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="text-center mb-16 et-reveal">
@@ -679,78 +484,51 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-20">
-            {FEATURES.map(({ tag, tagColor, title, body, quote, source, metric, metricLabel, photoId, photoAlt, imageLeft }, idx) => (
+          <div className="grid md:grid-cols-2 gap-6">
+            {BENEFIT_CARDS.map(({ tag, tagColor, metric, metricLabel, title, body, delay }) => (
               <div
                 key={tag}
-                className={`et-reveal grid lg:grid-cols-2 gap-10 xl:gap-16 items-center ${imageLeft ? "" : "lg:grid-flow-col-dense"}`}
+                className={`et-reveal et-feature-card ${delay} rounded-2xl p-7`}
+                style={{
+                  background: "#FFFFFF",
+                  border: "1px solid #E2E8F0",
+                  boxShadow: "0 2px 12px rgba(18,74,153,0.06)",
+                }}
               >
-                {/* Photo */}
-                <div className={`relative ${imageLeft ? "lg:order-1" : "lg:order-2"}`}>
-                  <div
-                    className="relative overflow-hidden"
-                    style={{ borderRadius: 20, aspectRatio: "4/3" }}
+                {/* Tag */}
+                <span
+                  className="inline-block text-xs font-bold uppercase tracking-widest mb-5 rounded-full px-3 py-1"
+                  style={{
+                    background: tagColor + "14",
+                    color: tagColor,
+                    border: `1px solid ${tagColor}28`,
+                  }}
+                >
+                  {tag}
+                </span>
+
+                {/* Metric */}
+                <div className="mb-4">
+                  <span
+                    className="text-5xl font-extrabold leading-none"
+                    style={{ color: tagColor }}
                   >
-                    <Image
-                      src={photoId}
-                      alt={photoAlt}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, 50vw"
-                    />
-                    {/* Metric badge */}
-                    <div
-                      className="absolute bottom-4 left-4 rounded-xl px-4 py-3"
-                      style={{
-                        background: "rgba(16,43,80,0.88)",
-                        backdropFilter: "blur(12px)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                      }}
-                    >
-                      <div className="text-2xl font-extrabold" style={{ color: tagColor, lineHeight: 1 }}>
-                        {metric}
-                      </div>
-                      <div className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.55)", maxWidth: 140 }}>
-                        {metricLabel}
-                      </div>
-                    </div>
-                  </div>
+                    {metric}
+                  </span>
+                  <span
+                    className="ml-3 text-sm font-medium"
+                    style={{ color: "#64748b" }}
+                  >
+                    {metricLabel}
+                  </span>
                 </div>
 
-                {/* Text */}
-                <div className={imageLeft ? "lg:order-2" : "lg:order-1"}>
-                  <span
-                    className="inline-block text-xs font-bold uppercase tracking-widest mb-4 rounded-full px-3 py-1"
-                    style={{
-                      background: tagColor + "18",
-                      color: tagColor,
-                      border: `1px solid ${tagColor}30`,
-                    }}
-                  >
-                    {tag}
-                  </span>
-                  <h3
-                    className="text-2xl lg:text-3xl font-bold leading-snug mb-4"
-                    style={{ color: "#0A0B1A" }}
-                  >
-                    {title}
-                  </h3>
-                  <p className="text-base leading-7" style={{ color: "#475569" }}>
-                    {body}
-                  </p>
-                  <blockquote
-                    className="mt-6 text-sm italic leading-6 pl-4"
-                    style={{
-                      borderLeft: `3px solid ${tagColor}`,
-                      color: "#64748b",
-                    }}
-                  >
-                    &ldquo;{quote}&rdquo;
-                    <cite className="block text-xs not-italic mt-1.5" style={{ color: "#94A3B8" }}>
-                      — {source}
-                    </cite>
-                  </blockquote>
-                </div>
+                <h3 className="text-xl font-bold mb-3 leading-snug" style={{ color: "#0A0B1A" }}>
+                  {title}
+                </h3>
+                <p className="text-base leading-7" style={{ color: "#475569" }}>
+                  {body}
+                </p>
               </div>
             ))}
           </div>
@@ -765,17 +543,17 @@ export default function HomePage() {
               Démarrage
             </p>
             <h2 className="text-3xl lg:text-4xl font-bold tracking-tight" style={{ color: "#0A0B1A" }}>
-              Opérationnel en 3 étapes
+              Opérationnel en 4 étapes
             </h2>
             <p className="mt-4 text-base" style={{ color: "#64748b", maxWidth: "440px", margin: "16px auto 0" }}>
               Aucune compétence technique. Aucune installation. Aucune carte bancaire.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 relative">
             {/* Connector line (desktop) */}
             <div
-              className="hidden md:block absolute top-8 left-[calc(16.67%+20px)] right-[calc(16.67%+20px)] h-px"
+              className="hidden lg:block absolute top-8 left-[calc(12.5%+20px)] right-[calc(12.5%+20px)] h-px"
               style={{ background: "linear-gradient(to right, rgba(70,95,255,0.3), rgba(70,95,255,0.1))" }}
               aria-hidden="true"
             />
@@ -809,14 +587,99 @@ export default function HomePage() {
             ))}
           </div>
 
-          <div className="mt-12 text-center et-reveal et-delay-3">
-            <Link
-              href="/signup"
-              className="inline-flex items-center justify-center rounded-xl px-8 py-3.5 text-base font-bold text-white transition-all hover:opacity-90"
-              style={{ background: "#124A99", boxShadow: "0 4px 16px rgba(70,95,255,0.3)" }}
+          {/* Pricing card */}
+          <div className="mt-16 et-reveal et-delay-4">
+            <div
+              className="relative overflow-hidden rounded-3xl p-8 lg:p-12"
+              style={{ background: "#124A99" }}
             >
-              Commencer maintenant — c&apos;est gratuit
-            </Link>
+              {/* Decorative glow */}
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background:
+                    "radial-gradient(ellipse 55% 70% at 85% 50%, rgba(57,136,255,0.18) 0%, transparent 70%)",
+                }}
+              />
+
+              {/* Launch badge */}
+              <span
+                className="absolute top-6 right-6 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold"
+                style={{
+                  background: "rgba(16,185,129,0.18)",
+                  border: "1px solid rgba(16,185,129,0.35)",
+                  color: "#6ee7b7",
+                }}
+              >
+                <span
+                  style={{
+                    width: 5,
+                    height: 5,
+                    borderRadius: "50%",
+                    background: "#10B981",
+                    flexShrink: 0,
+                  }}
+                />
+                Offre de lancement
+              </span>
+
+              <div className="relative z-10 grid lg:grid-cols-2 gap-10 items-center">
+                {/* Left: price */}
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.55)" }}>
+                    Tarif
+                  </p>
+                  <div className="flex items-baseline gap-3 mb-2">
+                    <span
+                      className="text-lg line-through"
+                      style={{ color: "rgba(255,255,255,0.3)" }}
+                    >
+                      200$/an
+                    </span>
+                    <span className="text-xs font-medium rounded-full px-2 py-0.5" style={{ background: "rgba(16,185,129,0.18)", color: "#6ee7b7" }}>
+                      −75%
+                    </span>
+                  </div>
+                  <div className="flex items-end gap-2 mb-2">
+                    <span className="text-6xl font-extrabold text-white leading-none">50$</span>
+                    <span className="text-base font-medium pb-1" style={{ color: "rgba(255,255,255,0.65)" }}>
+                      / exercice comptable
+                    </span>
+                  </div>
+                  <p className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
+                    1 exercice = 1 année fiscale complète
+                  </p>
+
+                  <Link
+                    href="/signup"
+                    className="mt-8 inline-flex items-center justify-center rounded-xl px-8 py-3.5 text-base font-bold transition-all hover:scale-[1.01] hover:opacity-95"
+                    style={{
+                      background: "white",
+                      color: "#124A99",
+                      boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+                    }}
+                  >
+                    Commencer pour 50$/an
+                  </Link>
+                </div>
+
+                {/* Right: includes */}
+                <div>
+                  <p className="text-sm font-semibold mb-4" style={{ color: "rgba(255,255,255,0.7)" }}>
+                    Tout inclus dans votre abonnement :
+                  </p>
+                  <ul className="flex flex-col gap-3">
+                    {PRICING_INCLUDES.map((item) => (
+                      <li key={item} className="flex items-center gap-3 text-sm" style={{ color: "rgba(255,255,255,0.85)" }}>
+                        <CheckIcon color="#6ee7b7" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

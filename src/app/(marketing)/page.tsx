@@ -28,7 +28,7 @@ const MARQUEE_PILLS = [
 const FEATURES = [
   {
     tag: "Supervision",
-    tagColor: "#465FFF",
+    tagColor: "#124A99",
     title: "Trois boutiques, un seul regard — depuis votre téléphone",
     body: "Vision unifiée de tous vos points de vente. Chaque vente notifiée en temps réel. Stock visible à tout moment. Journal de caisse non modifiable par le vendeur.",
     quote: "99 % des unités économiques en RDC sont informelles. Le vol en caisse est la première source de perte documentée.",
@@ -122,7 +122,7 @@ const TESTIMONIALS = [
     body: "Avant, je devais rentrer chaque soir vérifier les cahiers de mes vendeurs. Maintenant je vois tout depuis mon téléphone, même quand je suis au marché de la Foire.",
     metric: "+40%",
     metricLabel: "de ventes documentées dès le 1er mois",
-    color: "#465FFF",
+    color: "#124A99",
   },
   {
     initial: "M",
@@ -238,7 +238,7 @@ export default function HomePage() {
             className="absolute inset-0"
             style={{
               background:
-                "linear-gradient(180deg, rgba(7,11,24,0.82) 0%, rgba(7,11,24,0.88) 60%, rgba(7,11,24,0.96) 100%)",
+                "linear-gradient(180deg, rgba(16,43,80,0.82) 0%, rgba(16,43,80,0.88) 60%, rgba(16,43,80,0.96) 100%)",
             }}
           />
         </div>
@@ -339,8 +339,8 @@ export default function HomePage() {
                       style={{
                         width: 32, height: 32,
                         borderRadius: "50%",
-                        background: ["#465FFF", "#10B981", "#F59E0B", "#7C3AED"][i],
-                        border: "2px solid #070B18",
+                        background: ["#124A99", "#10B981", "#F59E0B", "#7C3AED"][i],
+                        border: "2px solid #102B50",
                         display: "flex", alignItems: "center", justifyContent: "center",
                         fontSize: 11, fontWeight: 700, color: "white",
                       }}
@@ -380,7 +380,7 @@ export default function HomePage() {
 
       {/* ── FEATURE MARQUEE ──────────────────────────────────────────── */}
       <div
-        style={{ background: "#0A0F1C", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+        style={{ background: "#102B50", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}
         className="py-4"
       >
         <div className="et-marquee-wrap">
@@ -397,7 +397,7 @@ export default function HomePage() {
                 }}
               >
                 <span
-                  style={{ width: 4, height: 4, borderRadius: "50%", background: "#465FFF", flexShrink: 0 }}
+                  style={{ width: 4, height: 4, borderRadius: "50%", background: "#124A99", flexShrink: 0 }}
                 />
                 {pill}
               </span>
@@ -407,7 +407,7 @@ export default function HomePage() {
       </div>
 
       {/* ── STATS BAND ───────────────────────────────────────────────── */}
-      <section style={{ background: "#070B18", borderBottom: "1px solid rgba(255,255,255,0.05)" }} className="py-16">
+      <section style={{ background: "#102B50", borderBottom: "1px solid rgba(255,255,255,0.05)" }} className="py-16">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
             {STATS.map((s, i) => (
@@ -578,7 +578,7 @@ export default function HomePage() {
       </section>
 
       {/* ── CONTEXT PHOTOS ───────────────────────────────────────────── */}
-      <section style={{ background: "#0A0F1C" }} className="py-20 lg:py-28">
+      <section style={{ background: "#102B50" }} className="py-20 lg:py-28">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 xl:gap-16 items-center">
 
@@ -655,7 +655,7 @@ export default function HomePage() {
                   />
                   <div
                     className="absolute inset-0"
-                    style={{ background: "linear-gradient(to bottom, transparent 55%, rgba(7,11,24,0.45) 100%)" }}
+                    style={{ background: "linear-gradient(to bottom, transparent 55%, rgba(16,43,80,0.45) 100%)" }}
                   />
                 </div>
               ))}
@@ -668,7 +668,7 @@ export default function HomePage() {
       <section id="benefices" className="py-20 lg:py-28" style={{ background: "#FFFFFF" }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="text-center mb-16 et-reveal">
-            <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "#465FFF" }}>
+            <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "#124A99" }}>
               Pourquoi ELMES-TEKA
             </p>
             <h2 className="text-3xl lg:text-4xl font-bold tracking-tight" style={{ color: "#0A0B1A" }}>
@@ -702,7 +702,7 @@ export default function HomePage() {
                     <div
                       className="absolute bottom-4 left-4 rounded-xl px-4 py-3"
                       style={{
-                        background: "rgba(7,11,24,0.88)",
+                        background: "rgba(16,43,80,0.88)",
                         backdropFilter: "blur(12px)",
                         border: "1px solid rgba(255,255,255,0.1)",
                       }}
@@ -761,7 +761,7 @@ export default function HomePage() {
       <section id="comment" className="py-20 lg:py-24" style={{ background: "#F8FAFC" }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="text-center mb-14 et-reveal">
-            <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "#465FFF" }}>
+            <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "#124A99" }}>
               Démarrage
             </p>
             <h2 className="text-3xl lg:text-4xl font-bold tracking-tight" style={{ color: "#0A0B1A" }}>
@@ -792,14 +792,14 @@ export default function HomePage() {
                     background: "white",
                     border: "1px solid rgba(70,95,255,0.15)",
                     boxShadow: "0 4px 16px rgba(70,95,255,0.08)",
-                    color: "#465FFF",
+                    color: "#124A99",
                   }}
                 >
                   {icon}
                 </div>
                 <div
                   className="text-xs font-bold mb-2"
-                  style={{ color: "#465FFF", fontFeatureSettings: "'tnum'" }}
+                  style={{ color: "#124A99", fontFeatureSettings: "'tnum'" }}
                 >
                   {n}
                 </div>
@@ -813,7 +813,7 @@ export default function HomePage() {
             <Link
               href="/signup"
               className="inline-flex items-center justify-center rounded-xl px-8 py-3.5 text-base font-bold text-white transition-all hover:opacity-90"
-              style={{ background: "#465FFF", boxShadow: "0 4px 16px rgba(70,95,255,0.3)" }}
+              style={{ background: "#124A99", boxShadow: "0 4px 16px rgba(70,95,255,0.3)" }}
             >
               Commencer maintenant — c&apos;est gratuit
             </Link>
@@ -822,7 +822,7 @@ export default function HomePage() {
       </section>
 
       {/* ── TESTIMONIALS ─────────────────────────────────────────────── */}
-      <section style={{ background: "#0A0F1C" }} className="py-20 lg:py-28">
+      <section style={{ background: "#102B50" }} className="py-20 lg:py-28">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="text-center mb-14 et-reveal">
             <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "#F59E0B" }}>
@@ -929,7 +929,7 @@ export default function HomePage() {
               className="inline-flex items-center justify-center rounded-xl px-10 py-4 text-base font-bold transition-all hover:scale-[1.01]"
               style={{
                 background: "white",
-                color: "#465FFF",
+                color: "#124A99",
                 boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
               }}
             >

@@ -23,13 +23,13 @@ export default function MarketingLayout({
       <main className="flex-1">{children}</main>
 
       {/* ── Footer ────────────────────────────────────────────────── */}
-      <footer style={{ background: "#070B18" }}>
+      <footer style={{ background: "#102B50" }}>
         {/* Top accent line */}
         <div
           style={{
             height: "1px",
             background:
-              "linear-gradient(90deg, transparent 0%, rgba(70,95,255,0.35) 30%, rgba(245,158,11,0.25) 70%, transparent 100%)",
+              "linear-gradient(90deg, transparent 0%, rgba(57,136,255,0.45) 40%, rgba(18,74,153,0.30) 70%, transparent 100%)",
           }}
         />
 
@@ -206,7 +206,7 @@ export default function MarketingLayout({
                 style={{
                   width: "6px",
                   height: "6px",
-                  background: "rgba(70,95,255,0.5)",
+                  background: "rgba(57,136,255,0.6)",
                 }}
               />
               Conçu et développé pour l&apos;Afrique

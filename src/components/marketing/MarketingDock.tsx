@@ -27,7 +27,7 @@ export default function MarketingDock() {
             className="flex-shrink-0"
           />
           <span className="font-bold text-sm tracking-tight hidden sm:inline">
-            ELMES<span style={{ color: "#93C5FD" }}>-TEKA</span>
+            ELMES<span style={{ color: "#3988FF" }}>-TEKA</span>
           </span>
         </Link>
 

@@ -1,4 +1,10 @@
 /* ── ELMES-TEKA Marketing CSS ─────────────────────────────────────────── */
+/* Palette officielle (Confiance v1.0)
+   Bleu confiance : #124A99  |  Bleu accent : #3988FF
+   Encre          : #102B50  |  Fond clair  : #F2F6FC
+   Blanc          : #FFFFFF
+   Typographie    : DejaVu Sans (Bold titres, Regular corps)
+   Interface      : corps 16px, titres 24–36px, interligne 1.4–1.6           */
 
 /* ── Keyframes ──────────────────────────────────────────────────────── */
 
@@ -76,12 +82,12 @@
   gap: 2px;
   padding: 5px 6px;
   border-radius: 100px;
-  background: rgba(7, 11, 24, 0.52);
+  background: rgba(16, 43, 80, 0.55);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255,255,255,0.10);
+  border: 1px solid rgba(57,136,255,0.18);
   box-shadow:
-    0 4px 24px rgba(0,0,0,0.28),
+    0 4px 24px rgba(16,43,80,0.32),
     0 1px 0 rgba(255,255,255,0.06) inset;
   transition:
     background 0.35s ease,
@@ -90,10 +96,10 @@
 }
 
 .et-dock-pill.et-dock-scrolled {
-  background: rgba(7, 11, 24, 0.90);
-  border-color: rgba(255,255,255,0.13);
+  background: rgba(16, 43, 80, 0.92);
+  border-color: rgba(57,136,255,0.25);
   box-shadow:
-    0 8px 40px rgba(0,0,0,0.50),
+    0 8px 40px rgba(16,43,80,0.55),
     0 1px 0 rgba(255,255,255,0.08) inset;
 }
 
@@ -130,17 +136,17 @@
   font-size: 0.8125rem;
   font-weight: 700;
   color: #fff;
-  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
-  box-shadow: 0 2px 14px rgba(245,158,11,0.32);
+  background: linear-gradient(135deg, #3988FF 0%, #124A99 100%);
+  box-shadow: 0 2px 14px rgba(57,136,255,0.35);
   transition: box-shadow 0.2s ease, transform 0.15s ease, filter 0.2s ease;
   white-space: nowrap;
   text-decoration: none;
 }
 
 .et-dock-cta:hover {
-  filter: brightness(1.08);
+  filter: brightness(1.10);
   transform: scale(1.025);
-  box-shadow: 0 4px 20px rgba(245,158,11,0.45);
+  box-shadow: 0 4px 20px rgba(57,136,255,0.50);
 }
 
 /* ── Scroll reveal ───────────────────────────────────────────────────── */
@@ -161,7 +167,7 @@
 
 /* ── Hero ────────────────────────────────────────────────────────────── */
 .et-hero {
-  background: #070B18;
+  background: #102B50;
   position: relative;
   overflow: hidden;
   min-height: 100vh;
@@ -173,7 +179,7 @@
   right: -10%;
   width: 55%;
   height: 80%;
-  background: radial-gradient(ellipse, rgba(70,95,255,0.08) 0%, transparent 70%);
+  background: radial-gradient(ellipse, rgba(57,136,255,0.10) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -223,7 +229,7 @@
 }
 .et-feature-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 20px 40px rgba(70,95,255,0.10);
+  box-shadow: 0 20px 40px rgba(18,74,153,0.12);
 }
 
 /* ── Phone mockup ────────────────────────────────────────────────────── */
@@ -256,12 +262,12 @@
 }
 .et-testimonial-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(70,95,255,0.3) !important;
+  border-color: rgba(57,136,255,0.35) !important;
 }
 
 /* ── CTA section ─────────────────────────────────────────────────────── */
 .et-cta-bg {
-  background: #465FFF;
+  background: #124A99;
   position: relative;
   overflow: hidden;
 }
@@ -269,7 +275,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 60% 80% at 80% 50%, rgba(255,255,255,0.07) 0%, transparent 70%),
+  background: radial-gradient(ellipse 60% 80% at 80% 50%, rgba(57,136,255,0.15) 0%, transparent 70%),
               radial-gradient(ellipse 40% 60% at 20% 30%, rgba(0,0,0,0.12) 0%, transparent 60%);
   pointer-events: none;
 }

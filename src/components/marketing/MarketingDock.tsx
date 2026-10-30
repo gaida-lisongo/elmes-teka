@@ -33,20 +33,20 @@ export default function MarketingDock() {
 
         <div className="et-dock-sep" />
 
-        <Link href="/#benefices" className="et-dock-link hidden md:flex">
-          Bénéfices
-        </Link>
-        <Link href="/#comment" className="et-dock-link hidden md:flex">
-          Comment ça marche
+        <Link href="/" className="et-dock-link hidden md:flex">
+          Accueil
         </Link>
         <Link href="/about" className="et-dock-link hidden md:flex">
-          À propos
+          Qui sommes-nous
+        </Link>
+        <Link href="/contact" className="et-dock-link hidden md:flex">
+          Nous Contacter
         </Link>
 
         <div className="et-dock-sep hidden md:block" />
 
         <Link href="/signin" className="et-dock-link hidden sm:flex">
-          Connexion
+          Se connecter
         </Link>
         <Link
           href="/signup"

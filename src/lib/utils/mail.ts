@@ -126,9 +126,9 @@ export class Mail {
       host: config.host,
       port: config.port,
       secure: config.secure,
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 20000,
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 30000,
       auth: {
         user: config.user,
         pass: config.pass,

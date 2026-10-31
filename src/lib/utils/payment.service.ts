@@ -6,6 +6,8 @@
  *   PAYMENT_API_URL   – URL de base de l'Edge Function
  */
 
+import { smsNotifier } from '@/lib/utils/sms';
+
 const BASE_URL = process.env.PAYMENT_API_URL;
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -65,7 +67,10 @@ async function request<T>(
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  const {data} = await res.json();
+  // L'Edge Function enveloppe normalement la réponse dans { data } ; les erreurs
+  // (4xx/5xx) peuvent arriver sans enveloppe, voire sans corps JSON.
+  const json = await res.json().catch(() => null);
+  const data = (json?.data ?? json ?? {}) as T;
   return { ok: res.ok, data, status: res.status };
 }
 
@@ -84,9 +89,10 @@ export async function initiateCollection(
       amount: payload.amount,
       currency: payload.currency ?? 'CDF',
       reference: payload.reference,
-      phone: payload.phone,
+      // FlexPay attend le format international 243XXXXXXXXX
+      phone: smsNotifier.normalizePhone(payload.phone),
     });
-    console.log("[FLEX RESPONSE]", data.code == '0')
+    console.log('[FLEX COLLECT]', status, data?.code, data?.message ?? data?.error);
 
     // La réponse FlexPay retourne généralement data.code === "0" pour un succès
     if (data.code == '0' && data?.orderNumber) {
@@ -99,8 +105,8 @@ export async function initiateCollection(
     }
 
     return {
-      success: status == 0,
-      error: data.message || data.error || 'Échec de l’initiation de la collecte.',
+      success: false,
+      error: data?.message || data?.error || `Échec de l’initiation de la collecte (HTTP ${status}).`,
       raw: data,
     };
   } catch (error: any) {
@@ -166,7 +172,13 @@ export async function checkStatus(
 
     console.log("[Payment Service Check]", data)
 
-    const { transaction } = data
+    const transaction = data?.transaction;
+    if (!transaction && !data?.status) {
+      return {
+        success: false,
+        error: data?.message || data?.error || 'Statut du paiement indisponible.',
+      };
+    }
 
     // Adapter selon la forme de la réponse de l'Edge Function
     const statusMap: Record<string, 'EN_ATTENTE' | 'SUCCES' | 'ECHEC'> = {
@@ -178,7 +190,7 @@ export async function checkStatus(
 
     const mappedStatus =
       statusMap[data.status?.toLowerCase()] ||
-      (transaction.status === '2' ? 'EN_ATTENTE' : (transaction.status === '0' ? 'SUCCES' : 'ECHEC'));
+      (transaction?.status === '2' ? 'EN_ATTENTE' : (transaction?.status === '0' ? 'SUCCES' : 'ECHEC'));
 
     return {
       success: true,

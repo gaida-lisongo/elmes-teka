@@ -358,7 +358,7 @@ export async function createAnnee(input: {
       success: true,
       message: paymentInitiated
         ? "Exercice cree, paiement initie."
-        : "Exercice cree, mais le paiement n'a pas pu etre initie.",
+        : `Exercice cree, mais le paiement n'a pas pu etre initie : ${paymentResult.error ?? "erreur inconnue"}.`,
       data: { id: annee._id.toString(), paymentInitiated },
     };
   } catch (error: any) {

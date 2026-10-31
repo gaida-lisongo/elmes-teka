@@ -318,7 +318,7 @@
   to   { transform: scale(1.08); }
 }
 
-.et-promo-card { animation: et-fade-up 0.7s ease both; }
+.et-promo-card { animation: et-fade-up 0.7s ease backwards; }
 .et-promo-glow { background: radial-gradient(circle, rgba(57,136,255,0.55) 0%, transparent 70%); animation: et-promo-glow 5s ease-in-out infinite; }
 .et-promo-float { animation: et-promo-float 3.5s ease-in-out infinite; }
 .et-promo-pulse span:first-child { animation: et-pulse 1.6s ease-in-out infinite; }
@@ -343,7 +343,28 @@
   .et-promo-card, .et-promo-glow, .et-promo-float, .et-promo-pulse span:first-child,
   .et-promo-tick, .et-promo-photo, .et-promo-cta, .et-promo-shine { animation: none !important; }
 }
-.et-promo-fade { background: linear-gradient(180deg, #102B50 0%, rgba(16,43,80,0.1) 40%, transparent 100%); }
+.et-promo-fade { background: linear-gradient(180deg, #163F75 0%, rgba(22,63,117,0.1) 40%, transparent 100%); }
 @media (min-width: 768px) {
-  .et-promo-fade { background: linear-gradient(90deg, #102B50 0%, rgba(16,43,80,0.15) 45%, transparent 100%); }
+  .et-promo-fade { background: linear-gradient(90deg, #143A6D 0%, rgba(20,58,109,0.15) 45%, transparent 100%); }
+}
+
+/* Extrusion : tranche pleine en couches décalées + ombre portée */
+.et-promo-extrude {
+  border: 1px solid rgba(57, 136, 255, 0.35);
+  box-shadow:
+    1px 1px 0 #124A99, 2px 2px 0 #124A99, 3px 3px 0 #124A99, 4px 4px 0 #124A99,
+    5px 5px 0 #124A99, 6px 6px 0 #124A99, 7px 7px 0 #0F3F84, 8px 8px 0 #0F3F84,
+    9px 9px 0 #0F3F84, 10px 10px 0 #0F3F84, 11px 11px 0 #0B3370, 12px 12px 0 #0B3370,
+    24px 30px 50px rgba(5, 15, 35, 0.55);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.et-promo-extrude:hover {
+  transform: translate(-3px, -3px);
+  box-shadow:
+    1px 1px 0 #124A99, 3px 3px 0 #124A99, 5px 5px 0 #124A99, 7px 7px 0 #124A99,
+    9px 9px 0 #0F3F84, 11px 11px 0 #0F3F84, 13px 13px 0 #0B3370, 15px 15px 0 #0B3370,
+    28px 36px 60px rgba(5, 15, 35, 0.6);
+}
+@media (prefers-reduced-motion: reduce) {
+  .et-promo-extrude, .et-promo-extrude:hover { transition: none; transform: none; }
 }

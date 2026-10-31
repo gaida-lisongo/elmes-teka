@@ -47,8 +47,10 @@ export default function PromoSpotlightCard({ promo }: { promo: Promo }) {
   };
 
   return (
-    <section className="px-4 py-12 sm:px-6 lg:py-16" style={{ background: "#F2F6FC" }} aria-label="Promotion en cours">
-      <div className="et-promo-card relative mx-auto grid max-w-6xl overflow-hidden rounded-3xl shadow-2xl md:grid-cols-5" style={{ background: "#102B50" }}>
+    <section aria-label="Promotion en cours">
+      {/* La carte déborde (marge négative) sur la bande unie, qui se prolonge dans le footer */}
+      <div className="px-4 pt-12 sm:px-6 lg:pt-16" style={{ background: "#F2F6FC" }}>
+      <div className="et-promo-card et-promo-extrude relative z-10 mx-auto -mb-28 grid max-w-6xl overflow-hidden rounded-3xl md:-mb-36 md:grid-cols-5" style={{ background: "linear-gradient(135deg, #1B4A8C 0%, #133766 55%, #102B50 100%)" }}>
         {/* Halo animé */}
         <div className="et-promo-glow pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full" />
 
@@ -119,6 +121,8 @@ export default function PromoSpotlightCard({ promo }: { promo: Promo }) {
           </div>
         </div>
       </div>
+      </div>
+      <div className="h-40 md:h-52" style={{ background: "#102B50" }} />
     </section>
   );
 }

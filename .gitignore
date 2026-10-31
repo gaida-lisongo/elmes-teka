@@ -40,3 +40,6 @@ next-env.d.ts
 __pycache__/
 *.py[cod]
 .claude/worktrees/
+
+# documentation FlexPay confidentielle (Infoset) — ne pas publier, dépôt public
+docs/flexpay/*.pdf

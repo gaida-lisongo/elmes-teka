@@ -8,6 +8,7 @@ import connectToDb from "@/lib/utils/db";
 import Annee from "@/lib/models/Annee";
 import Commande from "@/lib/models/Commande";
 import Depense from "@/lib/models/Depense";
+import { applyAnneePayment } from "@/lib/payments/flexpay-results";
 import { checkStatus, initiateCollection } from "@/lib/utils/payment.service";
 
 export type ActionResponse<T = undefined> =
@@ -458,38 +459,11 @@ export async function verifyAnneePayment(
       return { success: false, message: result.error ?? "Verification impossible." };
     }
 
-    if (result.status === "SUCCES") {
-      await Annee.updateOne(
-        { _id: anneeId, tenantId, status: "PENDING" },
-        {
-          $set: {
-            status: "ACTIVE",
-            "provider.status": "PAID",
-            "provider.message": result.message ?? "Paiement confirme.",
-            "provider.paidAt": new Date(),
-          },
-        }
-      );
-      revalidatePath("/annees");
-      revalidatePath("/", "layout");
-      return { success: true, message: "Paiement confirme, exercice actif.", data: { status: "ACTIVE" } };
-    }
-
-    const failed = result.status === "ECHEC";
-    await Annee.updateOne(
-      { _id: anneeId, tenantId },
-      {
-        $set: {
-          "provider.status": failed ? "FAILED" : "PENDING",
-          "provider.message": result.message ?? (failed ? "Paiement echoue." : "Paiement en attente."),
-        },
-      }
-    );
-    revalidatePath("/annees");
+    const applied = await applyAnneePayment(anneeId, result, tenantId);
     return {
       success: true,
-      message: failed ? "Le paiement a echoue." : "Paiement toujours en attente.",
-      data: { status: "PENDING" },
+      message: applied.message,
+      data: { status: applied.state === "PAID" ? "ACTIVE" : "PENDING" },
     };
   } catch (error: any) {
     return { success: false, message: error.message || "Erreur verification." };

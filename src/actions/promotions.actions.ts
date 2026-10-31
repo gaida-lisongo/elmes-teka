@@ -9,6 +9,7 @@ import Commande from "@/lib/models/Commande";
 import Customer from "@/lib/models/Customer";
 import Promotion from "@/lib/models/Promotion";
 import { Tenant } from "@/lib/models/User";
+import { applyPromotionRecharge } from "@/lib/payments/flexpay-results";
 import { checkStatus, initiateCollection } from "@/lib/utils/payment.service";
 import connectToDb from "@/lib/utils/db";
 import { smsNotifier } from "@/lib/utils/sms";
@@ -137,20 +138,13 @@ export async function initiatePromotionRecharge(input: { promotionId: string; cr
 export async function verifyPromotionRecharge(promotionId: string, orderNumber: string) {
   try {
     const { tenantId } = await requireTenantSession();
-    const promotion = await Promotion.findOne({ _id: promotionId, tenantId, recharges: { $elemMatch: { orderNumber, status: "PENDING" } } }).select("code recharges").lean();
+    const promotion = await Promotion.findOne({ _id: promotionId, tenantId, recharges: { $elemMatch: { orderNumber, status: "PENDING" } } }).select("_id").lean();
     if (!promotion) return { success: false, message: "Recharge en attente introuvable." } as const;
-    const recharge = promotion.recharges.find((item) => item.orderNumber === orderNumber && item.status === "PENDING");
-    if (!recharge) return { success: false, message: "Recharge deja traitee." } as const;
     const status = await checkStatus(orderNumber);
-    if (!status.success || status.status === "EN_ATTENTE") return { success: false, message: status.error || "Le paiement est toujours en attente." } as const;
-    if (status.status === "ECHEC") {
-      await Promotion.updateOne({ _id: promotionId, tenantId }, { $set: { "recharges.$[item].status": "FAILED", "recharges.$[item].message": status.message || "Paiement echoue." } }, { arrayFilters: [{ "item.orderNumber": orderNumber, "item.status": "PENDING" }] });
-      return { success: false, message: "Le paiement a echoue." } as const;
-    }
-    const result = await Promotion.updateOne({ _id: promotionId, tenantId, recharges: { $elemMatch: { orderNumber, status: "PENDING" } } }, { $inc: { credits: recharge.credits }, $set: { "recharges.$[item].status": "PAID", "recharges.$[item].message": status.message || "Paiement confirme.", "recharges.$[item].paidAt": new Date() } }, { arrayFilters: [{ "item.orderNumber": orderNumber, "item.status": "PENDING" }] });
-    if (!result.modifiedCount) return { success: false, message: "Cette recharge a deja ete creditee." } as const;
-    revalidatePath(`/clients/${promotion.code}`);
-    return { success: true, message: `${recharge.credits} credits ajoutes.`, data: { credits: recharge.credits } } as const;
+    if (!status.success) return { success: false, message: status.error || "Verification impossible." } as const;
+    const applied = await applyPromotionRecharge(orderNumber, status, tenantId);
+    if (applied.state !== "PAID" || !applied.credits) return { success: false, message: applied.message } as const;
+    return { success: true, message: applied.message, data: { credits: applied.credits } } as const;
   } catch (error: any) { return { success: false, message: error.message || "Verification impossible." } as const; }
 }
 

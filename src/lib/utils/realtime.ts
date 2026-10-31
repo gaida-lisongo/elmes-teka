@@ -10,7 +10,7 @@ function getPusher() {
   return client;
 }
 
-export async function publishTenantEvent(tenantId: string, resource: "commandes" | "depenses" | "stocks", event: string, payload: Record<string, unknown>) {
+export async function publishTenantEvent(tenantId: string, resource: "commandes" | "depenses" | "stocks" | "paiements", event: string, payload: Record<string, unknown>) {
   const pusher = getPusher();
   if (!pusher) return;
   try {

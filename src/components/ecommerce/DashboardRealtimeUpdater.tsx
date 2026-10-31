@@ -1,13 +1,26 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Pusher from "pusher-js";
 import { useRouter } from "next/navigation";
 import { useAdminShell } from "@/context/AdminShellContext";
 
-export default function DashboardRealtimeUpdater() {
+/** Rafraîchit la page (ou appelle onEvent) quand l'événement Pusher du tenant arrive. */
+export default function DashboardRealtimeUpdater({
+  resource = "commandes",
+  event = "commande.created",
+  onEvent,
+}: {
+  resource?: string;
+  event?: string;
+  onEvent?: () => void;
+} = {}) {
   const { account } = useAdminShell();
   const router = useRouter();
+  const onEventRef = useRef(onEvent);
+  useEffect(() => {
+    onEventRef.current = onEvent;
+  });
 
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_PUSHER_KEY;
@@ -22,15 +35,16 @@ export default function DashboardRealtimeUpdater() {
       },
     });
 
-    const channel = p.subscribe("private-tenant-" + account.tenantId + "-commandes");
-    channel.bind("commande.created", () => {
-      router.refresh();
+    const channel = p.subscribe("private-tenant-" + account.tenantId + "-" + resource);
+    channel.bind(event, () => {
+      if (onEventRef.current) onEventRef.current();
+      else router.refresh();
     });
 
     return () => {
       p.disconnect();
     };
-  }, [account.tenantId, router]);
+  }, [account.tenantId, router, resource, event]);
 
   return null;
 }

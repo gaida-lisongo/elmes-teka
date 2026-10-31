@@ -16,7 +16,7 @@ export interface SessionPayload {
 const SESSION_COOKIE_NAME = "commerce_session";
 const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 7;
 
-function getSessionSecret(): string {
+export function getSessionSecret(): string {
   const secret = process.env.AUTH_SESSION_SECRET;
 
   if (!secret || secret.length < 32) {

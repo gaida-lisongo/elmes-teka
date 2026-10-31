@@ -1,14 +1,19 @@
 /**
- * Service de paiement — encapsule les appels HTTP vers l'Edge Function Supabase
- * qui sert d'intermédiaire avec FlexPay (Mobile Money, RDC).
+ * Service de paiement FlexPay (Mobile Money et carte bancaire, RDC).
+ * Documentation : docs/flexpay/README.md
  *
  * Variables d'environnement requises :
- *   PAYMENT_API_URL   – URL de base de l'Edge Function
+ *   FLEX_HOST_PAYMENT_MOBILE – hôte (ou URL complète) de paymentService / merchantPayOutService
+ *   FLEX_HOST_PAYMENT_CARD   – hôte (ou URL complète) de la génération d'URL de paiement carte
+ *   FLEX_HOST_CHECK          – hôte (ou URL complète) de la vérification /check/{orderNumber}
+ *   FLEX_MERCHANT            – code marchand FlexPay
+ *   FLEX_TOKEN               – token d'autorisation, préfixé par "Bearer "
  */
 
+import crypto from 'node:crypto';
+import { headers } from 'next/headers';
+import { getSessionSecret } from '@/lib/auth/session';
 import { smsNotifier } from '@/lib/utils/sms';
-
-const BASE_URL = process.env.PAYMENT_API_URL;
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -28,9 +33,19 @@ export interface PayoutPayload {
   currency?: PaymentCurrency;
 }
 
+export interface CardPaymentPayload {
+  amount: number;
+  reference: string;
+  currency?: PaymentCurrency;
+  description?: string;
+  /** Chemin de la page de retour (ex. "/annees"), complété par ?payment=approve|cancel|decline */
+  returnPath: string;
+}
+
 export interface PaymentResponse {
   success: boolean;
   orderNumber?: string;
+  url?: string;
   message?: string;
   error?: string;
   raw?: any;
@@ -40,62 +55,116 @@ export interface StatusResponse {
   success: boolean;
   status?: 'EN_ATTENTE' | 'SUCCES' | 'ECHEC';
   orderNumber?: string;
+  reference?: string;
   message?: string;
   error?: string;
   raw?: any;
+}
+
+// ── Configuration ──────────────────────────────────────────────────
+
+function requireEnv(key: string): string {
+  const value = process.env[key]?.trim();
+  if (!value) throw new Error(`${key} n’est pas défini dans les variables d’environnement.`);
+  return value;
+}
+
+/** Accepte un hôte seul (on ajoute le chemin documenté) ou une URL déjà complète. */
+function endpoint(hostKey: string, defaultPath: string): string {
+  const url = new URL(requireEnv(hostKey));
+  if (url.pathname === '/' || url.pathname === '') url.pathname = defaultPath;
+  return url.toString().replace(/\/$/, '');
+}
+
+function authorization(): string {
+  const token = requireEnv('FLEX_TOKEN');
+  return token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+}
+
+async function appOrigin(): Promise<string> {
+  try {
+    const h = await headers();
+    const host = h.get('x-forwarded-host') ?? h.get('host');
+    if (host) return `${h.get('x-forwarded-proto') ?? 'https'}://${host}`;
+  } catch {
+    // Hors requête (script, cron) : on retombe sur l'URL de production Vercel.
+  }
+  const production = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (production) return `https://${production}`;
+  throw new Error('Impossible de déterminer l’URL publique de la plateforme.');
+}
+
+// ── Callback signé ─────────────────────────────────────────────────
+// FlexPay ne signe pas ses callbacks : l'URL porte une clé HMAC liée à la
+// référence, et le webhook revérifie toujours le statut via /check.
+
+export function callbackKey(reference: string): string {
+  return crypto.createHmac('sha256', getSessionSecret()).update(`flexpay:${reference}`).digest('hex');
+}
+
+export function isValidCallbackKey(reference: string, key: string | null): boolean {
+  if (!key) return false;
+  const expected = Buffer.from(callbackKey(reference));
+  const supplied = Buffer.from(key);
+  return expected.length === supplied.length && crypto.timingSafeEqual(expected, supplied);
+}
+
+async function callbackUrl(reference: string): Promise<string> {
+  const url = new URL('/api/payments/flexpay/callback', await appOrigin());
+  url.searchParams.set('ref', reference);
+  url.searchParams.set('key', callbackKey(reference));
+  return url.toString();
 }
 
 // ── Appels HTTP internes ───────────────────────────────────────────
 
 async function request<T>(
   method: 'GET' | 'POST',
-  path: string,
+  url: string,
   body?: Record<string, unknown>,
 ): Promise<{ ok: boolean; data: T; status: number }> {
-  if (!BASE_URL) {
-    throw new Error(
-      'PAYMENT_API_URL n’est pas défini dans les variables d’environnement.',
-    );
-  }
-
-  const url = `${BASE_URL.replace(/\/$/, '')}${path}`;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-
   const res = await fetch(url, {
     method,
-    headers,
+    headers: { 'Content-Type': 'application/json', Authorization: authorization() },
     body: body ? JSON.stringify(body) : undefined,
+    cache: 'no-store',
   });
-
-  // L'Edge Function enveloppe normalement la réponse dans { data } ; les erreurs
-  // (4xx/5xx) peuvent arriver sans enveloppe, voire sans corps JSON.
-  const json = await res.json().catch(() => null);
-  const data = (json?.data ?? json ?? {}) as T;
+  const data = (await res.json().catch(() => ({}))) as T;
   return { ok: res.ok, data, status: res.status };
+}
+
+function failure(data: any, status: number, fallback: string): PaymentResponse {
+  return {
+    success: false,
+    error: data?.message || data?.error || `${fallback} (HTTP ${status}).`,
+    raw: data,
+  };
 }
 
 // ── Méthodes publiques ─────────────────────────────────────────────
 
 /**
- * 1. Initie une COLLECTE (paiement depuis un joueur vers le compte marchand).
- *    Utilisé pour les recharges de niveau.
+ * 1. Collecte Mobile Money : FlexPay envoie un push au téléphone du client,
+ *    puis appelle le callback avec le résultat.
  */
-export async function initiateCollection(
-  payload: CollectionPayload,
-): Promise<PaymentResponse> {
+export async function initiateCollection(payload: CollectionPayload): Promise<PaymentResponse> {
   try {
-    const { data, status } = await request<any>('POST', '/collect', {
-      channel: 'MOBILE_MONEY',
-      amount: payload.amount,
-      currency: payload.currency ?? 'CDF',
-      reference: payload.reference,
-      // FlexPay attend le format international 243XXXXXXXXX
-      phone: smsNotifier.normalizePhone(payload.phone),
-    });
-    console.log('[FLEX COLLECT]', status, data?.code, data?.message ?? data?.error);
+    const { data, status } = await request<any>(
+      'POST',
+      endpoint('FLEX_HOST_PAYMENT_MOBILE', '/api/rest/v1/paymentService'),
+      {
+        merchant: requireEnv('FLEX_MERCHANT'),
+        type: '1',
+        phone: smsNotifier.normalizePhone(payload.phone),
+        reference: payload.reference,
+        amount: String(payload.amount),
+        currency: payload.currency ?? 'CDF',
+        callbackUrl: await callbackUrl(payload.reference),
+      },
+    );
+    console.log('[FLEX COLLECT]', payload.reference, status, data?.code, data?.message);
 
-    // La réponse FlexPay retourne généralement data.code === "0" pour un succès
-    if (data.code == '0' && data?.orderNumber) {
+    if (String(data?.code) === '0' && data?.orderNumber) {
       return {
         success: true,
         orderNumber: data.orderNumber,
@@ -103,38 +172,79 @@ export async function initiateCollection(
         raw: data,
       };
     }
-
-    return {
-      success: false,
-      error: data?.message || data?.error || `Échec de l’initiation de la collecte (HTTP ${status}).`,
-      raw: data,
-    };
+    return failure(data, status, 'Échec de l’initiation de la collecte');
   } catch (error: any) {
-    return {
-      success: false,
-      error: error.message || 'Erreur réseau lors de la collecte.',
-    };
+    return { success: false, error: error.message || 'Erreur réseau lors de la collecte.' };
   }
 }
 
 /**
- * 2. Initie un PAIEMENT (transfert depuis le compte marchand vers un agent).
- *    Utilisé pour les retraits de commissions des agents.
+ * 2. Paiement par carte : FlexPay renvoie une URL vers laquelle rediriger le client.
  */
-export async function initiatePayout(
-  payload: PayoutPayload,
-): Promise<PaymentResponse> {
+export async function initiateCardPayment(payload: CardPaymentPayload): Promise<PaymentResponse> {
   try {
-    const { data, ok } = await request<any>('POST', '/payout', {
-      amount: payload.amount,
-      currency: payload?.currency ?? 'CDF',
-      phone: payload.phone,
-      reference: payload.reference,
-    });
+    const origin = await appOrigin();
+    const back = (result: string) => {
+      const url = new URL(payload.returnPath, origin);
+      url.searchParams.set('payment', result);
+      url.searchParams.set('ref', payload.reference);
+      return url.toString();
+    };
+    const { data, status } = await request<any>(
+      'POST',
+      endpoint('FLEX_HOST_PAYMENT_CARD', '/v1.1/pay'),
+      {
+        authorization: authorization(),
+        merchant: requireEnv('FLEX_MERCHANT'),
+        reference: payload.reference,
+        amount: String(payload.amount),
+        currency: payload.currency ?? 'USD',
+        description: payload.description ?? payload.reference,
+        callback_url: await callbackUrl(payload.reference),
+        approve_url: back('approve'),
+        cancel_url: back('cancel'),
+        decline_url: back('decline'),
+        language: 'fr',
+      },
+    );
+    console.log('[FLEX CARD]', payload.reference, status, data?.code, data?.message);
 
-    console.log('PayOut', data)
+    if (String(data?.code) === '0' && data?.orderNumber && data?.url) {
+      return {
+        success: true,
+        orderNumber: data.orderNumber,
+        url: data.url,
+        message: data.message || 'Redirection en cours.',
+        raw: data,
+      };
+    }
+    return failure(data, status, 'Échec de l’initiation du paiement par carte');
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Erreur réseau lors du paiement par carte.' };
+  }
+}
 
-    if (data.code === '0' && data?.orderNumber) {
+/**
+ * 3. Pay out marchand : transfert du compte marchand vers un numéro Mobile Money.
+ */
+export async function initiatePayout(payload: PayoutPayload): Promise<PaymentResponse> {
+  try {
+    const { data, status } = await request<any>(
+      'POST',
+      endpoint('FLEX_HOST_PAYMENT_MOBILE', '/api/rest/v1/merchantPayOutService'),
+      {
+        merchant: requireEnv('FLEX_MERCHANT'),
+        type: '1',
+        phone: smsNotifier.normalizePhone(payload.phone),
+        reference: payload.reference,
+        amount: String(payload.amount),
+        currency: payload.currency ?? 'CDF',
+        callbackUrl: await callbackUrl(payload.reference),
+      },
+    );
+    console.log('[FLEX PAYOUT]', payload.reference, status, data?.code, data?.message);
+
+    if (String(data?.code) === '0' && data?.orderNumber) {
       return {
         success: true,
         orderNumber: data.orderNumber,
@@ -142,62 +252,40 @@ export async function initiatePayout(
         raw: data,
       };
     }
-
-    const message = data?.status == '0XX6' ? "Veuillez patienter le temps que nous disposons des fonds" : data.message || data.error || 'Échec de l’initiation du paiement.'
-
-    return {
-      success: false,
-      error: message,
-      raw: data,
-    };
+    return failure(data, status, 'Échec de l’initiation du paiement');
   } catch (error: any) {
-    return {
-      success: false,
-      error: error.message || 'Erreur réseau lors du paiement.',
-    };
+    return { success: false, error: error.message || 'Erreur réseau lors du paiement.' };
   }
 }
 
 /**
- * 3. Vérifie le statut d’une transaction à partir de son orderNumber.
+ * 4. Vérifie le statut d’une transaction (source de vérité, y compris pour le webhook).
+ *    transaction.status : 0 succès · 1 échec · 2 en attente · 3/4 remboursement · 5 annulée
  */
-export async function checkStatus(
-  orderNumber: string,
-): Promise<StatusResponse> {
+export async function checkStatus(orderNumber: string): Promise<StatusResponse> {
   try {
-    const { data } = await request<any>(
-      'GET',
-      `/check?orderNumber=${encodeURIComponent(orderNumber)}`,
-    );
-
-    console.log("[Payment Service Check]", data)
+    const url = `${endpoint('FLEX_HOST_CHECK', '/api/rest/v1/check')}/${encodeURIComponent(orderNumber)}`;
+    const { data, status } = await request<any>('GET', url);
+    console.log('[FLEX CHECK]', orderNumber, status, data?.code, data?.transaction?.status);
 
     const transaction = data?.transaction;
-    if (!transaction && !data?.status) {
+    if (String(data?.code) !== '0' || !transaction) {
       return {
         success: false,
-        error: data?.message || data?.error || 'Statut du paiement indisponible.',
+        error: data?.message || data?.messsage || `Transaction introuvable (HTTP ${status}).`,
+        raw: data,
       };
     }
 
-    // Adapter selon la forme de la réponse de l'Edge Function
-    const statusMap: Record<string, 'EN_ATTENTE' | 'SUCCES' | 'ECHEC'> = {
-      pending: 'EN_ATTENTE',
-      success: 'SUCCES',
-      failed: 'ECHEC',
-      cancelled: 'ECHEC',
-    };
-
-    const mappedStatus =
-      statusMap[data.status?.toLowerCase()] ||
-      (transaction?.status === '2' ? 'EN_ATTENTE' : (transaction?.status === '0' ? 'SUCCES' : 'ECHEC'));
-
+    const code = String(transaction.status);
+    const mappedStatus = code === '0' ? 'SUCCES' : code === '2' ? 'EN_ATTENTE' : 'ECHEC';
     return {
       success: true,
       status: mappedStatus,
-      orderNumber,
-      message: data.message || 'Statut récupéré.',
-      raw: {...transaction, code: transaction?.status},
+      orderNumber: transaction.orderNumber ?? orderNumber,
+      reference: transaction.reference,
+      message: data.message || data.messsage || 'Statut récupéré.',
+      raw: transaction,
     };
   } catch (error: any) {
     return {

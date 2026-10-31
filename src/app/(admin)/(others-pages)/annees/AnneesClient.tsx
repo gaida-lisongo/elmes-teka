@@ -14,6 +14,7 @@ import {
 } from "@/actions/annees.actions";
 import { exportAnneeJournal } from "@/actions/exports.actions";
 import ResourcePageShell from "@/components/common/ResourcePageShell";
+import DashboardRealtimeUpdater from "@/components/ecommerce/DashboardRealtimeUpdater";
 import Pagination from "@/components/tables/Pagination";
 import { Drawer } from "@/components/ui/drawer";
 import { Modal } from "@/components/ui/modal";
@@ -326,6 +327,7 @@ export default function AnneesClient({
 
   return (
     <>
+      <DashboardRealtimeUpdater resource="paiements" event="payment.updated" onEvent={refreshData} />
       <ResourcePageShell
         title="Exercices"
         description="Gerer les exercices comptables de votre entreprise"

@@ -7,7 +7,6 @@ import Annee from "@/lib/models/Annee";
 import Store from "@/lib/models/Store";
 import FondsClient from "./FondsClient";
 
-// @ts-ignore – actions créées par Agent 2
 import { getFonds } from "@/actions/fonds.actions";
 
 export default async function FondsPage() {

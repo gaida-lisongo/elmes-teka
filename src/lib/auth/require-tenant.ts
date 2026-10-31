@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 
 import { getSession } from "@/lib/auth/session";
 import connectToDb from "@/lib/utils/db";
-import { Tenant } from "@/lib/models/User";
+import { Tenant, User } from "@/lib/models/User";
 
 export interface TenantSession {
   userId: string;
@@ -25,17 +25,18 @@ export async function requireTenantSession(): Promise<TenantSession> {
     throw new Error("FORBIDDEN_TENANT_ONLY");
   }
 
-  if (!session.tenantId || !Types.ObjectId.isValid(session.tenantId)) {
+  if (!Types.ObjectId.isValid(session.userId) || !session.tenantId || !Types.ObjectId.isValid(session.tenantId)) {
     throw new Error("INVALID_TENANT");
   }
 
   await connectToDb();
 
-  const tenant = await Tenant.findById(session.tenantId)
-    .select("_id status")
-    .lean();
+  const [user, tenant] = await Promise.all([
+    User.findOne({ _id: session.userId, status: "ACTIVE" }).select("_id").lean(),
+    Tenant.findOne({ _id: session.tenantId, userId: session.userId, status: "ACTIVE" }).select("_id").lean(),
+  ]);
 
-  if (!tenant || tenant.status !== "ACTIVE") {
+  if (!user || !tenant) {
     throw new Error("TENANT_INACTIVE");
   }
 

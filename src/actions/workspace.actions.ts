@@ -15,7 +15,7 @@ import Customer from "@/lib/models/Customer";
 import Product from "@/lib/models/Product";
 import Promotion from "@/lib/models/Promotion";
 import Stock from "@/lib/models/Stock";
-import Depense from "@/lib/models/Depense";
+import Depense, { type IDepenseItem } from "@/lib/models/Depense";
 import SupplyRequest from "@/lib/models/SupplyRequest";
 import { requireTenantSession } from "@/lib/auth/require-tenant";
 
@@ -98,10 +98,10 @@ export async function searchCustomers(
         matricule: c.matricule,
       })),
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur recherche client.",
+      message: (error instanceof Error ? error.message : "Erreur recherche client."),
     };
   }
 }
@@ -147,10 +147,10 @@ export async function createWorkspaceCustomer(input: {
         matricule: customer.matricule,
       },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur creation client.",
+      message: (error instanceof Error ? error.message : "Erreur creation client."),
     };
   }
 }
@@ -196,10 +196,10 @@ export async function getSaleProducts(slug: string, search = "") {
         };
       });
     return { success: true, message: "Produits charges.", data } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur produits.",
+      message: (error instanceof Error ? error.message : "Erreur produits."),
     } as const;
   }
 }
@@ -351,10 +351,10 @@ export async function createSale(
       message: "Vente enregistree.",
       data: { id: created._id.toString(), reference: created.reference },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur creation vente.",
+      message: (error instanceof Error ? error.message : "Erreur creation vente."),
     };
   } finally {
     await session.endSession();
@@ -406,10 +406,10 @@ export async function listSales(
         totalPages: Math.max(1, Math.ceil(total / 12)),
       },
     } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur ventes.",
+      message: (error instanceof Error ? error.message : "Erreur ventes."),
     } as const;
   }
 }
@@ -452,10 +452,10 @@ export async function cancelSale(slug: string, id: string) {
     );
     revalidatePath(`/commandes/${slug}`);
     return { success: true, message: "Vente annulee.", data: null } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur annulation.",
+      message: (error instanceof Error ? error.message : "Erreur annulation."),
     } as const;
   }
 }
@@ -492,6 +492,8 @@ export async function listExpenses(
           id: d._id.toString(),
           reference: d.reference,
           lines: d.depenses.map((l: any) => ({
+            category: l.category ?? "OTHER",
+            nature: l.nature ?? "VARIABLE",
             libelle: l.libelle,
             amount: l.amount,
             observation: l.observation ?? "",
@@ -508,10 +510,10 @@ export async function listExpenses(
         totalPages: Math.max(1, Math.ceil(total / 12)),
       },
     } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur depenses.",
+      message: (error instanceof Error ? error.message : "Erreur depenses."),
     } as const;
   }
 }
@@ -520,7 +522,7 @@ export async function createExpense(
   slug: string,
   input: {
     currency: "USD" | "CDF";
-    lines: Array<{ libelle: string; amount: number; observation?: string }>;
+    lines: Array<{ libelle: string; amount: number; observation?: string; category?: string; nature?: string }>;
   },
 ) {
   try {
@@ -530,6 +532,8 @@ export async function createExpense(
       !input.lines.length ||
       input.lines.some(
         (l) =>
+          (l.category !== undefined && !["RENT", "SALARY", "UTILITIES", "TRANSPORT", "TAX", "OTHER"].includes(l.category)) ||
+          (l.nature !== undefined && !["FIXED", "VARIABLE"].includes(l.nature)) ||
           l.libelle.trim().length < 2 ||
           !Number.isFinite(l.amount) ||
           l.amount <= 0,
@@ -549,6 +553,8 @@ export async function createExpense(
       depenses: input.lines.map((l) => ({
         ...l,
         libelle: l.libelle.trim(),
+        category: (l.category ?? "OTHER") as IDepenseItem["category"],
+        nature: (l.nature ?? "VARIABLE") as IDepenseItem["nature"],
         status: "PENDING",
       })),
     });
@@ -568,10 +574,10 @@ export async function createExpense(
       message: "Depense creee.",
       data: { id: expense._id.toString() },
     } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur depense.",
+      message: (error instanceof Error ? error.message : "Erreur depense."),
     } as const;
   }
 }
@@ -602,10 +608,10 @@ export async function cancelExpense(slug: string, id: string) {
     });
     revalidatePath(`/depenses/${slug}`);
     return { success: true, message: "Depense annulee.", data: null } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur annulation.",
+      message: (error instanceof Error ? error.message : "Erreur annulation."),
     } as const;
   }
 }
@@ -655,10 +661,10 @@ export async function listSupplyRequests(slug: string, page = 1, status = "") {
         })),
       },
     } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur stocks.",
+      message: (error instanceof Error ? error.message : "Erreur stocks."),
     } as const;
   }
 }
@@ -721,10 +727,10 @@ export async function createSupplyRequest(
       message: "Demande envoyee.",
       data: { id: request._id.toString() },
     } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur demande.",
+      message: (error instanceof Error ? error.message : "Erreur demande."),
     } as const;
   }
 }
@@ -755,10 +761,10 @@ export async function cancelSupplyRequest(slug: string, id: string) {
     });
     revalidatePath(`/stocks/${slug}`);
     return { success: true, message: "Demande annulee.", data: null } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur annulation.",
+      message: (error instanceof Error ? error.message : "Erreur annulation."),
     } as const;
   }
 }
@@ -818,10 +824,10 @@ export async function listCustomers(page = 1, search = "") {
         totalPages: Math.max(1, Math.ceil(total / 12)),
       },
     } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur clients.",
+      message: (error instanceof Error ? error.message : "Erreur clients."),
     } as const;
   }
 }
@@ -871,10 +877,10 @@ export async function getCustomerDetail(id: string) {
         })),
       },
     } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur detail.",
+      message: (error instanceof Error ? error.message : "Erreur detail."),
     } as const;
   }
 }
@@ -900,10 +906,10 @@ export async function updateCustomer(
       return { success: false, message: "Client introuvable." } as const;
     revalidatePath("/clients");
     return { success: true, message: "Client modifie.", data: null } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur modification.",
+      message: (error instanceof Error ? error.message : "Erreur modification."),
     } as const;
   }
 }
@@ -935,10 +941,10 @@ export async function listAvailablePromotions(customerId: string) {
         reduction: p.reduction,
       })),
     } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur promotions.",
+      message: (error instanceof Error ? error.message : "Erreur promotions."),
     } as const;
   }
 }
@@ -974,10 +980,10 @@ export async function getTenantSupplyRequests() {
         createdAt: r.createdAt.toISOString(),
       })),
     } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur notifications.",
+      message: (error instanceof Error ? error.message : "Erreur notifications."),
     } as const;
   }
 }
@@ -1037,10 +1043,10 @@ export async function reviewSupplyRequest(
           : "Demande rejetee.",
       data: null,
     } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur validation.",
+      message: (error instanceof Error ? error.message : "Erreur validation."),
     } as const;
   } finally {
     await mongoSession.endSession();
@@ -1073,10 +1079,10 @@ export async function getTenantExpenses() {
         createdAt: e.createdAt.toISOString(),
       })),
     } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur depenses tenant.",
+      message: (error instanceof Error ? error.message : "Erreur depenses tenant."),
     } as const;
   }
 }
@@ -1113,10 +1119,10 @@ export async function reviewExpense(
         decision === "APPROVED" ? "Depense approuvee." : "Depense rejetee.",
       data: null,
     } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur validation depense.",
+      message: (error instanceof Error ? error.message : "Erreur validation depense."),
     } as const;
   }
 }

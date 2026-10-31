@@ -1,3 +1,5 @@
+import { CheckLineIcon } from "@/icons";
+import { PLANS } from "@/lib/payments/plans";
 import type { Metadata } from "next";
 import Link from "next/link";
 import HeroSection from "@/components/marketing/HeroSection";
@@ -29,47 +31,47 @@ const MARQUEE_PILLS = [
 ];
 
 const STATS = [
-  { value: "99%", label: "des unités éco. en RDC sont informelles", source: "INS RDC" },
-  { value: "81%", label: "des MPME sans logiciel de stock", source: "MicroSave 2025" },
-  { value: "57%", label: "ont du mal à collecter leurs données", source: "MicroSave 2025" },
-  { value: "15 min", label: "pour démarrer sur ELMES-TEKA", source: "" },
+  { value: "3", label: "packs pour accompagner votre activité", source: "Starter, Business et Premium" },
+  { value: "2", label: "devises pour vos opérations", source: "USD et CDF" },
+  { value: `${PLANS.STARTER.annualUsd} $`, label: "par an pour démarrer avec Starter", source: "Par entreprise et exercice comptable" },
+  { value: "1", label: "espace pour suivre votre activité", source: "Ventes, stocks, clients et charges" },
 ];
 
 const BENEFIT_CARDS = [
   {
     tag: "Supervision",
     tagColor: "#124A99",
-    metric: "-31%",
-    metricLabel: "de pertes en caisse",
-    title: "Trois boutiques, un seul regard — depuis votre téléphone",
-    body: "Vision unifiée de tous vos points de vente. Chaque vente notifiée en temps réel.",
+    metric: "En direct",
+    metricLabel: "vos opérations commerciales",
+    title: "Vos boutiques, un seul regard depuis votre téléphone",
+    body: "Suivez vos ventes en temps réel. Avec Business et Premium, supervisez plusieurs boutiques depuis un même espace.",
     delay: "",
   },
   {
     tag: "Fidélisation",
     tagColor: "#10B981",
-    metric: "+40%",
-    metricLabel: "de clients fidèles",
+    metric: "Historique",
+    metricLabel: "des achats de vos clients",
     title: "Vos meilleurs clients reviennent — parce que vous les connaissez",
-    body: "Base client centralisée avec historique d'achats. Identification automatique des clients fidèles.",
+    body: "Retrouvez vos clients et leurs achats pour préparer vos promotions et entretenir la relation commerciale.",
     delay: "et-delay-1",
   },
   {
     tag: "Pilotage",
     tagColor: "#F59E0B",
-    metric: "2×",
-    metricLabel: "plus vite pour décider",
+    metric: "USD / CDF",
+    metricLabel: "des montants clairement suivis",
     title: "Décidez sur des faits, pas sur des impressions",
-    body: "CA par boutique en temps réel. Marge brute par produit. Top produits et performance vendeur.",
+    body: "Suivez les ventes, les dépenses et les charges fixes ou variables. Consultez les rapports avancés avec Business et Premium.",
     delay: "et-delay-2",
   },
   {
     tag: "Financement",
     tagColor: "#38bdf8",
-    metric: "3×",
-    metricLabel: "plus de chances d'obtenir un crédit",
-    title: "6 mois d'ELMES-TEKA = votre dossier de financement",
-    body: "Historique complet exportable en PDF. Récapitulatifs exploitables par les institutions de microfinance.",
+    metric: "Premium",
+    metricLabel: "l’accompagnement IA en préparation",
+    title: "Construisez progressivement votre historique financier",
+    body: "Les rapports Business et Premium documentent votre activité. Les recommandations IA et la préparation du financement sont à venir dans Premium.",
     delay: "et-delay-3",
   },
 ];
@@ -109,7 +111,7 @@ const STEPS = [
   {
     n: "04",
     title: "Choisissez votre formule",
-    body: "Un abonnement annuel par exercice comptable (année fiscale). Payez une fois, gérez toute l'année.",
+    body: "Starter, Business ou Premium : choisissez le pack adapté à votre activité, puis activez-le pour l’exercice comptable.",
     icon: (
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
         <rect x="3" y="4" width="16" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" />
@@ -118,51 +120,6 @@ const STEPS = [
     ),
   },
 ];
-
-const PRICING_INCLUDES = [
-  "Boutiques illimitées",
-  "Vendeurs illimités",
-  "Rapports PDF",
-  "Support prioritaire",
-];
-
-const TESTIMONIALS = [
-  {
-    initial: "A",
-    name: "Alphonsine Kabamba",
-    role: "Boutique vêtements — Gombe, Kinshasa",
-    body: "Avant, je devais rentrer chaque soir vérifier les cahiers de mes vendeurs. Maintenant je vois tout depuis mon téléphone, même quand je suis au marché de la Foire.",
-    metric: "+40%",
-    metricLabel: "de ventes documentées dès le 1er mois",
-    color: "#124A99",
-  },
-  {
-    initial: "M",
-    name: "Marcel Tshimanga",
-    role: "Grossiste denrées alimentaires — Lingwala",
-    body: "J'ai obtenu un crédit à la FINCA grâce aux relevés PDF d'ELMES-TEKA. La banque voulait 6 mois de preuves d'activité — j'avais tout, propre et signé.",
-    metric: "5 000 $",
-    metricLabel: "de crédit obtenu après 8 mois d'utilisation",
-    color: "#10B981",
-  },
-  {
-    initial: "D",
-    name: "Divine Mutombo",
-    role: "Salon de coiffure, 2 points de vente — Matonge",
-    body: "Je payais une caissière extra pour faire les comptes le dimanche. Plus besoin. ELMES-TEKA génère tout automatiquement. J'économise 200 $ par mois.",
-    metric: "200 $/mois",
-    metricLabel: "économisés sur la gestion administrative",
-    color: "#F59E0B",
-  },
-];
-
-function CheckIcon({ color = "#22c55e" }: { color?: string }) {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" className="flex-shrink-0">
-      <path d="M2.5 7l3 3 6-6" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 export default function HomePage() {
   const doublePills = [...MARQUEE_PILLS, ...MARQUEE_PILLS];
@@ -272,7 +229,7 @@ export default function HomePage() {
                 {/* Metric */}
                 <div className="mb-4">
                   <span
-                    className="text-5xl font-extrabold leading-none"
+                    className="text-3xl font-bold leading-tight"
                     style={{ color: tagColor }}
                   >
                     {metric}
@@ -349,178 +306,31 @@ export default function HomePage() {
             ))}
           </div>
 
-          {/* Pricing card */}
-          <div className="mt-16 et-reveal et-delay-4">
-            <div
-              className="relative overflow-hidden rounded-3xl p-8 lg:p-12"
-              style={{ background: "#124A99" }}
-            >
-              {/* Decorative glow */}
-              <div
-                aria-hidden="true"
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background:
-                    "radial-gradient(ellipse 55% 70% at 85% 50%, rgba(57,136,255,0.18) 0%, transparent 70%)",
-                }}
-              />
-
-              {/* Launch badge */}
-              <span
-                className="absolute top-6 right-6 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold"
-                style={{
-                  background: "rgba(16,185,129,0.18)",
-                  border: "1px solid rgba(16,185,129,0.35)",
-                  color: "#6ee7b7",
-                }}
-              >
-                <span
-                  style={{
-                    width: 5,
-                    height: 5,
-                    borderRadius: "50%",
-                    background: "#10B981",
-                    flexShrink: 0,
-                  }}
-                />
-                Offre de lancement
-              </span>
-
-              <div className="relative z-10 grid lg:grid-cols-2 gap-10 items-center">
-                {/* Left: price */}
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.55)" }}>
-                    Tarif
-                  </p>
-                  <div className="flex items-baseline gap-3 mb-2">
-                    <span
-                      className="text-lg line-through"
-                      style={{ color: "rgba(255,255,255,0.3)" }}
-                    >
-                      200$/an
-                    </span>
-                    <span className="text-xs font-medium rounded-full px-2 py-0.5" style={{ background: "rgba(16,185,129,0.18)", color: "#6ee7b7" }}>
-                      −75%
-                    </span>
-                  </div>
-                  <div className="flex items-end gap-2 mb-2">
-                    <span className="text-6xl font-extrabold text-white leading-none">50$</span>
-                    <span className="text-base font-medium pb-1" style={{ color: "rgba(255,255,255,0.65)" }}>
-                      / exercice comptable
-                    </span>
-                  </div>
-                  <p className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
-                    1 exercice = 1 année fiscale complète
-                  </p>
-
-                  <Link
-                    href="/signup"
-                    className="mt-8 inline-flex items-center justify-center rounded-xl px-8 py-3.5 text-base font-bold transition-all hover:scale-[1.01] hover:opacity-95"
-                    style={{
-                      background: "white",
-                      color: "#124A99",
-                      boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
-                    }}
-                  >
-                    Commencer pour 50$/an
-                  </Link>
-                </div>
-
-                {/* Right: includes */}
-                <div>
-                  <p className="text-sm font-semibold mb-4" style={{ color: "rgba(255,255,255,0.7)" }}>
-                    Tout inclus dans votre abonnement :
-                  </p>
-                  <ul className="flex flex-col gap-3">
-                    {PRICING_INCLUDES.map((item) => (
-                      <li key={item} className="flex items-center gap-3 text-sm" style={{ color: "rgba(255,255,255,0.85)" }}>
-                        <CheckIcon color="#6ee7b7" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
-      {/* ── TESTIMONIALS ─────────────────────────────────────────────── */}
-      <section style={{ background: "#102B50" }} className="py-20 lg:py-28">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="text-center mb-14 et-reveal">
-            <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "#F59E0B" }}>
-              Témoignages
-            </p>
-            <h2 className="text-3xl lg:text-4xl font-bold text-white tracking-tight">
-              Ce qu&apos;ils disent
-            </h2>
+      <section id="pricing" aria-labelledby="pricing-heading" className="bg-brand-800 py-20 lg:py-28">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="mx-auto mb-12 max-w-2xl text-center">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-brand-200">Nos packs</p>
+            <h2 id="pricing-heading" className="mb-4 text-3xl font-bold text-white lg:text-4xl">Une formule pour chaque étape de votre activité</h2>
+            <p className="leading-7 text-white/80">Tarifs annuels par entreprise et exercice comptable. Choisissez votre pack ; vos codes promo et avantages de parrainage restent disponibles.</p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map(({ initial, name, role, body, metric, metricLabel, color }, i) => (
-              <div
-                key={name}
-                className="et-testimonial-card et-reveal rounded-2xl flex flex-col"
-                style={{
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.07)",
-                  padding: "28px 24px",
-                  transitionDelay: `${i * 0.1}s`,
-                }}
-              >
-                {/* Stars */}
-                <div className="flex gap-1 mb-5">
-                  {Array.from({ length: 5 }).map((_, j) => (
-                    <svg key={j} width="14" height="14" viewBox="0 0 14 14" fill={color} aria-hidden="true">
-                      <path d="M7 1l1.5 3.5L12 5l-2.5 2.5.5 3.5L7 9.5l-3 1.5.5-3.5L2 5l3.5-.5z" />
-                    </svg>
-                  ))}
-                </div>
-
-                <blockquote className="text-base leading-7 flex-1" style={{ color: "rgba(255,255,255,0.72)" }}>
-                  &ldquo;{body}&rdquo;
-                </blockquote>
-
-                {/* Metric */}
-                <div
-                  className="mt-5 rounded-xl px-4 py-3"
-                  style={{
-                    background: color + "12",
-                    border: `1px solid ${color}25`,
-                  }}
-                >
-                  <div className="text-2xl font-extrabold leading-none" style={{ color }}>
-                    {metric}
-                  </div>
-                  <div className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.45)" }}>
-                    {metricLabel}
-                  </div>
-                </div>
-
-                {/* Author */}
-                <div className="flex items-center gap-3 mt-5">
-                  <div
-                    style={{
-                      width: 40, height: 40,
-                      borderRadius: "50%",
-                      background: color + "25",
-                      border: `1.5px solid ${color}40`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 15, fontWeight: 700, color,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {initial}
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold" style={{ color: "white" }}>{name}</div>
-                    <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>{role}</div>
-                  </div>
-                </div>
-              </div>
+          <div className="grid gap-6 md:grid-cols-3">
+            {Object.entries(PLANS).map(([id, plan]) => (
+              <article key={id} className={`flex flex-col rounded-2xl border p-6 text-white lg:p-8 ${id === "BUSINESS" ? "border-brand-300 bg-brand-500" : "border-white/20 bg-white/5"}`}>
+                <h3 className="text-2xl font-bold">{plan.name}</h3>
+                <p className="mt-2 min-h-12 text-sm leading-6 text-white/80">{id === "STARTER" ? "Les essentiels pour gérer une boutique." : id === "BUSINESS" ? "Le pilotage de vos boutiques et les rapports avancés." : "Les fonctions Business et les futurs outils d’accompagnement IA."}</p>
+                <p className="my-6"><strong className="text-4xl font-bold">{plan.annualUsd} $</strong><span className="ml-2 text-white/80">/ an</span></p>
+                <ul className="mb-8 flex-1 space-y-4">{plan.features.map(feature => <li key={feature} className="flex items-start gap-3 text-sm leading-6"><CheckLineIcon aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-brand-200" />{feature}</li>)}</ul>
+                <Link href={`/signup?plan=${id}`} className="inline-flex min-h-11 items-center justify-center rounded-full bg-white px-5 py-3 text-center font-bold text-brand-500 transition-colors hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-800">Choisir {plan.name}</Link>
+              </article>
             ))}
+          </div>
+          <div className="mx-auto mt-8 max-w-3xl space-y-3 text-center text-sm leading-6 text-white/80">
+            <p>L’abonnement couvre l’exercice comptable choisi, jusqu’au 31 décembre. Le montant final et la réduction applicable sont confirmés avant le paiement.</p>
+            <p>Passez à un pack supérieur en payant la différence au prorata du temps restant, sans changer l’échéance.</p>
+            <p>Les fonctions IA de Premium sont en préparation. Elles ne sont pas encore disponibles et ne garantissent pas l’obtention d’un crédit.</p>
           </div>
         </div>
       </section>
@@ -545,7 +355,7 @@ export default function HomePage() {
             de votre commerce ?
           </h2>
           <p className="mt-5 text-lg" style={{ color: "rgba(255,255,255,0.8)" }}>
-            Créez votre compte en 15 minutes. Aucune carte bancaire requise.
+            Créez votre compte, choisissez votre pack et activez votre exercice comptable.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
@@ -558,7 +368,7 @@ export default function HomePage() {
                 boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
               }}
             >
-              Créer mon compte gratuitement
+              Créer mon compte
             </Link>
             <Link
               href="/signin"
@@ -572,7 +382,7 @@ export default function HomePage() {
             </Link>
           </div>
           <p className="mt-5 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
-            Démarrage en moins de 15 minutes · Sans carte bancaire · Conçu pour la RDC
+            Starter {PLANS.STARTER.annualUsd} $ · Business {PLANS.BUSINESS.annualUsd} $ · Premium {PLANS.PREMIUM.annualUsd} $ par an
           </p>
         </div>
       </section>

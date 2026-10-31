@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: { useTypeScriptCli: false, workerThreads: true, cpus: 2 },
   // Le cluster Pusher n'est pas un secret : on réutilise PUSHER_CLUSTER côté navigateur.
   env: {
     NEXT_PUBLIC_PUSHER_CLUSTER: process.env.NEXT_PUBLIC_PUSHER_CLUSTER ?? process.env.PUSHER_CLUSTER ?? "",

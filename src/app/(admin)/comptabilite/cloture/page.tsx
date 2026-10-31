@@ -6,7 +6,6 @@ import Annee from "@/lib/models/Annee";
 import { Types } from "mongoose";
 import ClotureClient from "./ClotureClient";
 
-// @ts-ignore – actions créées par Agent 2
 import { getClosureData } from "@/actions/comptabilite.actions";
 
 export default async function CloturePage() {

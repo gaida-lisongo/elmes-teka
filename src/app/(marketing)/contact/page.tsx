@@ -1,3 +1,4 @@
+import { PLANS } from "@/lib/payments/plans";
 import type { Metadata } from "next";
 import Link from "next/link";
 import ContactForm from "@/components/marketing/ContactForm";
@@ -287,7 +288,7 @@ export default function ContactPage() {
             Prêt à essayer ELMES-TEKA ?
           </h2>
           <p className="mt-5 text-lg" style={{ color: "rgba(255,255,255,0.65)" }}>
-            Démarrez en moins de 15 minutes — 50$/an.
+            Choisissez Starter à {PLANS.STARTER.annualUsd} $, Business à {PLANS.BUSINESS.annualUsd} $ ou Premium à {PLANS.PREMIUM.annualUsd} $ par an.
           </p>
           <div className="mt-10">
             <Link

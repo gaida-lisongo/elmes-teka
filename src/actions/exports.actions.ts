@@ -1,5 +1,6 @@
 "use server";
 
+import { requireSubscriptionFeature } from "@/lib/payments/entitlements";
 import { Types } from "mongoose";
 import ExcelJS from "exceljs";
 
@@ -12,7 +13,8 @@ import Creance from "@/lib/models/Creance";
 import Dette from "@/lib/models/Dette";
 import Store from "@/lib/models/Store";
 import Product from "@/lib/models/Product";
-import { Saler, Tenant } from "@/lib/models/User";
+import type { TDocumentDefinitions } from "pdfmake/interfaces";
+import { Tenant } from "@/lib/models/User";
 
 export type ActionResponse<T = undefined> =
   | { success: true; message: string; data: T }
@@ -71,6 +73,7 @@ export async function exportAnneeJournal(
 ): Promise<ActionResponse<{ buffer: number[]; filename: string }>> {
   try {
     const { tenantId } = await requireTenantSession();
+    await requireSubscriptionFeature(tenantId, "advancedReports");
     await connectToDb();
 
     if (!Types.ObjectId.isValid(anneeId)) {
@@ -82,7 +85,7 @@ export async function exportAnneeJournal(
       return { success: false, message: "Exercice introuvable." };
     }
 
-    const tenant = await Tenant.findOne({ userId: new Types.ObjectId(tenantId) })
+    const tenant = await Tenant.findById(tenantId)
       .select("designation")
       .lean();
 
@@ -91,6 +94,7 @@ export async function exportAnneeJournal(
 
     /* Données */
     const commandes = await Commande.find({
+      tenantId: tenantOid,
       anneeId: anneeOid,
       status: { $nin: ["CANCELLED", "DRAFT"] },
     })
@@ -99,7 +103,7 @@ export async function exportAnneeJournal(
       .sort({ createdAt: -1 })
       .lean();
 
-    const depenses = await Depense.find({ anneeId: anneeOid })
+    const depenses = await Depense.find({ tenantId: tenantOid, anneeId: anneeOid, status: { $nin: ["REJECTED", "CANCELLED"] } })
       .populate("shopId", "designation")
       .populate("agentId", "pseudo")
       .sort({ createdAt: -1 })
@@ -109,12 +113,11 @@ export async function exportAnneeJournal(
       .select("designation")
       .lean();
 
-    const totalRecettes = commandes.reduce((sum, c) => sum + (c.totalAmount ?? 0), 0);
-
-    const totalDepenses = depenses.reduce((sum, d) => {
-      const items = d.depenses || [];
-      return sum + items.filter((i) => i.status !== "REJECTED").reduce((s, i) => s + i.amount, 0);
-    }, 0);
+    const totals = ["USD", "CDF"].map(currency => ({
+      currency,
+      recettes: commandes.filter(order => order.currency === currency).reduce((sum, order) => sum + order.totalAmount, 0),
+      depenses: depenses.filter(expense => expense.currency === currency).reduce((sum, expense) => sum + expense.depenses.filter(line => line.status !== "REJECTED").reduce((lineSum, line) => lineSum + line.amount, 0), 0),
+    }));
 
     const workbook = new ExcelJS.Workbook();
     const filename = `journal-exercice-${annee.slug}-elmes-teka.xlsx`;
@@ -130,9 +133,11 @@ export async function exportAnneeJournal(
     sheet1.addRow(["Exercice", `${formatDate(annee.debut)} - ${formatDate(annee.fin)}`]);
     sheet1.addRow(["Date de generation", formatDate(new Date())]);
     sheet1.addRow([]);
-    sheet1.addRow(["Total Recettes", formatCurrency(totalRecettes, "CDF")]);
-    sheet1.addRow(["Total Depenses", formatCurrency(totalDepenses, "CDF")]);
-    sheet1.addRow(["Resultat", formatCurrency(totalRecettes - totalDepenses, "CDF")]);
+    for (const total of totals) {
+      sheet1.addRow([`Recettes (${total.currency})`, formatCurrency(total.recettes, total.currency)]);
+      sheet1.addRow([`Dépenses (${total.currency})`, formatCurrency(total.depenses, total.currency)]);
+      sheet1.addRow([`Solde enregistré (${total.currency})`, formatCurrency(total.recettes - total.depenses, total.currency)]);
+    }
     sheet1.addRow([]);
     sheet1.addRow(["Nombre de transactions", commandes.length + depenses.length]);
     sheet1.addRow(["Boutiques concernees", stores.length]);
@@ -153,21 +158,10 @@ export async function exportAnneeJournal(
     ];
     applyHeaderStyle(sheet2, 1);
 
-    commandes.forEach((c) => {
-      const items = c.commandes || [];
-      items.forEach((item) => {
-        sheet2.addRow({
-          date: formatDate(c.createdAt),
-          type: "RECETTE",
-          reference: c.reference,
-          boutique: (c.shopId as any)?.designation ?? "",
-          agent: "",
-          libelle: `Commande ${c.reference}`,
-          montant: item.total,
-          devise: c.currency,
-          statut: c.status,
-        });
-      });
+    commandes.forEach(c => {
+      sheet2.addRow({ date: formatDate(c.createdAt), type: "RECETTE", reference: c.reference,
+        boutique: (c.shopId as unknown as { designation?: string })?.designation ?? "", agent: "",
+        libelle: `Commande ${c.reference}`, montant: c.totalAmount, devise: c.currency, statut: c.status });
     });
 
     depenses.forEach((d) => {
@@ -178,11 +172,11 @@ export async function exportAnneeJournal(
           date: formatDate(d.createdAt),
           type: "DEPENSE",
           reference: d.reference,
-          boutique: (d.shopId as any)?.designation ?? "",
-          agent: (d.agentId as any)?.pseudo ?? "",
+          boutique: (d.shopId as unknown as { designation?: string })?.designation ?? "",
+          agent: (d.agentId as unknown as { pseudo?: string })?.pseudo ?? "",
           libelle: item.libelle,
           montant: item.amount,
-          devise: "CDF",
+          devise: d.currency,
           statut: item.status,
         });
       });
@@ -212,8 +206,8 @@ export async function exportAnneeJournal(
         sheet3.addRow({
           date: formatDate(c.createdAt),
           reference: c.reference,
-          boutique: (c.shopId as any)?.designation ?? "",
-          client: (c.clientId as any)?.name ?? "",
+          boutique: (c.shopId as unknown as { designation?: string })?.designation ?? "",
+          client: (c.clientId as unknown as { name?: string })?.name ?? "",
           qte: item.qte,
           devise: c.currency,
           statut: c.status,
@@ -242,8 +236,8 @@ export async function exportAnneeJournal(
         sheet4.addRow({
           date: formatDate(d.createdAt),
           reference: d.reference,
-          boutique: (d.shopId as any)?.designation ?? "",
-          agent: (d.agentId as any)?.pseudo ?? "",
+          boutique: (d.shopId as unknown as { designation?: string })?.designation ?? "",
+          agent: (d.agentId as unknown as { pseudo?: string })?.pseudo ?? "",
           libelle: item.libelle,
           montant: item.amount,
           statut: item.status,
@@ -259,8 +253,8 @@ export async function exportAnneeJournal(
       message: "Journal genere.",
       data: { buffer: Array.from(new Uint8Array(buffer)), filename },
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur export." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur export.") };
   }
 }
 
@@ -271,6 +265,7 @@ export async function exportProductSales(
 ): Promise<ActionResponse<{ buffer: number[]; filename: string }>> {
   try {
     const { tenantId } = await requireTenantSession();
+    await requireSubscriptionFeature(tenantId, "advancedReports");
     await connectToDb();
 
     if (!Types.ObjectId.isValid(productId)) {
@@ -287,7 +282,7 @@ export async function exportProductSales(
     /* Récupérer les commandes contenant ce produit */
     const commandes = await Commande.aggregate([
       { $unwind: "$commandes" },
-      { $match: { "commandes.product": productOid, status: { $nin: ["CANCELLED", "DRAFT"] } } },
+      { $match: { tenantId: new Types.ObjectId(tenantId), "commandes.product": productOid, status: { $nin: ["CANCELLED", "DRAFT"] } } },
       {
         $lookup: {
           from: "stores",
@@ -375,8 +370,8 @@ export async function exportProductSales(
       message: "Export genere.",
       data: { buffer: Array.from(new Uint8Array(buffer)), filename },
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur export." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur export.") };
   }
 }
 
@@ -387,6 +382,7 @@ export async function exportDossierFinancement(
 ): Promise<ActionResponse<{ buffer: number[]; filename: string }>> {
   try {
     const { tenantId } = await requireTenantSession();
+    await requireSubscriptionFeature(tenantId, "advancedReports");
     await connectToDb();
 
     if (!Types.ObjectId.isValid(anneeId)) {
@@ -399,7 +395,7 @@ export async function exportDossierFinancement(
     const annee = await Annee.findOne({ _id: anneeOid, tenantId }).lean();
     if (!annee) return { success: false, message: "Exercice introuvable." };
 
-    const tenant = await Tenant.findOne({ userId: tenantOid }).select("designation logo").lean();
+    const tenant = await Tenant.findById(tenantOid).select("designation logo").lean();
 
     const [commandesByMonth, depensesByMonth, top10Commandes, creancesTotal, dettesTotal] =
       await Promise.all([
@@ -414,7 +410,7 @@ export async function exportDossierFinancement(
           { $sort: { "_id.month": 1 } },
         ]),
         Commande.find({ tenantId: tenantOid, anneeId: anneeOid, status: { $nin: ["CANCELLED", "DRAFT"] } })
-          .sort({ totalAmount: -1 })
+          .sort({ createdAt: -1 })
           .limit(10)
           .select("reference totalAmount currency createdAt")
           .lean(),
@@ -430,19 +426,21 @@ export async function exportDossierFinancement(
 
     const monthNames = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Aoû", "Sep", "Oct", "Nov", "Déc"];
 
-    const months = Array.from({ length: 12 }, (_, i) => {
+    const months = ["USD", "CDF"].flatMap(currency => Array.from({ length: 12 }, (_, i) => {
       const m = i + 1;
-      const ca = commandesByMonth.find((r) => r._id.month === m)?. total ?? 0;
-      const dep = depensesByMonth.find((r) => r._id.month === m)?.total ?? 0;
-      return { label: monthNames[i], ca, dep, result: ca - dep };
+      const ca = commandesByMonth.find((r) => r._id.month === m && r._id.currency === currency)?.total ?? 0;
+      const dep = depensesByMonth.find((r) => r._id.month === m && r._id.currency === currency)?.total ?? 0;
+      return { label: `${monthNames[i]} (${currency})`, ca, dep, result: ca - dep, currency };
+    }));
+
+    const totals = ["USD", "CDF"].map(currency => {
+      const rows = months.filter(month => month.currency === currency);
+      const ca = rows.reduce((sum, month) => sum + month.ca, 0);
+      const dep = rows.reduce((sum, month) => sum + month.dep, 0);
+      return { currency, ca, dep, result: ca - dep };
     });
 
-    const totalCA = months.reduce((s, m) => s + m.ca, 0);
-    const totalDep = months.reduce((s, m) => s + m.dep, 0);
-    const totalResult = totalCA - totalDep;
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const PdfPrinter = (await import("pdfmake")).default as any;
+    const pdfmake = (await import("pdfmake")).default;
     const fonts = {
       Helvetica: {
         normal: "Helvetica",
@@ -451,9 +449,11 @@ export async function exportDossierFinancement(
         bolditalics: "Helvetica-BoldOblique",
       },
     };
-    const printer = new PdfPrinter(fonts);
+    pdfmake.addFonts(fonts);
+    pdfmake.setUrlAccessPolicy(() => false);
+    pdfmake.setLocalAccessPolicy(path => ["Helvetica", "Helvetica-Bold", "Helvetica-Oblique", "Helvetica-BoldOblique"].includes(path));
 
-    const docDefinition: any = {
+    const docDefinition: TDocumentDefinitions = {
       defaultStyle: { font: "Helvetica", fontSize: 10 },
       pageMargins: [40, 60, 40, 60],
       content: [
@@ -462,7 +462,7 @@ export async function exportDossierFinancement(
         { text: `Exercice : ${formatDate(annee.debut)} — ${formatDate(annee.fin)}`, style: "meta" },
         { text: `Généré le ${formatDate(new Date())}`, style: "meta" },
         { text: " " },
-        { text: "1. Tableau mensuel des opérations (CDF)", style: "sectionTitle" },
+        { text: "1. Opérations mensuelles par devise (sans conversion)", style: "sectionTitle" },
         {
           table: {
             headerRows: 1,
@@ -472,7 +472,7 @@ export async function exportDossierFinancement(
                 { text: "Mois", bold: true },
                 { text: "Recettes", bold: true },
                 { text: "Dépenses", bold: true },
-                { text: "Résultat net", bold: true },
+                { text: "Solde des opérations", bold: true },
               ],
               ...months.map((m) => [
                 m.label,
@@ -480,18 +480,18 @@ export async function exportDossierFinancement(
                 m.dep.toLocaleString("fr-FR"),
                 { text: m.result.toLocaleString("fr-FR"), color: m.result < 0 ? "#dc2626" : "#16a34a" },
               ]),
-              [
-                { text: "TOTAL", bold: true },
-                { text: totalCA.toLocaleString("fr-FR"), bold: true },
-                { text: totalDep.toLocaleString("fr-FR"), bold: true },
-                { text: totalResult.toLocaleString("fr-FR"), bold: true, color: totalResult < 0 ? "#dc2626" : "#16a34a" },
-              ],
+              ...totals.map(total => [
+                { text: `TOTAL (${total.currency})`, bold: true },
+                { text: total.ca.toLocaleString("fr-FR"), bold: true },
+                { text: total.dep.toLocaleString("fr-FR"), bold: true },
+                { text: total.result.toLocaleString("fr-FR"), bold: true },
+              ]),
             ],
           },
           layout: "lightHorizontalLines",
         },
         { text: " " },
-        { text: "2. Top 10 ventes de l'exercice", style: "sectionTitle" },
+        { text: "2. Dix dernières ventes de l’exercice", style: "sectionTitle" },
         {
           table: {
             headerRows: 1,
@@ -517,14 +517,14 @@ export async function exportDossierFinancement(
         { text: "3. Créances et dettes en cours", style: "sectionTitle" },
         {
           ul: [
-            ...creancesTotal.map((r: any) => `Créances (${r._id}) : ${r.total.toLocaleString("fr-FR")} — ${r.count} dossier(s)`),
+            ...creancesTotal.map((r: { _id: string; total: number; count: number }) => `Créances (${r._id}) : ${r.total.toLocaleString("fr-FR")} — ${r.count} dossier(s)`),
             ...(creancesTotal.length === 0 ? ["Aucune créance en cours"] : []),
-            ...dettesTotal.map((r: any) => `Dettes (${r._id}) : ${r.total.toLocaleString("fr-FR")} — ${r.count} dossier(s)`),
+            ...dettesTotal.map((r: { _id: string; total: number; count: number }) => `Dettes (${r._id}) : ${r.total.toLocaleString("fr-FR")} — ${r.count} dossier(s)`),
             ...(dettesTotal.length === 0 ? ["Aucune dette en cours"] : []),
           ],
         },
         { text: " " },
-        { text: "Document généré par ELMES-TEKA — usage interne et financement", style: "footer" },
+        { text: "Récapitulatif des opérations enregistrées. Le solde présenté n’est ni un bénéfice net, ni une capacité de remboursement. Aucun score ou accord de crédit n’est calculé par ce document.", style: "footer" },
       ],
       styles: {
         title: { fontSize: 18, bold: true, margin: [0, 0, 0, 4] },
@@ -535,16 +535,7 @@ export async function exportDossierFinancement(
       },
     };
 
-    const doc = printer.createPdfKitDocument(docDefinition);
-    const chunks: Buffer[] = [];
-    await new Promise<void>((resolve, reject) => {
-      doc.on("data", (chunk: Buffer) => chunks.push(chunk));
-      doc.on("end", resolve);
-      doc.on("error", reject);
-      doc.end();
-    });
-
-    const buffer = Buffer.concat(chunks);
+    const buffer = await pdfmake.createPdf(docDefinition).getBuffer();
     const filename = `dossier-financement-${annee.slug}-elmes-teka.pdf`;
 
     return {
@@ -552,7 +543,7 @@ export async function exportDossierFinancement(
       message: "Dossier PDF généré.",
       data: { buffer: Array.from(new Uint8Array(buffer)), filename },
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur génération PDF." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur génération PDF.") };
   }
 }

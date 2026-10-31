@@ -9,7 +9,6 @@ import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import { PlusIcon, PencilIcon, TrashBinIcon } from "@/icons";
 
-// @ts-ignore – actions créées par Agent 2
 import {
   createImmobilisation,
   updateImmobilisation,

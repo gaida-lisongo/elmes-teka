@@ -7,7 +7,6 @@ import Annee from "@/lib/models/Annee";
 import Store from "@/lib/models/Store";
 import JournalClient from "./JournalClient";
 
-// @ts-ignore – actions créées par Agent 2
 import { getJournalOperations } from "@/actions/comptabilite.actions";
 
 const PAGE_SIZE = 50;

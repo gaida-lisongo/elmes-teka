@@ -1,5 +1,7 @@
 "use server";
 
+import { createStoreWithinPlan } from "@/lib/payments/store-access";
+
 import { revalidatePath } from "next/cache";
 import { Types } from "mongoose";
 import { randomBytes } from "node:crypto";
@@ -116,8 +118,8 @@ export async function getStoreMetrics(): Promise<ActionResponse<StoreMetrics>> {
         totalAgents: agentCount?.total ?? 0,
       },
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur metriques." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur metriques.") };
   }
 }
 
@@ -249,8 +251,8 @@ export async function getStores(
       message: "Liste recuperee.",
       data: { items, total, page: safePage, limit: safeLimit, totalPages },
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur liste." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur liste.") };
   }
 }
 
@@ -295,16 +297,12 @@ export async function createStoreStep1(input: {
       return { success: false, message: "Impossible de generer une reference." };
     }
 
-    const store = await Store.create({
-      tenantId: new Types.ObjectId(tenantId),
+    const store = await createStoreWithinPlan(tenantId, {
       designation: input.designation.trim(),
       description: input.description.trim(),
       coordonnes: input.coordonnes ?? [],
       photos: input.photos ?? [],
       reference,
-      status: "ACTIVE",
-      capitals: [],
-      caisses: [],
     });
 
     return {
@@ -315,8 +313,8 @@ export async function createStoreStep1(input: {
         reference: store.reference,
       },
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur creation." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur creation.") };
   }
 }
 
@@ -434,8 +432,8 @@ export async function initiateStorePayment(input: {
   //       currency,
   //     },
   //   };
-  // } catch (error: any) {
-  //   return { success: false, message: error.message || "Erreur paiement." };
+  // } catch (error: unknown) {
+  //   return { success: false, message: (error instanceof Error ? error.message : "Erreur paiement.") };
   // }
 }
 
@@ -527,8 +525,8 @@ export async function verifyStorePayment(
   //     message: "Paiement en attente de confirmation.",
   //     data: { status: "PENDING", paid: false },
   //   };
-  // } catch (error: any) {
-  //   return { success: false, message: error.message || "Erreur verification." };
+  // } catch (error: unknown) {
+  //   return { success: false, message: (error instanceof Error ? error.message : "Erreur verification.") };
   // }
 }
 
@@ -569,8 +567,8 @@ export async function updateStore(
     revalidatePath("/stores");
 
     return { success: true, message: "Boutique mise a jour.", data: null };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur mise a jour." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur mise a jour.") };
   }
 }
 
@@ -595,8 +593,8 @@ export async function archiveStore(id: string): Promise<ActionResponse<null>> {
     revalidatePath("/stores");
 
     return { success: true, message: "Boutique archivee.", data: null };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur archivage." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur archivage.") };
   }
 }
 
@@ -674,8 +672,8 @@ export async function addStoreCapital(
     );
     revalidatePath("/stores");
     return { success: true, message: "Capital ajoute.", data: null };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur ajout capital." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur ajout capital.") };
   }
 }
 
@@ -727,8 +725,8 @@ export async function updateStoreCapital(
     }
     revalidatePath("/stores");
     return { success: true, message: "Capital modifie.", data: null };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur modification capital." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur modification capital.") };
   }
 }
 
@@ -751,8 +749,8 @@ export async function deleteStoreCapital(
     }
     revalidatePath("/stores");
     return { success: true, message: "Capital supprime.", data: null };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur suppression capital." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur suppression capital.") };
   }
 }
 
@@ -802,7 +800,7 @@ export async function associateProductsWithStore(
     const validProductIds = products.map((p) => p._id);
 
     /* Chercher un stock existant pour cette boutique et exercice */
-    let stock = await Stock.findOne({
+    const stock = await Stock.findOne({
       shopId: new Types.ObjectId(storeId),
       anneeId: new Types.ObjectId(anneeId),
     }).lean();
@@ -839,10 +837,10 @@ export async function associateProductsWithStore(
       message: "Produits associes a la boutique.",
       data: null,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur association.",
+      message: (error instanceof Error ? error.message : "Erreur association."),
     };
   }
 }
@@ -903,10 +901,10 @@ export async function getStoreProducts(
       message: "Produits recuperes.",
       data: items,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || "Erreur recuperation.",
+      message: (error instanceof Error ? error.message : "Erreur recuperation."),
     };
   }
 }
@@ -935,7 +933,7 @@ export async function removeProductFromStore(
     const [store, product, annee] = await Promise.all([
       Store.findOne({ _id: storeOid, tenantId: tenantOid }).select("_id").lean(),
       Product.findOne({ _id: productOid, tenantId: tenantOid }).select("_id").lean(),
-      Annee.findOne({ _id: anneeOid, tenantId: tenantOid }).select("_id").lean(),
+      Annee.findOne({ _id: anneeOid, tenantId: tenantOid, status: "ACTIVE", "provider.status": "PAID", debut: { $lte: new Date() }, fin: { $gt: new Date() } }).select("_id plan").lean(),
     ]);
     if (!store) return { success: false, message: "Boutique introuvable." };
     if (!product) return { success: false, message: "Produit introuvable." };
@@ -964,8 +962,8 @@ export async function removeProductFromStore(
     );
     revalidatePath("/stores");
     return { success: true, message: "Produit retire de la boutique.", data: null };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur retrait produit." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur retrait produit.") };
   }
 }
 
@@ -1027,8 +1025,8 @@ export async function updateStoreProductQuantity(
       message: "Quantite du stock mise a jour.",
       data: { quantity },
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur mise a jour du stock." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur mise a jour du stock.") };
   }
 }
 
@@ -1058,8 +1056,8 @@ export async function getTenantProductsForSelect(): Promise<
         code: p.code,
       })),
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur produits." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur produits.") };
   }
 }
 
@@ -1088,16 +1086,16 @@ export async function getTenantAnneesForSelect(): Promise<
         label: `${a.debut.getFullYear()} - ${a.fin.getFullYear()}`,
       })),
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur exercices." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur exercices.") };
   }
 }
 
 /* ───── Abonnements ───── */
 
 const TRANSACTION_LIMITS: Record<"STARTER" | "BUSINESS" | "PREMIUM", number | null> = {
-  STARTER: 200,
-  BUSINESS: 1000,
+  STARTER: null,
+  BUSINESS: null,
   PREMIUM: null,
 };
 
@@ -1129,6 +1127,7 @@ export async function subscribeStore(
     if (!store) return { success: false, message: "Boutique introuvable." };
     if (!annee) return { success: false, message: "Exercice introuvable." };
 
+    if (pack !== (annee.plan ?? "STARTER")) return { success: false, message: "Le pack doit correspondre à l’abonnement payé de l’exercice." };
     const transactionLimit = TRANSACTION_LIMITS[pack];
 
     const existing = (store.subscriptions ?? []).find(
@@ -1168,8 +1167,8 @@ export async function subscribeStore(
 
     revalidatePath("/stores");
     return { success: true, message: "Abonnement active.", data: null };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur abonnement." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur abonnement.") };
   }
 }
 
@@ -1224,7 +1223,7 @@ export async function verifyStoreSubscription(
         createdAt: sub.createdAt.toISOString(),
       },
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur verification abonnement." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur verification abonnement.") };
   }
 }

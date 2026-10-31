@@ -1,8 +1,9 @@
+import { developmentAgentToolsEnabled } from "@/lib/agent/development-tools";
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
 import { Types } from "mongoose";
 
-import { getAgentSession } from "@/lib/agent/auth";
+import { getAgentSession, verifyAgentKey } from "@/lib/agent/auth";
 import connectToDb from "@/lib/utils/db";
 import { Tenant, Saler } from "@/lib/models/User";
 import Store from "@/lib/models/Store";
@@ -32,6 +33,14 @@ function from(days: number) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!developmentAgentToolsEnabled()) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (!verifyAgentKey(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const session = getAgentSession(request);
     if (!session || session.accountType !== "TENANT" || !session.tenantId) {

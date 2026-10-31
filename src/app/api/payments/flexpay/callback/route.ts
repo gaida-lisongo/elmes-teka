@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
+  applyUpgradePayment,
   ANNEE_PREFIX,
   PROMO_PREFIX,
   applyAnneePayment,
@@ -53,7 +54,9 @@ export async function POST(request: NextRequest) {
   }
 
   let applied: AppliedPayment;
-  if (reference.startsWith(ANNEE_PREFIX)) {
+  if (reference.startsWith("UPGRADE-")) {
+    applied = await applyUpgradePayment(reference.slice(8, 32), reference, status);
+  } else if (reference.startsWith(ANNEE_PREFIX)) {
     applied = await applyAnneePayment(reference.slice(ANNEE_PREFIX.length), status);
   } else if (reference.startsWith(PROMO_PREFIX)) {
     applied = await applyPromotionRecharge(orderNumber, status);

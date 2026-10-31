@@ -13,6 +13,7 @@ import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
 import Spinner from "@/components/ui/spinner/Spinner";
 import { EyeCloseIcon, EyeIcon } from "@/icons";
+import { PLANS, type Plan } from "@/lib/payments/plans";
 import type { TenantType } from "@/lib/models/User";
 import Link from "next/link";
 
@@ -43,7 +44,8 @@ const tenantTypeOptions = [
   { value: "ORGANIZATION", label: "Organisation" },
 ];
 
-export default function SignUpForm({ initialCode = "" }: { initialCode?: string }) {
+export default function SignUpForm({ initialCode = "", initialPlan = "STARTER" }: { initialCode?: string; initialPlan?: Plan }) {
+  const [preferredPlan, setPreferredPlan] = useState<Plan>(initialPlan);
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
@@ -208,6 +210,7 @@ export default function SignUpForm({ initialCode = "" }: { initialCode?: string 
         documents: documents.map(({ title, url }) => ({ title, url })),
         uploadedPublicIds,
         code: form.code,
+        preferredPlan,
       });
 
       if (!response.success) {
@@ -247,6 +250,15 @@ export default function SignUpForm({ initialCode = "" }: { initialCode?: string 
         </div>
 
         <form onSubmit={submit}>
+          {step === 1 && <div className="mb-6 rounded-2xl border border-brand-100 bg-brand-25 p-5 dark:border-gray-700 dark:bg-gray-900">
+            <Label htmlFor="preferred-plan">Votre pack</Label>
+            <select id="preferred-plan" value={preferredPlan} onChange={event => setPreferredPlan(event.target.value as Plan)} className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-base text-gray-800 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+              {Object.entries(PLANS).map(([id, plan]) => <option key={id} value={id}>{plan.name} — {plan.annualUsd} $/an</option>)}
+            </select>
+            <p className="mt-3 text-sm leading-6 text-gray-600 dark:text-gray-400">{PLANS[preferredPlan].features.join(" · ")}</p>
+            <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-400">Ce choix prépare votre souscription. Le paiement sera confirmé à l’ouverture de votre exercice, avec votre code promo éventuel.</p>
+          </div>}
+
           {step === 1 && (
             <div className="space-y-5">
               <div>
@@ -277,7 +289,7 @@ export default function SignUpForm({ initialCode = "" }: { initialCode?: string 
               <div>
                 <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">Marque ou entreprise</h2>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Presentez l'activite et ajoutez les justificatifs disponibles.
+                  Presentez l&apos;activite et ajoutez les justificatifs disponibles.
                 </p>
               </div>
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">

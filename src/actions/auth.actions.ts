@@ -1,5 +1,7 @@
 "use server";
 
+import { isPlan, type Plan } from "@/lib/payments/plans";
+
 import { randomBytes, scrypt as callbackScrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import { Types } from "mongoose";
@@ -28,6 +30,7 @@ export type ActionResponse<T = undefined> =
   | { success: false; message: string; errors?: Record<string, string> };
 
 export interface CreateTenantAccountInput {
+  preferredPlan?: Plan;
   pseudo: string;
   telephone: string;
   email: string;
@@ -336,6 +339,7 @@ export async function createTenantAccount(
   try {
     await connectToDb();
 
+    if (input.preferredPlan !== undefined && !isPlan(input.preferredPlan)) return { success: false, message: "Formule invalide." };
     const pseudo = input.pseudo.trim();
     const telephone = normalizeTelephone(input.telephone);
     const email = normalizeEmail(input.email);
@@ -429,6 +433,7 @@ export async function createTenantAccount(
       nRef,
       referredBy,
       signupPromoCode,
+      preferredPlan: input.preferredPlan ?? "STARTER",
     });
 
     createdTenantId = tenant._id as Types.ObjectId;

@@ -98,9 +98,9 @@ export const GUIDE_TOPICS: GuideTopic[] = [
       },
       {
         title: "Créer l'exercice",
-        text: "Cliquez sur « Nouvel exercice ». Choisissez l'année (l'exercice va toujours du 1er janvier au 31 décembre), la devise de paiement et votre numéro Mobile Money. Saisissez un code promo si vous en avez un : le prix réduit s'affiche immédiatement.",
+        text: "Cliquez sur « Nouvel exercice ». Choisissez l'année (l'exercice va toujours du 1er janvier au 31 décembre), votre pack, la devise de paiement et votre numéro Mobile Money. Saisissez un code promo si vous en avez un : le prix réduit s'affiche immédiatement.",
         shot: "tenant-annees-create",
-        tip: "L'abonnement annuel est de 50 USD (ou l'équivalent en CDF). Le parrainage et les codes promo le réduisent.",
+        tip: "Choisissez Starter à 50 USD, Business à 120 USD ou Premium à 200 USD par exercice (ou l'équivalent en CDF). Le parrainage et les codes promo réduisent le tarif. L'upgrade est calculé au prorata du temps restant.",
       },
       {
         title: "Valider sur votre téléphone",
@@ -464,7 +464,7 @@ export const GUIDE_TOPICS: GuideTopic[] = [
       },
       {
         title: "Le dossier de financement (PDF)",
-        text: "« Dossier PDF » génère un état financier de l'exercice, prêt à remettre à une banque ou une institution de microfinance. L'export Excel du journal se trouve sur la page Exercices.",
+        text: "« Dossier PDF » génère un état financier de l'exercice, à vérifier avant de le remettre à une banque ou une institution de microfinance. Les exports avancés sont réservés aux packs Business et Premium ; l’export Excel du journal se trouve sur la page Exercices.",
       },
       {
         title: "La clôture d'exercice",
@@ -472,7 +472,7 @@ export const GUIDE_TOPICS: GuideTopic[] = [
         shot: "tenant-cloture",
       },
     ],
-    faq: [{ q: "Puis-je encore consulter un exercice clôturé ?", a: "Oui, tout l'historique reste consultable et exportable." }],
+    faq: [{ q: "Puis-je encore consulter un exercice clôturé ?", a: "Oui, l’historique reste consultable. Les exports avancés nécessitent un pack Business ou Premium actif." }],
     related: ["tresorerie", "exercice-et-abonnement"],
   },
   {

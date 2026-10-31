@@ -29,7 +29,6 @@ export default function MarketingHeader() {
           />
           <span
             className="text-white font-bold text-lg tracking-tight"
-            style={{ fontFamily: "var(--font-poppins, Poppins, system-ui)" }}
           >
             ELMES<span style={{ color: "#93C5FD" }}>-TEKA</span>
           </span>
@@ -43,10 +42,10 @@ export default function MarketingHeader() {
             Bénéfices
           </Link>
           <Link
-            href="/#comment"
+            href="/#pricing"
             className="text-sm font-medium text-white/70 hover:text-white transition-colors"
           >
-            Comment ça marche
+            Packs et tarifs
           </Link>
           <Link
             href="/about"

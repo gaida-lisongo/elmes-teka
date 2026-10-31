@@ -8,9 +8,9 @@ Les demander à l'équipe ELMES.
 
 | Variable | Rôle |
 |----------|------|
-| `FLEX_HOST_PAYMENT_MOBILE` | Hôte de l'API Mobile Money. Si aucun chemin n'est donné, le code ajoute `/api/rest/v1/paymentService` (collecte) et `/api/rest/v1/merchantPayOutService` (pay out). |
-| `FLEX_HOST_PAYMENT_CARD` | Hôte (ou URL complète) de la génération d'URL de paiement carte. Chemin par défaut : `/v1.1/pay`. |
-| `FLEX_HOST_CHECK` | Hôte (ou URL de base) de la vérification. Chemin par défaut : `/api/rest/v1/check`, suivi de `/{orderNumber}`. |
+| `FLEX_HOST_PAYMENT_MOBILE` | URL complète de la collecte, ex. `https://backend.flexpay.cd/api/rest/v1/paymentService`. Le pay out en est déduit (`…/merchantPayOutService`). Un hôte seul est aussi accepté. |
+| `FLEX_HOST_PAYMENT_CARD` | URL complète du paiement carte, ex. `https://cardpayment.flexpay.cd/v1.1/pay`. |
+| `FLEX_HOST_CHECK` | URL de base du check, ex. `https://backend.flexpay.cd/api/rest/v1/check/` ; le code ajoute `{orderNumber}`. |
 | `FLEX_MERCHANT` | Code marchand. |
 | `FLEX_TOKEN` | Token, au format `Bearer xxxx` (le préfixe est ajouté s'il manque). |
 | `AUTH_SESSION_SECRET` | Déjà existant : sert aussi à signer la clé de l'URL de callback. |

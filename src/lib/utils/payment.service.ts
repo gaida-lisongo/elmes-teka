@@ -3,9 +3,9 @@
  * Documentation : docs/flexpay/README.md
  *
  * Variables d'environnement requises :
- *   FLEX_HOST_PAYMENT_MOBILE – hôte (ou URL complète) de paymentService / merchantPayOutService
- *   FLEX_HOST_PAYMENT_CARD   – hôte (ou URL complète) de la génération d'URL de paiement carte
- *   FLEX_HOST_CHECK          – hôte (ou URL complète) de la vérification /check/{orderNumber}
+ *   FLEX_HOST_PAYMENT_MOBILE – URL de paymentService (ex. https://backend.flexpay.cd/api/rest/v1/paymentService)
+ *   FLEX_HOST_PAYMENT_CARD   – URL de paiement carte (ex. https://cardpayment.flexpay.cd/v1.1/pay)
+ *   FLEX_HOST_CHECK          – URL de base du check (ex. https://backend.flexpay.cd/api/rest/v1/check/)
  *   FLEX_MERCHANT            – code marchand FlexPay
  *   FLEX_TOKEN               – token d'autorisation, préfixé par "Bearer "
  */
@@ -231,7 +231,11 @@ export async function initiatePayout(payload: PayoutPayload): Promise<PaymentRes
   try {
     const { data, status } = await request<any>(
       'POST',
-      endpoint('FLEX_HOST_PAYMENT_MOBILE', '/api/rest/v1/merchantPayOutService'),
+      // FLEX_HOST_PAYMENT_MOBILE pointe souvent sur …/paymentService : le pay out est son voisin.
+      endpoint('FLEX_HOST_PAYMENT_MOBILE', '/api/rest/v1/merchantPayOutService').replace(
+        /\/paymentService$/,
+        '/merchantPayOutService',
+      ),
       {
         merchant: requireEnv('FLEX_MERCHANT'),
         type: '1',

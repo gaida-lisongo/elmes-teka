@@ -7,6 +7,7 @@ import { Types } from "mongoose";
 import {
   clearPlatformAdminSession,
   consumeAdminMagicLink,
+  adminEmails,
   createAdminMagicLink,
   isAdminEmail,
   getPlatformAdmin,
@@ -29,10 +30,17 @@ export async function requestAdminMagicLink(email: string): Promise<PlatformActi
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
     return { success: false, message: "Adresse e-mail invalide.", errors: { email: "Adresse e-mail invalide." } };
   }
-  if (!isAdminEmail(normalized)) return neutral;
+  if (!isAdminEmail(normalized)) {
+    const configured = adminEmails();
+    console.warn(
+      "[PLATFORM LOGIN] adresse non autorisee",
+      configured.length ? `(${configured.length} adresse(s) dans ADMIN_EMAIL, domaine(s) : ${configured.map((e) => e.split("@")[1]).join(", ")})` : "(ADMIN_EMAIL vide ou absent)"
+    );
+    return neutral;
+  }
   try {
     const link = await createAdminMagicLink(normalized, 30);
-    await sendMail({
+    const info = await sendMail({
       to: normalized,
       subject: "[ELMES-TEKA] Votre lien de connexion administrateur",
       html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto">
@@ -42,6 +50,10 @@ export async function requestAdminMagicLink(email: string): Promise<PlatformActi
   <p style="color:#9ca3af;font-size:12px">Si vous n'avez pas demande ce lien, ignorez ce message.</p>
 </div>`,
     });
+    console.log("[PLATFORM LOGIN] lien envoye", { accepted: info.accepted?.length ?? 0, rejected: info.rejected?.length ?? 0, response: info.response });
+    if (info.rejected?.length) {
+      return { success: false, message: "Le serveur mail a refuse l'envoi. Verifiez la configuration EMAIL_*." };
+    }
   } catch (error) {
     console.error("[PLATFORM LOGIN] envoi du lien impossible", error);
     return { success: false, message: "Le lien n'a pas pu etre envoye. Reessayez dans un instant." };

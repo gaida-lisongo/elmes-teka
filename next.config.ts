@@ -5,6 +5,13 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_PUSHER_CLUSTER: process.env.NEXT_PUBLIC_PUSHER_CLUSTER ?? process.env.PUSHER_CLUSTER ?? "",
   },
+  async redirects() {
+    return [
+      { source: "/plateforme", destination: "/platform", permanent: false },
+      { source: "/plateforme/:path*", destination: "/platform/:path*", permanent: false },
+      { source: "/admin", destination: "/platform", permanent: false },
+    ];
+  },
   images: {
     remotePatterns: [
       {

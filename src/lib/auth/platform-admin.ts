@@ -15,10 +15,11 @@ const ADMIN_COOKIE = "elmes_platform_admin";
 const ADMIN_SESSION_SECONDS = 60 * 60 * 8;
 
 export function adminEmails(): string[] {
+  // Tolère les séparateurs , ; ou espaces et des guillemets saisis dans Vercel.
   return (process.env.ADMIN_EMAIL ?? "")
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
+    .split(/[,;\s]+/)
+    .map((email) => email.replace(/^["'<]+|["'>]+$/g, "").trim().toLowerCase())
+    .filter((email) => email.includes("@"));
 }
 
 export function isAdminEmail(email: string): boolean {

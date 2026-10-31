@@ -115,7 +115,7 @@ export async function createPlatformPromo(input: PlatformPromoInput): Promise<Pl
 
     await PlatformPromo.create({ code, label, reduction, startsAt, endsAt, maxUses, isPublic: Boolean(input.isPublic), createdBy: admin.email });
     revalidatePath("/platform/promos");
-    revalidatePath("/");
+    revalidatePath("/", "layout");
     return { success: true, message: `Code ${code} cree.` };
   } catch (error: any) {
     return { success: false, message: error.message || "Creation impossible." };
@@ -136,7 +136,7 @@ export async function updatePlatformPromoFlags(
     const result = await PlatformPromo.updateOne({ _id: id }, { $set: set });
     if (!result.matchedCount) return { success: false, message: "Code introuvable." };
     revalidatePath("/platform/promos");
-    revalidatePath("/");
+    revalidatePath("/", "layout");
     return { success: true, message: "Code mis a jour." };
   } catch (error: any) {
     return { success: false, message: error.message || "Mise a jour impossible." };

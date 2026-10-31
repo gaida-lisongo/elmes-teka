@@ -294,3 +294,56 @@
   .et-reveal { opacity: 1 !important; transform: none !important; }
   .et-marquee-inner { animation: none !important; }
 }
+
+/* ── Carte promotion (au-dessus du footer) ─────────────────────────── */
+
+@keyframes et-promo-float {
+  0%, 100% { transform: translateY(0) rotate(-6deg); }
+  50%      { transform: translateY(-10px) rotate(4deg); }
+}
+@keyframes et-promo-glow {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50%      { opacity: 0.6; transform: scale(1.15); }
+}
+@keyframes et-promo-shine {
+  from { background-position: 200% center; }
+  to   { background-position: -200% center; }
+}
+@keyframes et-promo-tick {
+  from { opacity: 0.2; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes et-promo-zoom {
+  from { transform: scale(1); }
+  to   { transform: scale(1.08); }
+}
+
+.et-promo-card { animation: et-fade-up 0.7s ease both; }
+.et-promo-glow { background: radial-gradient(circle, rgba(57,136,255,0.55) 0%, transparent 70%); animation: et-promo-glow 5s ease-in-out infinite; }
+.et-promo-float { animation: et-promo-float 3.5s ease-in-out infinite; }
+.et-promo-pulse span:first-child { animation: et-pulse 1.6s ease-in-out infinite; }
+.et-promo-tick { animation: et-promo-tick 0.35s ease-out; }
+.et-promo-photo { animation: et-promo-zoom 12s ease-in-out infinite alternate; }
+.et-promo-cta { box-shadow: 0 0 0 0 rgba(34,197,94,0.6); animation: et-promo-ring 2.2s infinite; }
+.et-promo-shine {
+  background: linear-gradient(90deg, #4ADE80 0%, #FFFFFF 50%, #4ADE80 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: et-promo-shine 3s linear infinite;
+}
+@keyframes et-promo-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(34,197,94,0.55); }
+  70%  { box-shadow: 0 0 0 14px rgba(34,197,94,0); }
+  100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .et-promo-card, .et-promo-glow, .et-promo-float, .et-promo-pulse span:first-child,
+  .et-promo-tick, .et-promo-photo, .et-promo-cta, .et-promo-shine { animation: none !important; }
+}
+.et-promo-fade { background: linear-gradient(180deg, #102B50 0%, rgba(16,43,80,0.1) 40%, transparent 100%); }
+@media (min-width: 768px) {
+  .et-promo-fade { background: linear-gradient(90deg, #102B50 0%, rgba(16,43,80,0.15) 45%, transparent 100%); }
+}

@@ -168,7 +168,9 @@ export async function getPlatformPromos(): Promise<PlatformPromoRow[]> {
 }
 
 /** Codes promo publics actuellement valides, pour le site internet. */
-export async function getPublicPromos(): Promise<Array<{ code: string; label: string; reduction: number; endsAt: string }>> {
+export async function getPublicPromos(): Promise<
+  Array<{ code: string; label: string; reduction: number; endsAt: string; remaining: number | null }>
+> {
   await connectToDb();
   const now = new Date();
   const promos = await PlatformPromo.find({ status: "ACTIVE", isPublic: true, startsAt: { $lte: now }, endsAt: { $gte: now } })
@@ -177,5 +179,11 @@ export async function getPublicPromos(): Promise<Array<{ code: string; label: st
     .lean();
   return promos
     .filter((p) => p.maxUses === null || p.uses < p.maxUses)
-    .map((p) => ({ code: p.code, label: p.label, reduction: p.reduction, endsAt: p.endsAt.toISOString() }));
+    .map((p) => ({
+      code: p.code,
+      label: p.label,
+      reduction: p.reduction,
+      endsAt: p.endsAt.toISOString(),
+      remaining: p.maxUses === null ? null : p.maxUses - p.uses,
+    }));
 }

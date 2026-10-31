@@ -1,3 +1,4 @@
+import { PLANS, type Plan } from "./plans";
 import crypto from "node:crypto";
 import { Types } from "mongoose";
 import Annee, { type DiscountSource } from "@/lib/models/Annee";
@@ -14,7 +15,7 @@ import connectToDb from "@/lib/utils/db";
  *  - une seule réduction s'applique : la plus élevée.
  */
 
-export const SUBSCRIPTION_USD = 50;
+export const SUBSCRIPTION_USD = PLANS.STARTER.annualUsd;
 export const FILLEUL_REDUCTION = 10;
 export const PARRAIN_STEP = 5;
 export const PARRAIN_REDUCTION_PER_STEP = 5;
@@ -34,11 +35,13 @@ export function normalizeCode(value?: string | null): string {
   return (value ?? "").trim().toUpperCase().replace(/\s+/g, "");
 }
 
-function basePrice(currency: "USD" | "CDF") {
+function basePrice(currency: "USD" | "CDF", plan: Plan = "STARTER") {
+  const annualUsd = PLANS[plan].annualUsd;
   const taux = Number.parseFloat(process.env.TAUX ?? "0");
-  return currency === "CDF" && taux > 0
-    ? { amount: Math.round(SUBSCRIPTION_USD * taux), currency: "CDF" as const }
-    : { amount: SUBSCRIPTION_USD, currency: "USD" as const };
+  if (currency === "CDF" && (!Number.isFinite(taux) || taux <= 0)) throw new Error("Le taux de conversion CDF n’est pas configuré. Choisissez USD.");
+  return currency === "CDF"
+    ? { amount: Math.round(annualUsd * taux), currency: "CDF" as const }
+    : { amount: annualUsd, currency: "USD" as const };
 }
 
 /** Code promo plateforme utilisable maintenant, ou la raison du refus. */
@@ -78,11 +81,12 @@ export function parrainReduction(paidReferrals: number): number {
  */
 export async function computeSubscriptionPrice(input: {
   tenantId: string;
+  plan?: Plan;
   currency: "USD" | "CDF";
   promoCode?: string | null;
 }): Promise<{ price: SubscriptionPrice; error: string | null }> {
   await connectToDb();
-  const base = basePrice(input.currency);
+  const base = basePrice(input.currency, input.plan);
   const tenant = await Tenant.findById(input.tenantId).select("referredBy signupPromoCode").lean();
   const hasPaid = Boolean(await Annee.exists({ tenantId: input.tenantId, "provider.status": "PAID" }));
 

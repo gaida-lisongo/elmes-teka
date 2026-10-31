@@ -7,7 +7,6 @@ import Annee from "@/lib/models/Annee";
 import Store from "@/lib/models/Store";
 import ImmobilisationsClient from "./ImmobilisationsClient";
 
-// @ts-ignore – actions créées par Agent 2
 import { getImmobilisations } from "@/actions/immobilisations.actions";
 
 export default async function ImmobilisationsPage() {

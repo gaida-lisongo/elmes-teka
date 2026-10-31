@@ -1,10 +1,14 @@
 "use client";
 
+import { PLANS, hasPlanFeature, type Plan } from "@/lib/payments/plans";
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-import type { PaginatedAnnees, AnneeMetrics } from "@/actions/annees.actions";
+import type { PaginatedAnnees, AnneeMetrics, AnneeListItem } from "@/actions/annees.actions";
 import {
+  previewUpgradePrice,
+  upgradeSubscription,
+  verifyUpgradePayment,
   completeAnnee,
   createAnnee,
   previewSubscriptionPrice,
@@ -27,6 +31,7 @@ import Button from "@/components/ui/button/Button";
 import { PlusIcon, PencilIcon, TrashBinIcon, DownloadIcon, FolderIcon } from "@/icons";
 
 interface AnneesClientProps {
+  initialPlan: Plan;
   initialData: PaginatedAnnees | null;
   initialMetrics: AnneeMetrics | null;
   currentPage: number;
@@ -55,6 +60,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
 
 function AnneeCard({
   annee,
+  onUpgrade,
   onEdit,
   onDelete,
   onExport,
@@ -64,7 +70,8 @@ function AnneeCard({
   busy = false,
 }: {
   busy?: boolean;
-  annee: any;
+  annee: AnneeListItem;
+  onUpgrade: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onExport: () => void;
@@ -105,6 +112,7 @@ function AnneeCard({
       </div>
 
       <div className="mt-3 rounded-lg bg-gray-50 p-3 text-xs text-gray-500 dark:bg-gray-800">
+        <p>Formule : {PLANS[(annee.plan ?? "STARTER") as Plan].name}</p>
         <p>Paiement: {annee.provider.status}</p>
         <p>Montant: {annee.provider.amount} {annee.provider.currency}</p>
         {annee.provider.orderNumber && <p>Commande: {annee.provider.orderNumber}</p>}
@@ -115,20 +123,20 @@ function AnneeCard({
         <div>
           <p className="text-xs text-gray-500">Recettes</p>
           <p className="text-sm font-semibold text-gray-800 dark:text-white/90">
-            {annee.totalRecettes}
+            {annee.totalRecettesUSD} USD<br />{annee.totalRecettesCDF} CDF
           </p>
         </div>
         <div>
           <p className="text-xs text-gray-500">Depenses</p>
           <p className="text-sm font-semibold text-gray-800 dark:text-white/90">
-            {annee.totalDepenses}
+            {annee.totalDepensesUSD} USD<br />{annee.totalDepensesCDF} CDF
           </p>
         </div>
         <div>
-          <p className="text-xs text-gray-500">Resultat</p>
+          <p className="text-xs text-gray-500">Solde enregistré</p>
           <p className={`text-sm font-semibold ${resultatClass}`}>
-            {annee.resultat >= 0 ? "+" : ""}
-            {annee.resultat}
+            {annee.totalRecettesUSD - annee.totalDepensesUSD} USD<br />
+            {annee.totalRecettesCDF - annee.totalDepensesCDF} CDF
           </p>
         </div>
       </div>
@@ -149,10 +157,11 @@ function AnneeCard({
             {busy ? <Spinner className="h-3.5 w-3.5" label="Cloture..." /> : "Cloturer"}
           </button>
         )}
-        <button onClick={onEdit} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400">
+        {annee.status === "ACTIVE" && annee.plan !== "PREMIUM" && <button onClick={onUpgrade} className="rounded-lg px-3 py-1.5 text-xs font-medium text-brand-500">Gérer la formule</button>}
+        {annee.status === "PENDING" && !annee.provider.orderNumber && <button onClick={onEdit} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400">
           <PencilIcon className="h-4 w-4" /> Modifier
-        </button>
-        <button onClick={onExport} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-brand-500 hover:bg-brand-500/10">
+        </button>}
+        <button onClick={onExport} disabled={!hasPlanFeature(annee.plan, "advancedReports")} title={!hasPlanFeature(annee.plan, "advancedReports") ? "Disponible avec Business ou Premium" : undefined} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-brand-500 hover:bg-brand-500/10">
           <DownloadIcon className="h-4 w-4" /> Exporter le journal
         </button>
         <button onClick={onDelete} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-error-500 hover:bg-error-500/10">
@@ -164,6 +173,7 @@ function AnneeCard({
 }
 
 export default function AnneesClient({
+  initialPlan,
   initialData,
   initialMetrics,
   currentPage,
@@ -194,16 +204,35 @@ export default function AnneesClient({
   const [notice, setNotice] = useState<{ variant: "success" | "error" | "warning" | "info"; title: string; message: string } | null>(null);
 
   /* Prix de l'abonnement (réductions calculées côté serveur) */
+  const [upgradeId, setUpgradeId] = useState<string | null>(null);
+  const [upgradeTarget, setUpgradeTarget] = useState<Plan>("BUSINESS");
+  const [upgradeQuote, setUpgradeQuote] = useState<{ amount: number; token: string; expiresAt: number } | null>(null);
+  const [upgradeOrderNumber, setUpgradeOrderNumber] = useState("");
+  const [quoteError, setQuoteError] = useState("");
+  const [upgradePhone, setUpgradePhone] = useState("");
+  const [plan, setPlan] = useState<Plan>(initialPlan);
   const [promoCode, setPromoCode] = useState("");
   const [price, setPrice] = useState<{ amount: number; baseAmount: number; currency: string; label: string | null } | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
 
   useEffect(() => {
+    if (!upgradeId) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const response = await previewUpgradePrice(upgradeId, upgradeTarget);
+      if (cancelled) return;
+      setUpgradeQuote(response.success ? response.data : null);
+      setQuoteError(response.success ? "" : response.message);
+    }, 150);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [upgradeId, upgradeTarget]);
+
+  useEffect(() => {
     if (!createDrawerOpen) return;
     let cancelled = false;
-    setPriceLoading(true);
     const timer = setTimeout(async () => {
-      const res = await previewSubscriptionPrice({ currency: formData.currency, promoCode });
+      setPriceLoading(true);
+      const res = await previewSubscriptionPrice({ plan, currency: formData.currency, promoCode });
       if (cancelled) return;
       setPriceLoading(false);
       if (res.success) {
@@ -217,7 +246,7 @@ export default function AnneesClient({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [createDrawerOpen, formData.currency, promoCode]);
+  }, [createDrawerOpen, formData.currency, promoCode, plan]);
 
   /* Delete */
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -241,7 +270,7 @@ export default function AnneesClient({
     setActionLoading(true);
     setFormErrors({});
     setActionMessage("");
-    const res = await createAnnee({ ...formData, promoCode });
+    const res = await createAnnee({ ...formData, promoCode, plan });
     setActionLoading(false);
     if (res.success) {
       setNotice({
@@ -423,6 +452,7 @@ export default function AnneesClient({
                 <AnneeCard
                   key={a.id}
                   annee={a}
+                  onUpgrade={() => { setUpgradeId(a.id); setUpgradeTarget(a.plan === "BUSINESS" ? "PREMIUM" : "BUSINESS"); setUpgradeQuote(null); setUpgradeOrderNumber(""); setActionMessage(""); }}
                   onEdit={() => {
                     setEditId(a.id);
                     setFormData({
@@ -539,6 +569,14 @@ export default function AnneesClient({
               hint={formErrors.promoCode}
             />
           </div>
+          <div>
+            <Label>Pack pour cet exercice calendaire</Label>
+            <select value={plan} onChange={event => setPlan(event.target.value as Plan)} className="w-full rounded-lg border border-gray-300 p-3 dark:bg-gray-900">
+              {Object.entries(PLANS).map(([id, value]) => <option key={id} value={id}>{value.name} — {value.annualUsd} USD/an</option>)}
+            </select>
+            <p className="mt-2 text-sm text-gray-500">{PLANS[plan].features.join(" · ")}</p>
+            <p className="mt-2 text-sm text-gray-500">Le pack est valable pour l’exercice sélectionné, jusqu’au 31 décembre, même si vous souscrivez en cours d’année. Il ne couvre pas douze mois glissants.</p>
+          </div>
           <div className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3 text-sm dark:bg-white/[0.03]">
             <span className="text-gray-500 dark:text-gray-400">Abonnement annuel</span>
             {priceLoading || !price ? (
@@ -633,6 +671,34 @@ export default function AnneesClient({
       </Drawer>
 
       {/* Delete Modal */}
+      <Modal isOpen={Boolean(upgradeId)} onClose={() => setUpgradeId(null)} className="max-w-lg p-6">
+        <h3 className="mb-4 text-xl font-semibold">Changer de formule</h3>
+        <p className="mb-4 text-sm text-gray-500">Le montant correspond à la différence des tarifs annuels × la fraction de l’exercice restante. Paiement en USD, échéance conservée. Les codes promo restent disponibles à la souscription initiale.</p>
+        <Label>Formule souhaitée</Label>
+        <select value={upgradeTarget} onChange={e => { setUpgradeTarget(e.target.value as Plan); setUpgradeQuote(null); }} className="mb-4 w-full rounded-lg border p-3 dark:bg-gray-900">
+          <option value="BUSINESS">Business — 120 USD/an</option><option value="PREMIUM">Premium — 200 USD/an</option>
+        </select>
+        <p className="my-3 text-sm font-semibold">{upgradeQuote ? `Montant à payer : ${upgradeQuote.amount} USD (devis valable 10 minutes)` : quoteError || "Calcul du devis…"}</p>
+        <Label>Téléphone Mobile Money</Label>
+        <Input value={upgradePhone} onChange={e => setUpgradePhone(e.target.value)} />
+        <Label>Numéro de transaction reçu (si vérification nécessaire)</Label>
+        <Input value={upgradeOrderNumber} onChange={e => setUpgradeOrderNumber(e.target.value)} />
+        <p className="my-4 text-sm" role="status">{actionMessage}</p>
+        <div className="flex gap-3">
+          <Button disabled={actionLoading || !upgradeQuote} onClick={async () => {
+            if (!upgradeId || !upgradeQuote) return;
+            setActionLoading(true);
+            const result = await upgradeSubscription({ anneeId: upgradeId, target: upgradeTarget, phone: upgradePhone, quoteToken: upgradeQuote.token });
+            setActionMessage(result.message); setActionLoading(false); await refreshData();
+          }}>Payer la différence</Button>
+          <Button disabled={actionLoading} onClick={async () => {
+            if (!upgradeId) return;
+            setActionLoading(true);
+            const result = await verifyUpgradePayment(upgradeId, upgradeOrderNumber);
+            setActionMessage(result.message); setActionLoading(false); await refreshData();
+          }}>Vérifier le paiement</Button>
+        </div>
+      </Modal>
       <Modal loading={actionLoading} isOpen={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
         <div className="p-6 text-center">
           <h3 className="mb-2 text-lg font-semibold">Confirmer la suppression</h3>

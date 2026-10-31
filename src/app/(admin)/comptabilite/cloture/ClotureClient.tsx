@@ -7,10 +7,8 @@ import ResourcePageShell from "@/components/common/ResourcePageShell";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 
-// @ts-ignore – actions créées par Agent 2
 import { completeAnnee } from "@/actions/annees.actions";
 
-// @ts-ignore – actions créées par Agent 2
 import { createAnnee } from "@/actions/annees.actions";
 
 /* ── Types locaux ─────────────────────────────────────────── */

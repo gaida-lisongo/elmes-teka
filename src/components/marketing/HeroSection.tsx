@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { PLANS } from "@/lib/payments/plans";
+import { CheckLineIcon } from "@/icons";
 import HeroPhone from "@/components/marketing/HeroPhone";
 
 const SLIDES = [
@@ -27,8 +29,8 @@ const SLIDES = [
     tag: "Multi-boutiques",
     problem: "Impossible de superviser quand vous n'êtes pas là",
     consequence: "Dès que vous quittez, vous perdez le contrôle. Avec plusieurs boutiques, c'est encore pire.",
-    cta_text: "Surveiller mes boutiques",
-    cta_href: "/signup",
+    cta_text: "Découvrir Business",
+    cta_href: "/signup?plan=BUSINESS",
     videoSrc: "https://videos.pexels.com/video-files/27165007/12087873_2560_1440_25fps.mp4",
     videoPoster: "https://images.pexels.com/videos/27165007/abuja-market-african-market-bariga-market-business-woman-27165007.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080",
   },
@@ -36,20 +38,12 @@ const SLIDES = [
     tag: "Financement",
     problem: "Les banques refusent vos dossiers de crédit",
     consequence: "Votre activité est réelle mais vous ne pouvez pas le prouver sur papier.",
-    cta_text: "Construire mon dossier",
-    cta_href: "/signup",
+    cta_text: "Découvrir les packs",
+    cta_href: "/#pricing",
     videoSrc: "https://videos.pexels.com/video-files/20450812/20450812-hd_1920_1080_30fps.mp4",
     videoPoster: "https://images.pexels.com/videos/20450812/aboki-selling-to-buyer-20450812.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080",
   },
 ];
-
-function CheckIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" className="flex-shrink-0">
-      <path d="M2.5 7l3 3 6-6" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 export default function HeroSection() {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -201,46 +195,17 @@ export default function HeroSection() {
 
               {/* Trust points */}
               <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm" style={{ color: "rgba(255,255,255,0.42)" }}>
-                {["Démarrage en 15 minutes", "USD & CDF natifs", "Multi-boutiques inclus"].map((t) => (
+                {[`Packs dès ${PLANS.STARTER.annualUsd} $/an`, "USD & CDF natifs", "Multi-boutiques dès Business"].map((t) => (
                   <span key={t} className="flex items-center gap-1.5">
-                    <CheckIcon />
+                    <CheckLineIcon aria-hidden="true" className="h-4 w-4 shrink-0 text-brand-200" />
                     {t}
                   </span>
                 ))}
               </div>
 
-              {/* Social proof */}
-              <div
-                className="mt-7 flex items-center gap-3"
-                style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 18 }}
-              >
-                <div className="flex -space-x-2">
-                  {(
-                    [["A", "#124A99"], ["M", "#10B981"], ["D", "#F59E0B"], ["F", "#7C3AED"]] as [string, string][]
-                  ).map(([initial, bg]) => (
-                    <div
-                      key={initial}
-                      aria-hidden="true"
-                      style={{
-                        width: 30, height: 30, borderRadius: "50%", background: bg,
-                        border: "2px solid #102B50", display: "flex",
-                        alignItems: "center", justifyContent: "center",
-                        fontSize: 10, fontWeight: 700, color: "white",
-                      }}
-                    >
-                      {initial}
-                    </div>
-                  ))}
-                </div>
-                <div>
-                  <div style={{ color: "rgba(255,255,255,0.8)", fontSize: 13, fontWeight: 600, lineHeight: 1.3 }}>
-                    Rejoignez <span style={{ color: "#93BFFF" }}>2 400+ vendeurs actifs</span>
-                  </div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.32)" }}>
-                    à Kinshasa, Lubumbashi, Goma et au-delà
-                  </div>
-                </div>
-              </div>
+              <p className="mt-7 border-t border-white/10 pt-4 text-sm leading-6 text-white/70">
+                Une boutique avec Starter. Plusieurs boutiques et rapports avancés avec Business et Premium.
+              </p>
             </div>
 
             {/* Dots navigation */}

@@ -1,0 +1,152 @@
+{
+  "date": "2026-10-31",
+  "source": "https://openrouter.ai/api/v1/models",
+  "currency": "USD",
+  "unit": "per_1000000_tokens",
+  "not_runtime_configuration": true,
+  "models": [
+    {
+      "id": "deepseek/deepseek-v4.1-flash-1017",
+      "input_usd": 0.15,
+      "output_usd": 0.6,
+      "context_tokens": 1048576,
+      "reasoning": {
+        "mandatory": false,
+        "default_enabled": true,
+        "supported_efforts": [
+          "max",
+          "high",
+          "low",
+          "none"
+        ],
+        "default_effort": "high"
+      },
+      "pricing_overrides_per_token": [
+        {
+          "utc_days": [
+            "saturday",
+            "sunday"
+          ],
+          "prompt": "0.00000015",
+          "completion": "0.0000006",
+          "input_cache_read": "0.000000003"
+        },
+        {
+          "utc_days": [
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday"
+          ],
+          "utc_start": 0,
+          "utc_end": 100,
+          "prompt": "0.00000015",
+          "completion": "0.0000006",
+          "input_cache_read": "0.000000003"
+        },
+        {
+          "utc_days": [
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday"
+          ],
+          "utc_start": 100,
+          "utc_end": 400,
+          "prompt": "0.0000003",
+          "completion": "0.0000012",
+          "input_cache_read": "0.000000006"
+        },
+        {
+          "utc_days": [
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday"
+          ],
+          "utc_start": 400,
+          "utc_end": 600,
+          "prompt": "0.00000015",
+          "completion": "0.0000006",
+          "input_cache_read": "0.000000003"
+        },
+        {
+          "utc_days": [
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday"
+          ],
+          "utc_start": 600,
+          "utc_end": 1000,
+          "prompt": "0.0000003",
+          "completion": "0.0000012",
+          "input_cache_read": "0.000000006"
+        },
+        {
+          "utc_days": [
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday"
+          ],
+          "utc_start": 1000,
+          "utc_end": 0,
+          "prompt": "0.00000015",
+          "completion": "0.0000006",
+          "input_cache_read": "0.000000003"
+        }
+      ]
+    },
+    {
+      "id": "openai/gpt-6-luna",
+      "input_usd": 0.1,
+      "output_usd": 0.5,
+      "context_tokens": 1050000,
+      "reasoning": {
+        "mandatory": false,
+        "default_enabled": true,
+        "supported_efforts": [
+          "max",
+          "xhigh",
+          "high",
+          "medium",
+          "low",
+          "none"
+        ],
+        "default_effort": "medium"
+      },
+      "pricing_overrides_per_token": [
+        {
+          "min_prompt_tokens": 272000,
+          "prompt": "0.0000002",
+          "completion": "0.00000075",
+          "input_cache_read": "0.00000002",
+          "input_cache_write": "0.00000025"
+        }
+      ]
+    },
+    {
+      "id": "z-ai/glm-5.3-flash",
+      "input_usd": 0.0163,
+      "output_usd": 0.1479,
+      "context_tokens": 1048576,
+      "reasoning": {
+        "mandatory": true,
+        "default_enabled": true,
+        "supported_efforts": [
+          "max",
+          "high",
+          "low"
+        ],
+        "default_effort": "max"
+      },
+      "pricing_overrides_per_token": []
+    }
+  ]
+}

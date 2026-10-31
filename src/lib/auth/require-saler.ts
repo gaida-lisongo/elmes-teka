@@ -33,7 +33,8 @@ export async function requireSalerSession(): Promise<SalerWorkContext> {
 }
 
 export async function requireActiveAnnee(context: SalerWorkContext, slug: string) {
-  const annee = await Annee.findOne({ tenantId: context.tenantId, slug, status: "ACTIVE"}).lean();
+  const now = new Date();
+  const annee = await Annee.findOne({ tenantId: context.tenantId, slug, status: "ACTIVE", "provider.status": "PAID", debut: { $lte: now }, fin: { $gte: now } }).lean();
   if (!annee) throw new Error("ACTIVE_ANNEE_REQUIRED");
   return { id: annee._id.toString(), slug: annee.slug, debut: annee.debut.toISOString(), fin: annee.fin.toISOString() };
 }

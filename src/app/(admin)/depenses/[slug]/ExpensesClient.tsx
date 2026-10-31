@@ -22,6 +22,8 @@ import {
 /*  Types                                                             */
 /* ------------------------------------------------------------------ */
 interface ExpenseLine {
+  category?: string;
+  nature?: string;
   libelle: string;
   amount: number;
   observation?: string;
@@ -47,7 +49,7 @@ interface ExpensesData {
 
 interface Props {
   slug: string;
-  header: any;
+  header: { store: { designation: string }; annee: { slug: string } };
   initialData: ExpensesData | null;
   taux: number;
   exchange: number;
@@ -140,7 +142,7 @@ export default function ExpensesClient({
 
   // Drawer
   const [open, setOpen] = useState(false);
-  const [lines, setLines] = useState([
+  const [lines, setLines] = useState<ExpenseLine[]>([
     { libelle: "", amount: 0, observation: "" },
   ]);
   const [currency, setCurrency] = useState("CDF");
@@ -414,6 +416,13 @@ export default function ExpensesClient({
                     </button>
                   )}
                 </div>
+                <Label>Catégorie de charge</Label>
+                <select aria-label="Catégorie de charge" value={l.category ?? "OTHER"} onChange={e => setLines(prev => prev.map((v, j) => j === i ? { ...v, category: e.target.value } : v))} className="w-full rounded-lg border p-2 dark:bg-gray-900">
+                  <option value="RENT">Loyer</option><option value="SALARY">Salaires</option><option value="UTILITIES">Eau, électricité et internet</option><option value="TRANSPORT">Transport</option><option value="TAX">Taxes</option><option value="OTHER">Autres</option>
+                </select>
+                <select aria-label="Nature de charge" value={l.nature ?? "VARIABLE"} onChange={e => setLines(prev => prev.map((v, j) => j === i ? { ...v, nature: e.target.value } : v))} className="w-full rounded-lg border p-2 dark:bg-gray-900">
+                  <option value="FIXED">Charge fixe</option><option value="VARIABLE">Charge variable</option>
+                </select>
                 <Input
                   placeholder="Libelle (ex: Transport, Fournitures...)"
                   value={l.libelle}

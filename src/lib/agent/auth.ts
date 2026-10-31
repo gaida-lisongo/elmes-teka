@@ -5,8 +5,10 @@ import { verifySession, type SessionPayload } from "@/lib/auth/session";
 export function verifyAgentKey(request: NextRequest): boolean {
   const key = request.headers.get("x-agent-key");
   const secret = process.env.CLAUDE_AGENT_SECRET;
-  if (!secret || !key || key.length !== secret.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(key), Buffer.from(secret));
+  if (!secret || !key) return false;
+  const supplied = Buffer.from(key);
+  const expected = Buffer.from(secret);
+  return supplied.length === expected.length && crypto.timingSafeEqual(supplied, expected);
 }
 
 export function getAgentSession(request: NextRequest): SessionPayload | null {

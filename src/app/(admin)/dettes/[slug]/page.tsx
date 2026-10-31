@@ -7,7 +7,6 @@ import Annee from "@/lib/models/Annee";
 import Store from "@/lib/models/Store";
 import DettesClient from "./DettesClient";
 
-// @ts-ignore – actions créées par Agent 2
 import { getDettes } from "@/actions/dettes.actions";
 
 export default async function DettesPage({

@@ -9,7 +9,6 @@ import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import { PlusIcon } from "@/icons";
 
-// @ts-ignore – actions créées par Agent 2
 import { createLiquidite } from "@/actions/liquidites.actions";
 
 /* ── Types locaux ─────────────────────────────────────────── */

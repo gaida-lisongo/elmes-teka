@@ -1,5 +1,9 @@
 "use server";
 
+import { signUpgradeQuote, verifyUpgradeQuote } from "@/lib/payments/upgrade-quote";
+import { getSessionSecret } from "@/lib/auth/session";
+import { randomUUID } from "node:crypto";
+import { upgradePrice, isPlan, type Plan } from "@/lib/payments/plans";
 import { revalidatePath } from "next/cache";
 import { Types } from "mongoose";
 
@@ -21,6 +25,7 @@ export type ActionResponse<T = undefined> =
 /* ───── Types ───── */
 
 export interface AnneeListItem {
+  plan: Plan;
   id: string;
   debut: string;
   fin: string;
@@ -36,6 +41,10 @@ export interface AnneeListItem {
     paidAt: string | null;
   };
   createdAt: string;
+  totalRecettesUSD: number;
+  totalRecettesCDF: number;
+  totalDepensesUSD: number;
+  totalDepensesCDF: number;
   totalRecettes: number;
   totalDepenses: number;
   resultat: number;
@@ -102,16 +111,18 @@ async function notifyPaymentInitiated(tenantId: string, anneeLabel: string, pric
 
 /** Prix de l'abonnement pour le tenant connecté (aperçu avant création). */
 export async function previewSubscriptionPrice(input: {
+  plan?: Plan;
   currency: "USD" | "CDF";
   promoCode?: string;
 }): Promise<ActionResponse<SubscriptionPrice>> {
   try {
     const { tenantId } = await requireTenantSession();
-    const { price, error } = await computeSubscriptionPrice({ tenantId, currency: input.currency, promoCode: input.promoCode });
+    if (input.plan !== undefined && !isPlan(input.plan)) throw new Error("Formule invalide.");
+    const { price, error } = await computeSubscriptionPrice({ tenantId, plan: input.plan, currency: input.currency, promoCode: input.promoCode });
     if (error) return { success: false, message: error, errors: { promoCode: error } };
     return { success: true, message: price.label ?? "Tarif standard.", data: price };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Calcul du prix impossible." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Calcul du prix impossible.") };
   }
 }
 
@@ -141,7 +152,7 @@ export async function getAnneeMetrics(): Promise<ActionResponse<AnneeMetrics>> {
       .lean();
 
     /* Recettes globales */
-    const [recettesAgg] = await Commande.aggregate([
+    const recettesAgg = await Commande.aggregate([
       {
         $lookup: {
           from: "annees",
@@ -155,7 +166,7 @@ export async function getAnneeMetrics(): Promise<ActionResponse<AnneeMetrics>> {
       {
         $group: {
           _id: "$currency",
-          total: { $sum: { $sum: "$commandes.qte" } },
+          total: { $sum: "$totalAmount" },
         },
       },
     ]);
@@ -178,10 +189,10 @@ export async function getAnneeMetrics(): Promise<ActionResponse<AnneeMetrics>> {
         $group: {
           _id: null,
           totalUSD: {
-            $sum: { $cond: [{ $eq: ["$depenses.currency", "USD"] }, "$depenses.amount", 0] },
+            $sum: { $cond: [{ $eq: ["$currency", "USD"] }, "$depenses.amount", 0] },
           },
           totalCDF: {
-            $sum: { $cond: [{ $eq: ["$depenses.currency", "CDF"] }, "$depenses.amount", 0] },
+            $sum: { $cond: [{ $eq: ["$currency", "CDF"] }, "$depenses.amount", 0] },
           },
         },
       },
@@ -193,14 +204,14 @@ export async function getAnneeMetrics(): Promise<ActionResponse<AnneeMetrics>> {
       data: {
         total: anneeCount?.total ?? 0,
         courant: courant?.slug ?? null,
-        totalRecettesUSD: recettesAgg?.total ?? 0,
-        totalRecettesCDF: 0,
+        totalRecettesUSD: recettesAgg.find(row => row._id === "USD")?.total ?? 0,
+        totalRecettesCDF: recettesAgg.find(row => row._id === "CDF")?.total ?? 0,
         totalDepensesUSD: depensesAgg?.totalUSD ?? 0,
         totalDepensesCDF: depensesAgg?.totalCDF ?? 0,
       },
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur metriques." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur metriques.") };
   }
 }
 
@@ -249,7 +260,8 @@ export async function getAnnees(
           {
             $group: {
               _id: null,
-              total: { $sum: { $sum: "$commandes.qte" } },
+              totalUSD: { $sum: { $cond: [{ $eq: ["$currency", "USD"] }, "$totalAmount", 0] } },
+              totalCDF: { $sum: { $cond: [{ $eq: ["$currency", "CDF"] }, "$totalAmount", 0] } },
               nbCommandes: { $sum: 1 },
             },
           },
@@ -263,16 +275,18 @@ export async function getAnnees(
           {
             $group: {
               _id: null,
-              total: { $sum: "$depenses.amount" },
+              totalUSD: { $sum: { $cond: [{ $eq: ["$currency", "USD"] }, "$depenses.amount", 0] } },
+              totalCDF: { $sum: { $cond: [{ $eq: ["$currency", "CDF"] }, "$depenses.amount", 0] } },
               nbDepenses: { $sum: 1 },
             },
           },
         ]);
 
-        const totalRecettes = recettesAgg?.total ?? 0;
-        const totalDepenses = depensesAgg?.total ?? 0;
+        const totalRecettes = recettesAgg?.totalUSD ?? 0;
+        const totalDepenses = depensesAgg?.totalUSD ?? 0;
 
         return {
+          plan: annee.plan ?? "STARTER",
           id: annee._id.toString(),
           debut: annee.debut.toISOString(),
           fin: annee.fin.toISOString(),
@@ -288,6 +302,10 @@ export async function getAnnees(
             paidAt: annee.provider?.paidAt?.toISOString() ?? null,
           },
           createdAt: annee.createdAt.toISOString(),
+          totalRecettesUSD: recettesAgg?.totalUSD ?? 0,
+          totalRecettesCDF: recettesAgg?.totalCDF ?? 0,
+          totalDepensesUSD: depensesAgg?.totalUSD ?? 0,
+          totalDepensesCDF: depensesAgg?.totalCDF ?? 0,
           totalRecettes,
           totalDepenses,
           resultat: totalRecettes - totalDepenses,
@@ -302,14 +320,15 @@ export async function getAnnees(
       message: "Liste recuperee.",
       data: { items, total, page: safePage, limit: safeLimit, totalPages },
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur liste." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur liste.") };
   }
 }
 
 /* ───── Création ───── */
 
 export async function createAnnee(input: {
+  plan?: Plan;
   debut: string;
   fin: string;
   phone: string;
@@ -331,8 +350,10 @@ export async function createAnnee(input: {
     if (!["USD", "CDF"].includes(input.currency)) {
       errors.currency = "Devise invalide.";
     }
+    if (input.plan !== undefined && !isPlan(input.plan)) throw new Error("Formule invalide.");
     const { price, error: promoError } = await computeSubscriptionPrice({
       tenantId,
+      plan: input.plan,
       currency: input.currency === "CDF" ? "CDF" : "USD",
       promoCode: input.promoCode,
     });
@@ -348,8 +369,8 @@ export async function createAnnee(input: {
     const anneeNumerique = parsedDebut.getFullYear();
 
     /* Forcer les dates à 1er janvier / 31 décembre de l'année extraite */
-    const debut = new Date(anneeNumerique, 0, 1);
-    const fin = new Date(anneeNumerique, 11, 31);
+    const debut = new Date(Date.UTC(anneeNumerique, 0, 1));
+    const fin = new Date(Date.UTC(anneeNumerique, 11, 31, 23, 59, 59, 999));
 
     const slug = slugify(`${debut.getFullYear()}-${fin.getFullYear()}`);
 
@@ -367,6 +388,7 @@ export async function createAnnee(input: {
     /* Réduction de 100 % : exercice offert, aucun paiement FlexPay */
     if (price.amount <= 0) {
       const annee = await Annee.create({
+        plan: input.plan ?? "STARTER",
         tenantId: new Types.ObjectId(tenantId),
         debut,
         fin,
@@ -393,6 +415,7 @@ export async function createAnnee(input: {
     }
 
     const annee = await Annee.create({
+        plan: input.plan ?? "STARTER",
       tenantId: new Types.ObjectId(tenantId),
       debut,
       fin,
@@ -443,8 +466,8 @@ export async function createAnnee(input: {
         : `Exercice cree, mais le paiement n'a pas pu etre initie : ${paymentResult.error ?? "erreur inconnue"}.`,
       data: { id: annee._id.toString(), paymentInitiated },
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur creation." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur creation.") };
   }
 }
 
@@ -478,11 +501,13 @@ export async function initiateAnneePayment(input: {
     }
 
     /* Le code promo choisi à la création est reconduit, revalidé (période, quota). */
-    const { price } = await computeSubscriptionPrice({
+    const { price, error: priceError } = await computeSubscriptionPrice({
       tenantId,
       currency: input.currency === "CDF" ? "CDF" : "USD",
+      plan: annee.plan ?? "STARTER",
       promoCode: annee.provider?.promoCode ?? undefined,
     });
+    if (priceError) return { success: false, message: priceError };
     const result = await initiateCollection({
       phone: input.phone.trim(),
       amount: price.amount,
@@ -518,8 +543,8 @@ export async function initiateAnneePayment(input: {
       return { success: false, message: result.error ?? "Echec de l'initiation du paiement." };
     }
     return { success: true, message: "Paiement initie.", data: { orderNumber: result.orderNumber } };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur paiement." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur paiement.") };
   }
 }
 
@@ -557,8 +582,8 @@ export async function verifyAnneePayment(
       message: applied.message,
       data: { status: applied.state === "PAID" ? "ACTIVE" : "PENDING" },
     };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur verification." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur verification.") };
   }
 }
 
@@ -579,8 +604,8 @@ export async function completeAnnee(anneeId: string): Promise<ActionResponse<nul
     revalidatePath("/annees");
     revalidatePath("/", "layout");
     return { success: true, message: "Exercice cloture.", data: null };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur cloture." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur cloture.") };
   }
 }
 
@@ -603,6 +628,10 @@ export async function updateAnnee(
       return { success: false, message: "Exercice introuvable." };
     }
 
+    if (annee.status !== "PENDING" || annee.provider?.status === "PAID" || annee.provider?.orderNumber) {
+      return { success: false, message: "Les dates d’un exercice payé ou en cours de paiement ne peuvent pas être modifiées." };
+    }
+
     const errors: Record<string, string> = {};
     const parsedDebut = new Date(input.debut);
     const parsedFin = new Date(input.fin);
@@ -617,8 +646,8 @@ export async function updateAnnee(
     const anneeNumerique = parsedDebut.getFullYear();
 
     /* Forcer les dates à 1er janvier / 31 décembre de l'année extraite */
-    const debut = new Date(anneeNumerique, 0, 1);
-    const fin = new Date(anneeNumerique, 11, 31);
+    const debut = new Date(Date.UTC(anneeNumerique, 0, 1));
+    const fin = new Date(Date.UTC(anneeNumerique, 11, 31, 23, 59, 59, 999));
 
     /* Vérifier l'unicité par année calendaire (exclure cet exercice) */
     const duplicate = await Annee.findOne({
@@ -630,13 +659,13 @@ export async function updateAnnee(
       return { success: false, message: "Un exercice pour cette annee calendaire existe deja." };
     }
 
-    await Annee.updateOne({ _id: id }, { $set: { debut, fin } });
+    await Annee.updateOne({ _id: id, tenantId, status: "PENDING", "provider.status": { $ne: "PAID" }, "provider.orderNumber": null }, { $set: { debut, fin, slug: slugify(`${anneeNumerique}-${anneeNumerique}`) } });
 
     revalidatePath("/annees");
 
     return { success: true, message: "Exercice mis a jour.", data: null };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur modification." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur modification.") };
   }
 }
 
@@ -656,26 +685,90 @@ export async function deleteAnnee(id: string): Promise<ActionResponse<null>> {
       return { success: false, message: "Exercice introuvable." };
     }
 
-    /* Vérifier s'il y a des commandes ou dépenses liées */
-    const [hasData] = await Commande.aggregate([
-      { $match: { anneeId: new Types.ObjectId(id) } },
-      { $limit: 1 },
-      { $count: "count" },
-    ]);
-
-    if (hasData?.count > 0) {
-      return {
-        success: false,
-        message: "Impossible de supprimer un exercice contenant des commandes.",
-      };
+    if (annee.status !== "PENDING" || annee.provider?.status === "PAID" || annee.provider?.orderNumber || annee.upgrade) {
+      return { success: false, message: "Un exercice payé ou contenant un paiement ne peut pas être supprimé. Clôturez-le." };
     }
-
-    await Annee.deleteOne({ _id: id });
+    const [hasOrders, hasExpenses] = await Promise.all([
+      Commande.exists({ tenantId, anneeId: id }), Depense.exists({ tenantId, anneeId: id }),
+    ]);
+    if (hasOrders || hasExpenses) return { success: false, message: "Impossible de supprimer un exercice contenant des opérations." };
+    const deleted = await Annee.deleteOne({ _id: id, tenantId, status: "PENDING", "provider.status": { $ne: "PAID" }, "provider.orderNumber": null, upgrade: { $exists: false } });
+    if (!deleted.deletedCount) return { success: false, message: "L’exercice a changé. Actualisez la page." };
 
     revalidatePath("/annees");
 
     return { success: true, message: "Exercice supprime.", data: null };
-  } catch (error: any) {
-    return { success: false, message: error.message || "Erreur suppression." };
+  } catch (error: unknown) {
+    return { success: false, message: (error instanceof Error ? error.message : "Erreur suppression.") };
   }
+}
+
+/** Devis signé, lié au tenant et à l'état courant ; montant figé dix minutes. */
+export async function previewUpgradePrice(anneeId: string, target: Plan) {
+  try {
+    const { tenantId } = await requireTenantSession();
+    if (!Types.ObjectId.isValid(anneeId) || !isPlan(target)) throw new Error("Demande invalide.");
+    const annee = await Annee.findOne({ _id: anneeId, tenantId, status: "ACTIVE", "provider.status": "PAID" }).lean();
+    if (!annee) throw new Error("Abonnement actif introuvable.");
+    const quotedAt = Date.now();
+    const quote = { tenantId, anneeId, from: annee.plan ?? "STARTER", target,
+      amount: upgradePrice(annee.plan ?? "STARTER", target, annee.debut, annee.fin, new Date(quotedAt)),
+      periodStart: annee.debut.toISOString(), periodEnd: annee.fin.toISOString(), quotedAt, expiresAt: quotedAt + 600_000 };
+    if (quote.amount <= 0) throw new Error("Période restante trop courte.");
+    return { success: true as const, data: { amount: quote.amount, token: signUpgradeQuote(quote, getSessionSecret()), expiresAt: quote.expiresAt } };
+  } catch (error) { return { success: false as const, message: error instanceof Error ? error.message : "Devis impossible." }; }
+}
+
+/** L'ancienne formule reste active jusqu'à confirmation FlexPay. */
+export async function upgradeSubscription(input: { anneeId: string; target: Plan; phone: string; quoteToken: string }) {
+  try {
+    const { tenantId } = await requireTenantSession();
+    if (!Types.ObjectId.isValid(input.anneeId) || !isPlan(input.target)) throw new Error("Demande invalide.");
+    if (!input.phone || input.phone.trim().length < 8) throw new Error("Téléphone invalide.");
+    const quote = verifyUpgradeQuote(input.quoteToken, getSessionSecret());
+    if (quote.tenantId !== tenantId || quote.anneeId !== input.anneeId || quote.target !== input.target) throw new Error("Devis invalide.");
+    const reference = `UPGRADE-${input.anneeId}-${randomUUID()}`;
+    const filter = { _id: input.anneeId, tenantId, status: "ACTIVE" as const, "provider.status": "PAID" as const,
+      debut: new Date(quote.periodStart), fin: new Date(quote.periodEnd),
+      ...(quote.from === "STARTER" ? { $or: [{ plan: "STARTER" as const }, { plan: { $exists: false } }] } : { plan: quote.from }),
+      "upgrade.status": { $ne: "PENDING" as const } };
+    const previous = await Annee.findOne(filter).lean();
+    if (!previous) throw new Error("Formule modifiée ou paiement déjà en attente. Actualisez le devis.");
+    const reserved = await Annee.updateOne({ ...filter, "upgrade.reference": previous.upgrade?.reference ?? { $exists: false } }, {
+      $set: { upgrade: { from: quote.from, target: input.target, amount: quote.amount, currency: "USD", reference, status: "PENDING", orderNumber: null, createdAt: new Date() } },
+      ...(previous.upgrade ? { $push: { upgradeHistory: previous.upgrade } } : {}),
+    });
+    if (!reserved.modifiedCount) throw new Error("Un upgrade est déjà en attente. Vérifiez son paiement.");
+    try {
+      const result = await initiateCollection({ phone: input.phone.trim(), amount: quote.amount, currency: "USD", reference });
+      const initiated = Boolean(result.success && result.orderNumber);
+      const uncertain = !initiated && !result.raw && !/n.est pas d.fini/.test(result.error ?? "");
+      await Annee.updateOne({ _id: input.anneeId, tenantId, "upgrade.reference": reference, "upgrade.status": "PENDING" }, { $set: {
+        "upgrade.orderNumber": result.orderNumber ?? null,
+        "upgrade.status": initiated || uncertain ? "PENDING" : "FAILED",
+        "upgrade.message": result.message ?? result.error ?? "Paiement non initié.",
+      } });
+      revalidatePath("/annees");
+      return { success: initiated, message: initiated ? `Validez ${quote.amount} USD sur votre téléphone.` : uncertain ? "Réponse du prestataire inconnue. Ne repayez pas : renseignez le numéro de transaction reçu pour vérifier, ou contactez le support." : "Paiement non initié. Réessayez." };
+    } catch (error) {
+      await Annee.updateOne({ _id: input.anneeId, tenantId, "upgrade.reference": reference, "upgrade.status": "PENDING", "upgrade.orderNumber": null }, { $set: { "upgrade.message": "Initiation interrompue. Ne repayez pas avant rapprochement du prestataire." } });
+      throw error;
+    }
+  } catch (error) { return { success: false, message: error instanceof Error ? error.message : "Upgrade impossible." }; }
+}
+
+export async function verifyUpgradePayment(anneeId: string, receivedOrderNumber?: string) {
+  try {
+    const { tenantId } = await requireTenantSession();
+    if (!Types.ObjectId.isValid(anneeId)) throw new Error("Exercice invalide.");
+    const annee = await Annee.findOne({ _id: anneeId, tenantId }).lean();
+    if (!annee?.upgrade) throw new Error("Aucun paiement à vérifier.");
+    const orderNumber = annee.upgrade.orderNumber || receivedOrderNumber?.trim();
+    if (!orderNumber || orderNumber.length > 200) throw new Error("Renseignez le numéro de transaction reçu ou contactez le support.");
+    const result = await checkStatus(orderNumber);
+    if (!result.success) throw new Error("Vérification impossible.");
+    const { applyUpgradePayment } = await import("@/lib/payments/flexpay-results");
+    const applied = await applyUpgradePayment(anneeId, annee.upgrade.reference, result, tenantId);
+    return { success: applied.state === "PAID", message: applied.message };
+  } catch (error) { return { success: false, message: error instanceof Error ? error.message : "Vérification impossible." }; }
 }

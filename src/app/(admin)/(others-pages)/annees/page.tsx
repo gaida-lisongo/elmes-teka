@@ -1,3 +1,5 @@
+import { Tenant } from "@/lib/models/User";
+import { isPlan } from "@/lib/payments/plans";
 import { redirect } from "next/navigation";
 import { getTenantSession } from "@/lib/auth/require-tenant";
 import { getAnnees, getAnneeMetrics } from "@/actions/annees.actions";
@@ -9,7 +11,7 @@ export const metadata = {
 };
 
 export default async function AnneesPage(props: {
-  searchParams?: Promise<{ page?: string; limit?: string }>;
+  searchParams?: Promise<{ page?: string; limit?: string; plan?: string }>;
 }) {
   const session = await getTenantSession();
   if (!session) redirect("/signin");
@@ -23,8 +25,12 @@ export default async function AnneesPage(props: {
     getAnnees(page, limit),
   ]);
 
+  const tenant = await Tenant.findById(session.tenantId).select("preferredPlan").lean();
+  const initialPlan = isPlan(sp?.plan) ? sp.plan : tenant?.preferredPlan ?? "STARTER";
+
   return (
     <AnneesClient
+      initialPlan={initialPlan}
       initialData={anneesResult.success ? anneesResult.data : null}
       initialMetrics={metricsResult.success ? metricsResult.data : null}
       currentPage={page}

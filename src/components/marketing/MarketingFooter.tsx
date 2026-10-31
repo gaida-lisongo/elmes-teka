@@ -6,6 +6,7 @@ import { LockIcon } from "@/icons";
 
 const QUICK_LINKS = [
   { href: "/", label: "Accueil" },
+  { href: "/#pricing", label: "Packs et tarifs" },
   { href: "/guide", label: "Guide et formation" },
   { href: "/about", label: "Qui sommes-nous" },
   { href: "/contact", label: "Nous contacter" },

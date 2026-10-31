@@ -1,3 +1,4 @@
+import { PLANS } from "@/lib/payments/plans";
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
@@ -6,9 +7,6 @@ import {
   CheckCircleIcon,
   BoltIcon,
   GroupIcon,
-  CalenderIcon,
-  BoxCubeIcon,
-  DollarLineIcon,
   ArrowRightIcon,
 } from "@/icons";
 
@@ -64,12 +62,12 @@ export default function AboutPage() {
 
           {/* Titre */}
           <h1 className="et-reveal et-delay-1 text-3xl lg:text-5xl font-bold text-white leading-tight tracking-tight">
-            Construire l'infrastructure de données du commerce congolais
+            Construire l&apos;infrastructure de données du commerce congolais
           </h1>
 
           {/* Sous-titre */}
           <p className="et-reveal et-delay-2 mt-6 text-lg leading-relaxed" style={{ color: "rgba(255,255,255,0.75)" }}>
-            ELMES-TEKA est né d'un constat simple : 99 % des entrepreneurs
+            ELMES-TEKA est né d&apos;un constat simple : 99 % des entrepreneurs
             congolais gèrent leur activité sans outil. Nous changeons ça —
             un commerçant à la fois.
           </p>
@@ -109,13 +107,13 @@ export default function AboutPage() {
               </h2>
               <p className="et-reveal et-delay-2 mt-5 text-lg leading-relaxed" style={{ color: "#5a6a80" }}>
                 Permettre à tout entrepreneur congolais — formel ou informel —
-                d'accéder aux outils de gestion des grandes entreprises, adaptés
+                d&apos;accéder aux outils de gestion des grandes entreprises, adaptés
                 à sa réalité.
               </p>
               <p className="et-reveal et-delay-3 mt-4 text-base leading-relaxed" style={{ color: "#5a6a80" }}>
                 Nous croyons que la digitalisation du commerce en République
                 Démocratique du Congo commence par des outils simples, fiables
-                et accessibles depuis n'importe quel téléphone — sans formation
+                et accessibles depuis n&apos;importe quel téléphone — sans formation
                 comptable, sans connexion stable requise.
               </p>
             </div>
@@ -190,7 +188,7 @@ export default function AboutPage() {
               Qui est ELMES ?
             </h2>
             <p className="et-reveal et-delay-2 mt-3 text-lg" style={{ color: "#5a6a80" }}>
-              ELMES-TEKA est un produit d'ELectro MEcatronique Services.
+              ELMES-TEKA est un produit d&apos;ELectro MEcatronique Services.
             </p>
           </div>
 
@@ -201,8 +199,8 @@ export default function AboutPage() {
                 ELectro MEcatronique Services (ELMES) est une société congolaise
                 basée à Kinshasa, spécialisée dans les services technologiques
                 et informatiques. Depuis sa création, ELMES intervient dans les
-                domaines de l'électrotechnique, des télécommunications, de
-                l'informatique, et de l'ingénierie appliquée.
+                domaines de l&apos;électrotechnique, des télécommunications, de
+                l&apos;informatique, et de l&apos;ingénierie appliquée.
               </p>
               <p className="text-base leading-relaxed mb-8" style={{ color: "#3a4a5c" }}>
                 ELMES-TEKA est notre réponse au problème de digitalisation du
@@ -332,88 +330,29 @@ export default function AboutPage() {
             </p>
           </div>
 
-          {/* Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Card 1 — Abonnement annuel */}
-            <div
-              className="et-reveal et-delay-1 et-feature-card rounded-2xl p-7 flex flex-col"
-              style={{ background: "#fff", border: "1px solid #dce8f9" }}
-            >
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center mb-5"
-                style={{ background: "#F2F6FC" }}
-              >
-                <CalenderIcon className="w-5 h-5" style={{ color: "#124A99" }} />
-              </div>
-              <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-lg font-bold" style={{ color: "#102B50" }}>
-                  50 $ / exercice comptable
-                </h3>
-              </div>
-              <span
-                className="inline-flex self-start px-2.5 py-1 rounded-full text-xs font-semibold mb-3"
-                style={{ background: "#F2F6FC", color: "#124A99", border: "1px solid #dce8f9" }}
-              >
-                Offre de lancement
-              </span>
-              <p className="text-sm leading-6 flex-1" style={{ color: "#5a6a80" }}>
-                Un exercice = une année fiscale complète. Payez une fois, gérez
-                toute l'année sans interruption.
-              </p>
-            </div>
-
-            {/* Card 2 — Multi-boutiques */}
-            <div
-              className="et-reveal et-delay-2 et-feature-card rounded-2xl p-7 flex flex-col"
-              style={{ background: "#fff", border: "1px solid #dce8f9" }}
-            >
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center mb-5"
-                style={{ background: "#F2F6FC" }}
-              >
-                <BoxCubeIcon className="w-5 h-5" style={{ color: "#124A99" }} />
-              </div>
-              <h3 className="text-lg font-bold mb-3" style={{ color: "#102B50" }}>
-                Boutiques illimitées
-              </h3>
-              <p className="text-sm leading-6 flex-1" style={{ color: "#5a6a80" }}>
-                Votre abonnement couvre toutes vos boutiques. Pas de surcoût par
-                point de vente.
-              </p>
-            </div>
-
-            {/* Card 3 — Pas de frais cachés */}
-            <div
-              className="et-reveal et-delay-3 et-feature-card rounded-2xl p-7 flex flex-col"
-              style={{ background: "#fff", border: "1px solid #dce8f9" }}
-            >
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center mb-5"
-                style={{ background: "#F2F6FC" }}
-              >
-                <DollarLineIcon className="w-5 h-5" style={{ color: "#124A99" }} />
-              </div>
-              <h3 className="text-lg font-bold mb-3" style={{ color: "#102B50" }}>
-                Prix unique, tout inclus
-              </h3>
-              <p className="text-sm leading-6 flex-1" style={{ color: "#5a6a80" }}>
-                Ventes, stocks, clients, exports PDF, vendeurs illimités. Un seul
-                paiement par an.
-              </p>
-            </div>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            {Object.entries(PLANS).map(([id, plan]) => (
+              <article key={id} className="et-reveal et-feature-card flex flex-col rounded-2xl border border-brand-100 bg-white p-7">
+                <h3 className="text-2xl font-bold text-brand-800">{plan.name}</h3>
+                <p className="my-5 text-brand-500"><strong className="text-3xl font-bold">{plan.annualUsd} $</strong> / an</p>
+                <ul className="mb-6 flex-1 space-y-3 text-sm leading-6 text-gray-600">{plan.features.map(feature => <li key={feature}>{feature}</li>)}</ul>
+                <Link href={`/signup?plan=${id}`} className="inline-flex min-h-11 items-center justify-center rounded-full bg-brand-500 px-5 py-3 font-bold text-white transition-colors hover:bg-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2">Choisir {plan.name}</Link>
+              </article>
+            ))}
           </div>
+          <p className="mt-6 text-sm leading-6 text-gray-600">Les tarifs couvrent l’exercice comptable choisi, jusqu’au 31 décembre. Les codes promo et le parrainage s’appliquent à la souscription. L’upgrade est calculé au prorata du temps restant. Les fonctions IA Premium sont à venir.</p>
 
           {/* CTA sous les cards */}
           <div className="et-reveal et-delay-2 mt-10 text-center">
             <Link
-              href="/signup"
+              href="/#pricing"
               className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-base text-white transition-all"
               style={{
                 background: "linear-gradient(135deg, #3988FF 0%, #124A99 100%)",
                 boxShadow: "0 4px 20px rgba(57,136,255,0.35)",
               }}
             >
-              Commencer pour 50$/an
+              Comparer les packs
               <ArrowRightIcon className="w-4 h-4" />
             </Link>
           </div>
@@ -430,7 +369,7 @@ export default function AboutPage() {
             className="et-reveal et-delay-1 mt-5 text-lg leading-relaxed"
             style={{ color: "rgba(255,255,255,0.75)" }}
           >
-            Créez votre compte en moins de 15 minutes. 50$/an, sans engagement.
+            Créez votre compte, puis choisissez Starter à {PLANS.STARTER.annualUsd} $, Business à {PLANS.BUSINESS.annualUsd} $ ou Premium à {PLANS.PREMIUM.annualUsd} $ par an.
           </p>
           <div className="et-reveal et-delay-2 mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link

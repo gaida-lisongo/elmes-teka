@@ -46,7 +46,9 @@ export function signSession(payload: SessionPayload): string {
 
 export function verifySession(token: string): SessionPayload | null {
   try {
-    const [encodedPayload, suppliedSignature] = token.split(".");
+    const parts = token.split(".");
+    if (parts.length !== 2) return null;
+    const [encodedPayload, suppliedSignature] = parts;
 
     if (!encodedPayload || !suppliedSignature) {
       return null;
@@ -71,9 +73,14 @@ export function verifySession(token: string): SessionPayload | null {
     const payload = JSON.parse(decodeBase64Url(encodedPayload)) as SessionPayload;
 
     if (
-      !payload.userId ||
-      !payload.accountType ||
-      payload.expiresAt <= Date.now()
+      typeof payload.userId !== "string" || !payload.userId ||
+      !["TENANT", "SALER"].includes(payload.accountType) ||
+      typeof payload.tenantId !== "string" || !payload.tenantId ||
+      (payload.accountType === "SALER" &&
+        (typeof payload.salerId !== "string" || !payload.salerId || typeof payload.storeId !== "string" || !payload.storeId)) ||
+      !Number.isFinite(payload.issuedAt) || !Number.isFinite(payload.expiresAt) ||
+      payload.issuedAt <= 0 || payload.issuedAt > Date.now() + 60_000 ||
+      payload.expiresAt <= payload.issuedAt || payload.expiresAt <= Date.now()
     ) {
       return null;
     }

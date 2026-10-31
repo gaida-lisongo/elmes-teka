@@ -7,7 +7,6 @@ import Annee from "@/lib/models/Annee";
 import Store from "@/lib/models/Store";
 import LiquiditesClient from "./LiquiditesClient";
 
-// @ts-ignore – actions créées par Agent 2
 import { getLiquidites } from "@/actions/liquidites.actions";
 
 export default async function LiquiditesPage({

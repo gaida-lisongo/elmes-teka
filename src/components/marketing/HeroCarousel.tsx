@@ -281,11 +281,11 @@ export default function HeroCarousel() {
                 lineHeight: 1.3,
               }}
             >
-              Rejoignez{" "}
-              <span style={{ color: "#93BFFF" }}>2 400+ vendeurs actifs</span>
+              Découvrez{" "}
+              <span style={{ color: "#93BFFF" }}>la gestion commerciale ELMES-TEKA</span>
             </div>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.32)" }}>
-              à Kinshasa, Lubumbashi, Goma et au-delà
+              pour les entrepreneurs congolais
             </div>
           </div>
         </div>

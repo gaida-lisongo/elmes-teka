@@ -1,3 +1,4 @@
+import { createStoreWithinPlan } from "@/lib/payments/store-access";
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
 import { Types } from "mongoose";
@@ -62,19 +63,12 @@ export async function POST(request: NextRequest) {
   }
 
   const reference = `STR-${randomBytes(5).toString("hex").toUpperCase()}`;
-  const store = await Store.create({
-    tenantId,
-    designation,
-    description: body.description ?? designation,
-    reference,
-    status: "ACTIVE",
-    coordonnes: [],
-    capitals: [],
-    caisses: [],
-    photos: [],
-  });
-
-  await Tenant.updateOne({ _id: tenantId }, { $addToSet: { storesId: store._id } });
+  let store;
+  try {
+    store = await createStoreWithinPlan(session.tenantId, { designation, description: body.description ?? designation, reference });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Création refusée." }, { status: 403 });
+  }
 
   return NextResponse.json({
     ok: true,

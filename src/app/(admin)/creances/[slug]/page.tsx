@@ -8,7 +8,6 @@ import Store from "@/lib/models/Store";
 import Customer from "@/lib/models/Customer";
 import CreancesClient from "./CreancesClient";
 
-// @ts-ignore – actions créées par Agent 2
 import { getCreances } from "@/actions/creances.actions";
 
 export default async function CreancesPage({

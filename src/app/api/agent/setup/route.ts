@@ -1,3 +1,4 @@
+import { developmentAgentToolsEnabled } from "@/lib/agent/development-tools";
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes, scrypt as callbackScrypt } from "node:crypto";
 import { promisify } from "node:util";
@@ -31,6 +32,10 @@ function slugify(value: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  if (!developmentAgentToolsEnabled()) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   if (!verifyAgentKey(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

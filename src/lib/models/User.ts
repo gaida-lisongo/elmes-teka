@@ -1,3 +1,4 @@
+import type { Plan } from "@/lib/payments/plans";
 import {
   Schema,
   model,
@@ -46,6 +47,8 @@ export interface ITenantDocument {
 }
 
 export interface ITenant {
+  preferredPlan?: Plan;
+  storeCreationVersion?: number;
   userId: Types.ObjectId;
   storesId: Types.ObjectId[];
   apiKey: string;
@@ -240,6 +243,8 @@ UserSchema.set("toObject", {
 
 const TenantSchema = new Schema<ITenant>(
   {
+    preferredPlan: { type: String, enum: ["STARTER", "BUSINESS", "PREMIUM"], default: "STARTER" },
+    storeCreationVersion: { type: Number, default: 0 },
     referralCode: { type: String, trim: true, uppercase: true, default: undefined, unique: true, sparse: true },
     referredBy: { type: Schema.Types.ObjectId, ref: "Tenant", default: null, index: true },
     signupPromoCode: { type: String, trim: true, uppercase: true, default: null },

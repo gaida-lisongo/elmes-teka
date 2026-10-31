@@ -1,5 +1,7 @@
 import { Schema, model, models, type Model, type Types } from "mongoose";
 
+import type { Plan } from "@/lib/payments/plans";
+
 export type AnneeStatus = "PENDING" | "ACTIVE" | "COMPLETED";
 export type AnneeProviderStatus = "PENDING" | "PAID" | "FAILED";
 
@@ -20,7 +22,23 @@ export interface IAnneeProvider {
 
 export type DiscountSource = "PROMO" | "FILLEUL" | "PARRAIN";
 
+export interface IAnneeUpgrade {
+  from?: Plan;
+  target: Plan;
+  amount: number;
+  currency?: "USD";
+  orderNumber: string | null;
+  status: "PENDING" | "PAID" | "FAILED";
+  reference: string;
+  createdAt?: Date;
+  paidAt?: Date | null;
+  message?: string;
+}
+
 export interface IAnnee {
+  plan: Plan;
+  upgrade?: IAnneeUpgrade;
+  upgradeHistory?: IAnneeUpgrade[];
   tenantId: Types.ObjectId;
   debut: Date;
   fin: Date;
@@ -53,8 +71,24 @@ const AnneeProviderSchema = new Schema<IAnneeProvider>(
   { _id: false }
 );
 
+const UpgradeSchema = new Schema<IAnneeUpgrade>({
+  from: { type: String, enum: ["STARTER", "BUSINESS", "PREMIUM"] },
+  target: { type: String, enum: ["BUSINESS", "PREMIUM"], required: true },
+  amount: { type: Number, min: 0, required: true },
+  currency: { type: String, enum: ["USD"], default: "USD" },
+  orderNumber: { type: String, default: null },
+  status: { type: String, enum: ["PENDING", "PAID", "FAILED"], default: "PENDING" },
+  reference: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+  paidAt: { type: Date, default: null },
+  message: { type: String, default: "" },
+}, { _id: false });
+
 const AnneeSchema = new Schema<IAnnee>(
   {
+    upgrade: { type: UpgradeSchema, default: undefined },
+    upgradeHistory: { type: [UpgradeSchema], default: [] },
+    plan: { type: String, enum: ["STARTER", "BUSINESS", "PREMIUM"], default: "STARTER" },
     tenantId: {
       type: Schema.Types.ObjectId,
       ref: "Tenant",

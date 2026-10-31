@@ -3,6 +3,8 @@ import { Schema, model, models, type Model, type Types } from "mongoose";
 export type DepenseItemStatus = "PENDING" | "APPROVED" | "PAID" | "REJECTED";
 
 export interface IDepenseItem {
+  category?: "RENT" | "SALARY" | "UTILITIES" | "TRANSPORT" | "TAX" | "OTHER";
+  nature?: "FIXED" | "VARIABLE";
   libelle: string;
   amount: number;
   status: DepenseItemStatus;
@@ -25,6 +27,8 @@ export interface IDepense {
 
 const DepenseItemSchema = new Schema<IDepenseItem>(
   {
+    category: { type: String, enum: ["RENT", "SALARY", "UTILITIES", "TRANSPORT", "TAX", "OTHER"], default: "OTHER" },
+    nature: { type: String, enum: ["FIXED", "VARIABLE"], default: "VARIABLE" },
     libelle: {
       type: String,
       required: true,

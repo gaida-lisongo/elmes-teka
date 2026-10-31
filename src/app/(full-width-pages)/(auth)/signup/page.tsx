@@ -1,3 +1,4 @@
+import { isPlan } from "@/lib/payments/plans";
 import SignUpForm from "@/components/auth/SignUpForm";
 import { getAdminShellAccount } from "@/lib/auth/admin-shell";
 import { Metadata } from "next";
@@ -11,16 +12,18 @@ export const metadata: Metadata = {
 export default async function SignUp({
   searchParams,
 }: {
-  searchParams: Promise<{ ref?: string; code?: string }>;
+  searchParams: Promise<{ ref?: string; code?: string; plan?: string }>;
 }) {
+  const params = await searchParams;
   const shell = await getAdminShellAccount();
 
   if (shell) {
-    redirect("/dashboard");
+    redirect(shell.account.type === "TENANT" && isPlan(params.plan) ? `/annees?plan=${params.plan}` : "/dashboard");
   }
 
-  const params = await searchParams;
   const initialCode = (params.ref ?? params.code ?? "").trim().toUpperCase().slice(0, 30);
 
-  return <SignUpForm initialCode={initialCode} />;
+  const initialPlan = isPlan(params.plan) ? params.plan : "STARTER";
+
+  return <SignUpForm initialCode={initialCode} initialPlan={initialPlan} />;
 }

@@ -396,7 +396,7 @@ export default function ProductsClient({
       />
 
       {/* Create Drawer */}
-      <Drawer
+      <Drawer loading={actionLoading}
         isOpen={createDrawerOpen}
         onClose={() => setCreateDrawerOpen(false)}
         title="Ajouter un produit"
@@ -522,7 +522,7 @@ export default function ProductsClient({
 
       {/* Edit Drawer */}
       {editDrawerOpen && (
-        <Drawer
+        <Drawer loading={actionLoading}
           isOpen={editDrawerOpen}
           onClose={() => setEditDrawerOpen(false)}
           title="Modifier le produit"
@@ -599,7 +599,7 @@ export default function ProductsClient({
       )}
 
       {/* Delete Modal */}
-      <Modal isOpen={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
+      <Modal loading={actionLoading} isOpen={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
         <div className="p-6 text-center">
           <h3 className="mb-2 text-lg font-semibold">Confirmer la suppression</h3>
           <p className="mb-6 text-sm text-gray-500">

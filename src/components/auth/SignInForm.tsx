@@ -97,7 +97,7 @@ export default function SignInForm() {
 
             {error && <p className="text-sm text-error-500">{error}</p>}
 
-            <Button className="w-full" size="sm" type="submit" disabled={isPending}>
+            <Button className="w-full" size="sm" type="submit" loading={isPending}>
               {isPending ? "Connexion..." : "Se connecter"}
             </Button>
           </div>

@@ -16,6 +16,7 @@ import {
   type TenantType,
 } from "@/lib/models/User";
 import Store from "@/lib/models/Store";
+import { ensureReferralCode, findUsablePromo, normalizeCode } from "@/lib/payments/pricing";
 
 const scrypt = promisify(callbackScrypt);
 const GENERIC_LOGIN_ERROR = "Identifiant ou mot de passe incorrect.";
@@ -39,6 +40,8 @@ export interface CreateTenantAccountInput {
   description?: Array<{ title: string; content: string }>;
   documents?: Array<{ title: string; url: string }>;
   uploadedPublicIds?: string[];
+  /** Code de parrainage d'un tenant ou code promo plateforme (optionnel) */
+  code?: string;
 }
 
 export interface LoginInput {
@@ -358,6 +361,21 @@ export async function createTenantAccount(
     const passwordError = validatePassword(password);
     if (passwordError) errors.password = passwordError;
 
+    /* Code saisi : parrainage d'un tenant existant, sinon code promo plateforme valide */
+    const code = normalizeCode(input.code);
+    let referredBy: Types.ObjectId | null = null;
+    let signupPromoCode: string | null = null;
+    if (code) {
+      const parrain = await Tenant.findOne({ referralCode: code, status: "ACTIVE" }).select("_id").lean();
+      if (parrain) {
+        referredBy = parrain._id as Types.ObjectId;
+      } else {
+        const found = await findUsablePromo(code);
+        if (found.promo) signupPromoCode = found.promo.code;
+        else errors.code = "Code de parrainage ou code promo invalide.";
+      }
+    }
+
     if (Object.keys(errors).length > 0) {
       await cleanupUploads(input.uploadedPublicIds);
       return { success: false, message: "Certaines informations sont invalides.", errors };
@@ -409,9 +427,12 @@ export async function createTenantAccount(
       email,
       telephone,
       nRef,
+      referredBy,
+      signupPromoCode,
     });
 
     createdTenantId = tenant._id as Types.ObjectId;
+    await ensureReferralCode(tenant._id.toString());
 
     await createSessionCookie({
       userId: user._id.toString(),

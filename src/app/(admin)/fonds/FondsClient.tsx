@@ -192,6 +192,7 @@ export default function FondsClient({
       />
 
       <Drawer
+        loading={loading}
         isOpen={open}
         onClose={() => setOpen(false)}
         title="Nouvelle opération de fonds"

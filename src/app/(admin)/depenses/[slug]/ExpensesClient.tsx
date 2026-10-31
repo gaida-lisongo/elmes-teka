@@ -361,6 +361,7 @@ export default function ExpensesClient({
       {/*  Drawer — Nouvelle depense                                       */}
       {/* ================================================================ */}
       <Drawer
+        loading={loading}
         isOpen={open}
         onClose={() => setOpen(false)}
         title="Nouvelle depense"

@@ -283,6 +283,7 @@ export default function ImmobilisationsClient({
       />
 
       <Drawer
+        loading={loading}
         isOpen={open}
         onClose={() => setOpen(false)}
         title={editingId ? "Modifier l'immobilisation" : "Nouvelle immobilisation"}

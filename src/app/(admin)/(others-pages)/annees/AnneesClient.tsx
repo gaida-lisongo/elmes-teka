@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import type { PaginatedAnnees, AnneeMetrics } from "@/actions/annees.actions";
 import {
   completeAnnee,
   createAnnee,
+  previewSubscriptionPrice,
   deleteAnnee,
   initiateAnneePayment,
   updateAnnee,
@@ -15,11 +16,14 @@ import {
 import { exportAnneeJournal } from "@/actions/exports.actions";
 import ResourcePageShell from "@/components/common/ResourcePageShell";
 import DashboardRealtimeUpdater from "@/components/ecommerce/DashboardRealtimeUpdater";
+import Alert from "@/components/ui/alert/Alert";
+import Spinner, { ProgressBar } from "@/components/ui/spinner/Spinner";
 import Pagination from "@/components/tables/Pagination";
 import { Drawer } from "@/components/ui/drawer";
 import { Modal } from "@/components/ui/modal";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
+import Button from "@/components/ui/button/Button";
 import { PlusIcon, PencilIcon, TrashBinIcon, DownloadIcon, FolderIcon } from "@/icons";
 
 interface AnneesClientProps {
@@ -57,7 +61,9 @@ function AnneeCard({
   onVerify,
   onComplete,
   onRetryPayment,
+  busy = false,
 }: {
+  busy?: boolean;
   annee: any;
   onEdit: () => void;
   onDelete: () => void;
@@ -129,8 +135,8 @@ function AnneeCard({
 
       <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-4 dark:border-gray-800">
         {annee.status === "PENDING" && annee.provider.orderNumber && (
-          <button onClick={onVerify} className="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-medium text-brand-500 hover:bg-brand-500/10">
-            Verifier le paiement
+          <button onClick={onVerify} disabled={busy} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-brand-500 hover:bg-brand-500/10 disabled:opacity-60">
+            {busy ? <Spinner className="h-3.5 w-3.5" label="Verification..." /> : "Verifier le paiement"}
           </button>
         )}
         {annee.status === "PENDING" && annee.provider.status === "FAILED" && (
@@ -139,8 +145,8 @@ function AnneeCard({
           </button>
         )}
         {annee.status === "ACTIVE" && (
-          <button onClick={onComplete} className="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-medium text-warning-500 hover:bg-warning-500/10">
-            Cloturer
+          <button onClick={onComplete} disabled={busy} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-warning-500 hover:bg-warning-500/10 disabled:opacity-60">
+            {busy ? <Spinner className="h-3.5 w-3.5" label="Cloture..." /> : "Cloturer"}
           </button>
         )}
         <button onClick={onEdit} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400">
@@ -184,6 +190,34 @@ export default function AnneesClient({
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ variant: "success" | "error" | "warning" | "info"; title: string; message: string } | null>(null);
+
+  /* Prix de l'abonnement (réductions calculées côté serveur) */
+  const [promoCode, setPromoCode] = useState("");
+  const [price, setPrice] = useState<{ amount: number; baseAmount: number; currency: string; label: string | null } | null>(null);
+  const [priceLoading, setPriceLoading] = useState(false);
+
+  useEffect(() => {
+    if (!createDrawerOpen) return;
+    let cancelled = false;
+    setPriceLoading(true);
+    const timer = setTimeout(async () => {
+      const res = await previewSubscriptionPrice({ currency: formData.currency, promoCode });
+      if (cancelled) return;
+      setPriceLoading(false);
+      if (res.success) {
+        setPrice(res.data);
+        setFormErrors((current) => ({ ...current, promoCode: "" }));
+      } else {
+        setFormErrors((current) => ({ ...current, promoCode: res.message }));
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [createDrawerOpen, formData.currency, promoCode]);
 
   /* Delete */
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -207,9 +241,17 @@ export default function AnneesClient({
     setActionLoading(true);
     setFormErrors({});
     setActionMessage("");
-    const res = await createAnnee(formData);
+    const res = await createAnnee({ ...formData, promoCode });
     setActionLoading(false);
     if (res.success) {
+      setNotice({
+        variant: res.data.paymentInitiated || res.message.includes("offert") ? "success" : "warning",
+        title: res.data.paymentInitiated ? "Paiement envoye sur votre telephone" : "Exercice cree",
+        message: res.data.paymentInitiated
+          ? "Validez le message de paiement sur votre telephone. L'exercice s'activera automatiquement des la confirmation."
+          : res.message,
+      });
+      setPromoCode("");
       setCreateDrawerOpen(false);
       setFormData({ debut: "", fin: "", phone: "", currency: "USD" });
       await refreshData();
@@ -239,21 +281,24 @@ export default function AnneesClient({
   };
 
   const handleVerifyPayment = async (anneeId: string) => {
-    setActionLoading(true);
-    setActionMessage("");
+    setBusyId(anneeId);
     const res = await verifyAnneePayment(anneeId);
-    setActionLoading(false);
-    setActionMessage(res.message);
     await refreshData();
+    setBusyId(null);
+    const active = res.success && res.data.status === "ACTIVE";
+    setNotice({
+      variant: active ? "success" : res.success ? "info" : "error",
+      title: active ? "Paiement confirme" : res.success ? "Paiement en cours" : "Verification impossible",
+      message: res.message,
+    });
   };
 
   const handleComplete = async (anneeId: string) => {
-    setActionLoading(true);
-    setActionMessage("");
+    setBusyId(anneeId);
     const res = await completeAnnee(anneeId);
-    setActionLoading(false);
-    setActionMessage(res.message);
     if (res.success) await refreshData();
+    setBusyId(null);
+    setNotice({ variant: res.success ? "success" : "error", title: res.success ? "Exercice cloture" : "Cloture impossible", message: res.message });
   };
 
   const handleRetryPayment = async () => {
@@ -268,6 +313,7 @@ export default function AnneesClient({
     setActionLoading(false);
     setActionMessage(res.message);
     if (res.success) {
+      setNotice({ variant: "success", title: "Paiement envoye sur votre telephone", message: "Validez le message de paiement. L'exercice s'activera automatiquement." });
       setPaymentDrawerOpen(false);
       setPaymentAnneeId(null);
       await refreshData();
@@ -327,7 +373,20 @@ export default function AnneesClient({
 
   return (
     <>
-      <DashboardRealtimeUpdater resource="paiements" event="payment.updated" onEvent={refreshData} />
+      <DashboardRealtimeUpdater
+        resource="paiements"
+        event="payment.updated"
+        onEvent={async () => {
+          await refreshData();
+          setNotice({ variant: "success", title: "Paiement mis a jour", message: "Le statut de votre exercice vient d'etre actualise." });
+        }}
+      />
+      {(busyId || exportLoading) && <ProgressBar className="fixed left-0 top-0 z-[100000]" />}
+      {notice && (
+        <div className="mb-4" onClick={() => setNotice(null)} role="button" title="Fermer">
+          <Alert variant={notice.variant} title={notice.title} message={notice.message} />
+        </div>
+      )}
       <ResourcePageShell
         title="Exercices"
         description="Gerer les exercices comptables de votre entreprise"
@@ -382,6 +441,7 @@ export default function AnneesClient({
                     setDeleteModalOpen(true);
                   }}
                   onExport={() => handleExport(a.id)}
+                  busy={busyId === a.id}
                   onVerify={() => handleVerifyPayment(a.id)}
                   onComplete={() => handleComplete(a.id)}
                   onRetryPayment={() => {
@@ -421,7 +481,7 @@ export default function AnneesClient({
       />
 
       {/* Create Drawer */}
-      <Drawer
+      <Drawer loading={actionLoading}
         isOpen={createDrawerOpen}
         onClose={() => setCreateDrawerOpen(false)}
         title="Creer un exercice"
@@ -455,8 +515,8 @@ export default function AnneesClient({
               onChange={(e) => setFormData({ ...formData, currency: e.target.value as "USD" | "CDF" })}
               className="h-11 w-full rounded-lg border border-gray-300 px-4 text-sm dark:border-gray-700 dark:bg-gray-900"
             >
-              <option value="USD">USD - 50 USD</option>
-              <option value="CDF">CDF - 50 x TAUX</option>
+              <option value="USD">Dollar (USD)</option>
+              <option value="CDF">Franc congolais (CDF)</option>
             </select>
           </div>
           <div>
@@ -469,18 +529,38 @@ export default function AnneesClient({
               hint={formErrors.phone}
             />
           </div>
+          <div>
+            <Label>Code promo</Label>
+            <Input
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+              placeholder="Optionnel"
+              error={!!formErrors.promoCode}
+              hint={formErrors.promoCode}
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3 text-sm dark:bg-white/[0.03]">
+            <span className="text-gray-500 dark:text-gray-400">Abonnement annuel</span>
+            {priceLoading || !price ? (
+              <Spinner className="h-4 w-4 text-brand-500" />
+            ) : (
+              <span className="text-right">
+                {price.amount !== price.baseAmount && (
+                  <span className="mr-2 text-gray-400 line-through">{price.baseAmount} {price.currency}</span>
+                )}
+                <span className="font-semibold text-gray-800 dark:text-white/90">{price.amount} {price.currency}</span>
+                {price.label && <span className="block text-xs text-success-600">{price.label}</span>}
+              </span>
+            )}
+          </div>
           {actionMessage && <p className="text-sm text-error-500">{actionMessage}</p>}
-          <button
-            onClick={handleCreate}
-            disabled={actionLoading}
-            className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
-          >
-            {actionLoading ? "Initiation..." : "Creer et initier le paiement"}
-          </button>
+          <Button className="w-full" onClick={handleCreate} loading={actionLoading} disabled={priceLoading}>
+            {actionLoading ? "Envoi de la demande de paiement..." : price?.amount === 0 ? "Activer l'exercice offert" : "Creer et payer"}
+          </Button>
         </div>
       </Drawer>
 
-      <Drawer
+      <Drawer loading={actionLoading}
         isOpen={paymentDrawerOpen}
         onClose={() => setPaymentDrawerOpen(false)}
         title="Relancer le paiement"
@@ -494,8 +574,8 @@ export default function AnneesClient({
               onChange={(e) => setFormData({ ...formData, currency: e.target.value as "USD" | "CDF" })}
               className="h-11 w-full rounded-lg border border-gray-300 px-4 text-sm dark:border-gray-700 dark:bg-gray-900"
             >
-              <option value="USD">USD - 50 USD</option>
-              <option value="CDF">CDF - 50 x TAUX</option>
+              <option value="USD">Dollar (USD)</option>
+              <option value="CDF">Franc congolais (CDF)</option>
             </select>
           </div>
           <div>
@@ -507,18 +587,14 @@ export default function AnneesClient({
             />
           </div>
           {actionMessage && <p className="text-sm text-error-500">{actionMessage}</p>}
-          <button
-            onClick={handleRetryPayment}
-            disabled={actionLoading}
-            className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
-          >
-            {actionLoading ? "Initiation..." : "Relancer le paiement"}
-          </button>
+          <Button className="w-full" onClick={handleRetryPayment} loading={actionLoading}>
+            {actionLoading ? "Envoi de la demande de paiement..." : "Relancer le paiement"}
+          </Button>
         </div>
       </Drawer>
 
       {/* Edit Drawer */}
-      <Drawer
+      <Drawer loading={actionLoading}
         isOpen={editDrawerOpen}
         onClose={() => setEditDrawerOpen(false)}
         title="Modifier l'exercice"
@@ -557,7 +633,7 @@ export default function AnneesClient({
       </Drawer>
 
       {/* Delete Modal */}
-      <Modal isOpen={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
+      <Modal loading={actionLoading} isOpen={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
         <div className="p-6 text-center">
           <h3 className="mb-2 text-lg font-semibold">Confirmer la suppression</h3>
           <p className="mb-6 text-sm text-gray-500">

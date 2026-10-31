@@ -9,6 +9,7 @@ import Commande from "@/lib/models/Commande";
 import Customer from "@/lib/models/Customer";
 import Promotion from "@/lib/models/Promotion";
 import { Tenant } from "@/lib/models/User";
+import { scheduleAdminNotification } from "@/lib/admin/notify";
 import { applyPromotionRecharge } from "@/lib/payments/flexpay-results";
 import { checkStatus, initiateCollection } from "@/lib/utils/payment.service";
 import connectToDb from "@/lib/utils/db";
@@ -130,6 +131,8 @@ export async function initiatePromotionRecharge(input: { promotionId: string; cr
     const payment = await initiateCollection({ phone: input.phone.trim(), amount, currency: "USD", reference });
     if (!payment.success || !payment.orderNumber) return { success: false, message: payment.error || "Le paiement n'a pas pu etre initie." } as const;
     await Promotion.updateOne({ _id: promotion._id, tenantId }, { $push: { recharges: { orderNumber: payment.orderNumber, credits: input.credits, amount, currency: "USD", phone: input.phone.trim(), status: "PENDING", message: payment.message || "Paiement initie.", createdAt: new Date() } } });
+    const tenant = await Tenant.findById(tenantId).select("designation email").lean();
+    scheduleAdminNotification(`Paiement initie - ${tenant?.designation ?? tenantId}`, "Recharge de credits SMS initiee", [["Entreprise", tenant?.designation], ["Contact", tenant?.email], ["Promotion", promotion.code], ["Credits", input.credits], ["Montant", `${amount} USD`], ["Commande FlexPay", payment.orderNumber]]);
     revalidatePath(`/clients/${promotion.code}`);
     return { success: true, message: "Paiement initie.", data: { orderNumber: payment.orderNumber, credits: input.credits, amount } } as const;
   } catch (error: any) { return { success: false, message: error.message || "Recharge impossible." } as const; }

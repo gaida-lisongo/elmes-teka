@@ -219,6 +219,7 @@ export default function DettesClient({
       />
 
       <Drawer
+        loading={loading}
         isOpen={open}
         onClose={() => setOpen(false)}
         title="Nouvelle dette"

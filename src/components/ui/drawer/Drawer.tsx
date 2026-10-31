@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useCallback } from "react";
 import { CloseIcon } from "@/icons";
+import { ProgressBar } from "@/components/ui/spinner/Spinner";
 
 export interface DrawerProps {
   isOpen: boolean;
@@ -11,8 +12,14 @@ export interface DrawerProps {
   children: React.ReactNode;
   className?: string;
   size?: "lg" | "xl";
+  /** Action en cours : barre de progression, contenu non cliquable, fermeture bloquée. */
+  loading?: boolean;
 }
 
+/**
+ * Fenêtre de formulaire : boîte centrée et compacte sur ordinateur,
+ * feuille ancrée en bas de l'écran sur mobile.
+ */
 export default function Drawer({
   isOpen,
   onClose,
@@ -21,16 +28,17 @@ export default function Drawer({
   children,
   className = "",
   size = "lg",
+  loading = false,
 }: DrawerProps) {
-  const drawerRef = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => {
+    if (!loading) onClose();
+  }, [loading, onClose]);
 
   const handleEscape = useCallback(
     (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
+      if (event.key === "Escape") close();
     },
-    [onClose]
+    [close]
   );
 
   useEffect(() => {
@@ -49,28 +57,24 @@ export default function Drawer({
 
   if (!isOpen) return null;
 
-  const sizeClass = size === "xl" ? "max-w-[1024px]" : "max-w-[640px]";
+  const sizeClass = size === "xl" ? "sm:max-w-3xl" : "sm:max-w-lg";
 
   return (
-    <div className="fixed inset-0 z-[99999] flex">
-      {/* Overlay */}
-      <div
-        className="fixed inset-0 bg-gray-400/50 backdrop-blur-[4px]"
-        onClick={onClose}
-      />
+    <div className="fixed inset-0 z-[99999] flex items-end justify-center sm:items-center sm:p-6">
+      <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-[2px]" onClick={close} />
 
-      {/* Drawer panel */}
       <div
-        ref={drawerRef}
-        className={`fixed right-0 top-0 h-full w-full ${sizeClass} overflow-y-auto bg-white shadow-xl transition-transform duration-300 ease-in-out dark:bg-gray-900 ${className}`}
+        role="dialog"
+        aria-modal="true"
+        aria-busy={loading}
+        className={`relative flex max-h-[92vh] w-full ${sizeClass} flex-col overflow-hidden rounded-t-2xl bg-white shadow-theme-xl dark:bg-gray-900 sm:rounded-2xl ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="sticky top-0 z-10 flex items-start justify-between border-b border-gray-200 bg-white px-6 py-5 dark:border-gray-800 dark:bg-gray-900">
-          <div className="flex-1 pr-4">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-              {title}
-            </h3>
+        {loading && <ProgressBar className="absolute left-0 top-0 z-20" />}
+
+        <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-5 py-4 dark:border-gray-800 sm:px-6">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base font-semibold text-gray-800 dark:text-white/90 sm:text-lg">{title}</h3>
             {description && (
               <p className="mt-1 whitespace-pre-wrap break-words text-sm text-gray-500 dark:text-gray-400">
                 {description}
@@ -79,15 +83,18 @@ export default function Drawer({
           </div>
           <button
             type="button"
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+            onClick={close}
+            disabled={loading}
+            aria-label="Fermer"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700 disabled:opacity-50 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
           >
             <CloseIcon />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="px-6 py-5">{children}</div>
+        <div className={`overflow-y-auto px-5 py-5 sm:px-6 ${loading ? "pointer-events-none opacity-60" : ""}`}>
+          {children}
+        </div>
       </div>
     </div>
   );

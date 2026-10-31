@@ -294,6 +294,7 @@ export default function ClientsClient({ initialData }: { initialData: InitialDat
 
       {/* Drawer création / édition */}
       <Drawer
+        loading={loading}
         isOpen={open}
         onClose={() => setOpen(false)}
         title={editingId ? "Modifier la promotion" : "Créer une promotion"}

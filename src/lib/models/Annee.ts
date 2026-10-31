@@ -11,7 +11,14 @@ export interface IAnneeProvider {
   amount: number;
   currency: "USD" | "CDF";
   paidAt?: Date | null;
+  /** Prix avant réduction */
+  baseAmount?: number | null;
+  discountPercent?: number;
+  discountSource?: DiscountSource | null;
+  promoCode?: string | null;
 }
+
+export type DiscountSource = "PROMO" | "FILLEUL" | "PARRAIN";
 
 export interface IAnnee {
   tenantId: Types.ObjectId;
@@ -38,6 +45,10 @@ const AnneeProviderSchema = new Schema<IAnneeProvider>(
     amount: { type: Number, min: 0, required: true },
     currency: { type: String, enum: ["USD", "CDF"], required: true },
     paidAt: { type: Date, default: null },
+    baseAmount: { type: Number, min: 0, default: null },
+    discountPercent: { type: Number, min: 0, max: 100, default: 0 },
+    discountSource: { type: String, enum: ["PROMO", "FILLEUL", "PARRAIN", null], default: null },
+    promoCode: { type: String, trim: true, uppercase: true, default: null },
   },
   { _id: false }
 );

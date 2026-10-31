@@ -579,6 +579,7 @@ export default function StoresClient({
 
       {/* ─── Create Drawer (3 steps) ─── */}
       <Drawer
+        loading={actionLoading || verificationLoading}
         isOpen={createDrawerOpen}
         onClose={() => setCreateDrawerOpen(false)}
         title="Creer un point de vente"
@@ -710,6 +711,7 @@ export default function StoresClient({
 
       {/* ─── Edit Drawer ─── */}
       <Drawer
+        loading={actionLoading || verificationLoading}
         isOpen={editDrawerOpen}
         onClose={() => setEditDrawerOpen(false)}
         title="Modifier le point de vente"
@@ -744,6 +746,7 @@ export default function StoresClient({
 
       {/* ─── View Drawer ─── */}
       <Drawer
+        loading={actionLoading || verificationLoading}
         isOpen={viewDrawerOpen}
         onClose={() => setViewDrawerOpen(false)}
         title="Details du point de vente"
@@ -842,6 +845,7 @@ export default function StoresClient({
       </Drawer>
 
       <Drawer
+        loading={actionLoading || verificationLoading}
         isOpen={capitalDrawerOpen}
         onClose={() => setCapitalDrawerOpen(false)}
         title="Capitaux du point de vente"
@@ -970,6 +974,7 @@ export default function StoresClient({
 
       {/* ─── Associate Products Drawer ─── */}
       <Drawer
+        loading={actionLoading || verificationLoading}
         isOpen={associateDrawerOpen}
         onClose={() => setAssociateDrawerOpen(false)}
         title="Associer des produits"

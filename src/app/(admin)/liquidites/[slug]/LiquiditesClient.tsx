@@ -205,6 +205,7 @@ export default function LiquiditesClient({
       />
 
       <Drawer
+        loading={loading}
         isOpen={open}
         onClose={() => setOpen(false)}
         title="Nouvelle opération"

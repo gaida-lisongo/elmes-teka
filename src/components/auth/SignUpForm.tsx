@@ -11,6 +11,7 @@ import TextArea from "@/components/form/input/TextArea";
 import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
+import Spinner from "@/components/ui/spinner/Spinner";
 import { EyeCloseIcon, EyeIcon } from "@/icons";
 import type { TenantType } from "@/lib/models/User";
 import Link from "next/link";
@@ -33,6 +34,7 @@ interface SignUpFormState {
   photo: string;
   password: string;
   passwordConfirmation: string;
+  code: string;
 }
 
 const tenantTypeOptions = [
@@ -41,7 +43,7 @@ const tenantTypeOptions = [
   { value: "ORGANIZATION", label: "Organisation" },
 ];
 
-export default function SignUpForm() {
+export default function SignUpForm({ initialCode = "" }: { initialCode?: string }) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
@@ -65,6 +67,7 @@ export default function SignUpForm() {
     photo: "",
     password: "",
     passwordConfirmation: "",
+    code: initialCode,
   });
   const [documents, setDocuments] = useState<TenantDocumentInput[]>([]);
 
@@ -204,6 +207,7 @@ export default function SignUpForm() {
         ],
         documents: documents.map(({ title, url }) => ({ title, url })),
         uploadedPublicIds,
+        code: form.code,
       });
 
       if (!response.success) {
@@ -344,6 +348,10 @@ export default function SignUpForm() {
                   <Input type={showPassword ? "text" : "password"} value={form.passwordConfirmation} onChange={(event) => updateField("passwordConfirmation", event.target.value)} error={Boolean(errors.passwordConfirmation)} hint={errors.passwordConfirmation} />
                 </div>
               </div>
+              <div>
+                <Label>Code de parrainage ou code promo</Label>
+                <Input value={form.code} onChange={(event) => updateField("code", event.target.value.toUpperCase())} placeholder="Ex. ELMS3F9A2C" error={Boolean(errors.code)} hint={errors.code || "Optionnel. Donne droit a une reduction sur votre premier abonnement."} />
+              </div>
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-400">
                 <p className="font-medium text-gray-800 dark:text-white/90">{form.designation || "Marque non renseignee"}</p>
                 <p>{form.pseudo} - {form.email} - {form.telephone}</p>
@@ -352,6 +360,11 @@ export default function SignUpForm() {
             </div>
           )}
 
+          {isUploading && (
+            <p className="mt-5 text-sm text-brand-500">
+              <Spinner className="h-4 w-4" label="Envoi du fichier en cours..." />
+            </p>
+          )}
           {globalError && <p className="mt-5 text-sm text-error-500">{globalError}</p>}
 
           <div className="mt-6 flex items-center justify-between gap-3">
@@ -363,11 +376,11 @@ export default function SignUpForm() {
               )}
             </div>
             {step < 3 ? (
-              <Button type="button" onClick={nextStep} disabled={isUploading || isCheckingIdentity}>
+              <Button type="button" onClick={nextStep} disabled={isUploading} loading={isCheckingIdentity}>
                 {isCheckingIdentity ? "Verification..." : "Suivant"}
               </Button>
             ) : (
-              <Button type="submit" disabled={isPending || isUploading}>
+              <Button type="submit" disabled={isUploading} loading={isPending}>
                 {isPending ? "Creation..." : "Creer le compte"}
               </Button>
             )}

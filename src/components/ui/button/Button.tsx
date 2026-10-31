@@ -1,4 +1,5 @@
 import React, { ReactNode } from "react";
+import Spinner from "@/components/ui/spinner/Spinner";
 
 interface ButtonProps {
   children: ReactNode; // Button text or content
@@ -10,6 +11,7 @@ interface ButtonProps {
   disabled?: boolean; // Disabled state
   className?: string; // Disabled state
   type?: "button" | "submit" | "reset";
+  loading?: boolean; // Affiche un spinner et désactive le bouton
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -22,7 +24,9 @@ const Button: React.FC<ButtonProps> = ({
   className = "",
   disabled = false,
   type = "button",
+  loading = false,
 }) => {
+  const isDisabled = disabled || loading;
   // Size Classes
   const sizeClasses = {
     sm: "px-4 py-3 text-sm",
@@ -43,12 +47,13 @@ const Button: React.FC<ButtonProps> = ({
       className={`inline-flex items-center justify-center font-medium gap-2 rounded-lg transition ${className} ${
         sizeClasses[size]
       } ${variantClasses[variant]} ${
-        disabled ? "cursor-not-allowed opacity-50" : ""
+        isDisabled ? "cursor-not-allowed opacity-50" : ""
       }`}
       onClick={onClick}
-      disabled={disabled}
+      disabled={isDisabled}
+      aria-busy={loading}
     >
-      {startIcon && <span className="flex items-center">{startIcon}</span>}
+      {loading ? <Spinner className="h-4 w-4" /> : startIcon && <span className="flex items-center">{startIcon}</span>}
       {children}
       {endIcon && <span className="flex items-center">{endIcon}</span>}
     </button>

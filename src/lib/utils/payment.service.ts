@@ -11,8 +11,8 @@
  */
 
 import crypto from 'node:crypto';
-import { headers } from 'next/headers';
 import { getSessionSecret } from '@/lib/auth/session';
+import { appOrigin } from '@/lib/utils/app-url';
 import { smsNotifier } from '@/lib/utils/sms';
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -79,19 +79,6 @@ function endpoint(hostKey: string, defaultPath: string): string {
 function authorization(): string {
   const token = requireEnv('FLEX_TOKEN');
   return token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-}
-
-async function appOrigin(): Promise<string> {
-  try {
-    const h = await headers();
-    const host = h.get('x-forwarded-host') ?? h.get('host');
-    if (host) return `${h.get('x-forwarded-proto') ?? 'https'}://${host}`;
-  } catch {
-    // Hors requête (script, cron) : on retombe sur l'URL de production Vercel.
-  }
-  const production = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-  if (production) return `https://${production}`;
-  throw new Error('Impossible de déterminer l’URL publique de la plateforme.');
 }
 
 // ── Callback signé ─────────────────────────────────────────────────

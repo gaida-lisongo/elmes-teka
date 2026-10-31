@@ -7,7 +7,11 @@ import DashboardRealtimeUpdater from "@/components/ecommerce/DashboardRealtimeUp
 import { DashboardAlerts } from "@/components/ecommerce/DashboardAlerts";
 import { StoreSupervision } from "@/components/ecommerce/StoreSupervision";
 import { TopClients } from "@/components/ecommerce/TopClients";
+import ReferralCard from "@/components/ecommerce/ReferralCard";
+import { getTenantSession } from "@/lib/auth/require-tenant";
 import { getDashboardData } from "@/lib/dashboard/data";
+import { getReferralSummary } from "@/lib/payments/pricing";
+import { appOrigin } from "@/lib/utils/app-url";
 
 export const metadata: Metadata = {
   title: "Tableau de bord | ELMES-TEKA",
@@ -33,6 +37,8 @@ export default async function DashboardPage({
     productsPage: Number(params.productsPage) || 1,
     productSearch: params.productSearch,
   });
+  const tenantSession = data.scope === "TENANT" ? await getTenantSession() : null;
+  const referral = tenantSession ? await getReferralSummary(tenantSession.tenantId, await appOrigin()) : null;
   const taux = Number(process.env.TAUX) || 0;
   const exchange = Number(process.env.EXCHANGE) || 0;
   return (
@@ -46,6 +52,11 @@ export default async function DashboardPage({
       <div className="col-span-12">
         <EcommerceMetrics today={data.today} />
       </div>
+      {referral && (
+        <div className="col-span-12">
+          <ReferralCard referral={referral} />
+        </div>
+      )}
       {data.scope === "TENANT" && data.stores.length > 0 && (
         <div className="col-span-12">
           <StoreSupervision stores={data.stores} />

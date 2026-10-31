@@ -60,6 +60,12 @@ export interface ITenant {
   email: string;
   telephone: string;
   nRef: string;
+  /** Code de parrainage partagé par ce tenant */
+  referralCode?: string | null;
+  /** Parrain ayant invité ce tenant */
+  referredBy?: Types.ObjectId | null;
+  /** Code promo plateforme saisi à l'inscription, appliqué au premier exercice */
+  signupPromoCode?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -234,6 +240,9 @@ UserSchema.set("toObject", {
 
 const TenantSchema = new Schema<ITenant>(
   {
+    referralCode: { type: String, trim: true, uppercase: true, default: undefined, unique: true, sparse: true },
+    referredBy: { type: Schema.Types.ObjectId, ref: "Tenant", default: null, index: true },
+    signupPromoCode: { type: String, trim: true, uppercase: true, default: null },
     userId: {
       type: Schema.Types.ObjectId,
       ref: "User",

@@ -8,12 +8,19 @@ export const metadata: Metadata = {
   description: "Creation d'un compte entrepreneur ELMES-TEKA.",
 };
 
-export default async function SignUp() {
+export default async function SignUp({
+  searchParams,
+}: {
+  searchParams: Promise<{ ref?: string; code?: string }>;
+}) {
   const shell = await getAdminShellAccount();
 
   if (shell) {
     redirect("/dashboard");
   }
 
-  return <SignUpForm />;
+  const params = await searchParams;
+  const initialCode = (params.ref ?? params.code ?? "").trim().toUpperCase().slice(0, 30);
+
+  return <SignUpForm initialCode={initialCode} />;
 }

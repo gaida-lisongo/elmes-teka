@@ -366,6 +366,7 @@ export default function StocksClient({
       {/*  Drawer — Nouvelle demande                                       */}
       {/* ================================================================ */}
       <Drawer
+        loading={loading}
         isOpen={open}
         onClose={() => setOpen(false)}
         title="Demande d'approvisionnement"

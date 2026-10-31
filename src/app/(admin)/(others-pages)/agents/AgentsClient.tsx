@@ -429,7 +429,7 @@ export default function AgentsClient({
       />
 
       {/* ─── Create Drawer ─── */}
-      <Drawer
+      <Drawer loading={actionLoading}
         isOpen={createDrawerOpen}
         onClose={() => setCreateDrawerOpen(false)}
         title="Creer un agent"
@@ -524,7 +524,7 @@ export default function AgentsClient({
       </Drawer>
 
       {/* ─── Edit Drawer ─── */}
-      <Drawer
+      <Drawer loading={actionLoading}
         isOpen={editDrawerOpen}
         onClose={() => setEditDrawerOpen(false)}
         title="Modifier l'agent"
@@ -569,7 +569,7 @@ export default function AgentsClient({
       </Drawer>
 
       {/* ─── Assign Drawer ─── */}
-      <Drawer
+      <Drawer loading={actionLoading}
         isOpen={assignDrawerOpen}
         onClose={() => setAssignDrawerOpen(false)}
         title="Affecter a une boutique"
@@ -603,7 +603,7 @@ export default function AgentsClient({
       </Drawer>
 
       {/* ─── View Drawer ─── */}
-      <Drawer
+      <Drawer loading={actionLoading}
         isOpen={viewDrawerOpen}
         onClose={() => setViewDrawerOpen(false)}
         title="Details de l'agent"
@@ -643,7 +643,7 @@ export default function AgentsClient({
       </Drawer>
 
       {/* ─── Delete Modal ─── */}
-      <Modal isOpen={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
+      <Modal loading={actionLoading} isOpen={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
         <div className="p-6 text-center">
           <h3 className="mb-2 text-lg font-semibold">Confirmer la suppression</h3>
           <p className="mb-6 text-sm text-gray-500">

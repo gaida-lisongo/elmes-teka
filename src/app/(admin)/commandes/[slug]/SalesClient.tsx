@@ -590,6 +590,7 @@ export default function SalesClient({
       {/*  Drawer — Nouvelle vente                                         */}
       {/* ================================================================ */}
       <Drawer
+        loading={loading}
         isOpen={open}
         onClose={() => setOpen(false)}
         title="Nouvelle vente"

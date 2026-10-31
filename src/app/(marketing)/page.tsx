@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import HeroSection from "@/components/marketing/HeroSection";
+import PromoBanner from "@/components/marketing/PromoBanner";
 import ScrollRevealInit from "@/components/marketing/ScrollRevealInit";
+
+// Le bandeau des codes promo publics est rafraîchi toutes les 5 minutes (et à chaque modification admin).
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "ELMES-TEKA — CRM de gestion commerciale pour entrepreneurs congolais",
@@ -169,6 +173,8 @@ export default function HomePage() {
 
       {/* ── HERO ─────────────────────────────────────────────────────── */}
       <HeroSection />
+
+      <PromoBanner />
 
       {/* ── FEATURE MARQUEE ──────────────────────────────────────────── */}
       <div

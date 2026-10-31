@@ -8,7 +8,10 @@ import connectToDb from "@/lib/utils/db";
 import Annee from "@/lib/models/Annee";
 import Commande from "@/lib/models/Commande";
 import Depense from "@/lib/models/Depense";
-import { applyAnneePayment } from "@/lib/payments/flexpay-results";
+import { scheduleAdminNotification } from "@/lib/admin/notify";
+import { Tenant } from "@/lib/models/User";
+import { applyAnneePayment, recordPromoUse } from "@/lib/payments/flexpay-results";
+import { computeSubscriptionPrice, type SubscriptionPrice } from "@/lib/payments/pricing";
 import { checkStatus, initiateCollection } from "@/lib/utils/payment.service";
 
 export type ActionResponse<T = undefined> =
@@ -69,11 +72,47 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-function getSubscriptionAmount(currency: "USD" | "CDF") {
-  const taux = Number.parseFloat(process.env.TAUX ?? "0");
-  return currency === "CDF" && taux > 0
-    ? ({ amount: Math.round(50 * taux), currency: "CDF" } as const)
-    : ({ amount: 50, currency: "USD" } as const);
+function priceFields(price: SubscriptionPrice) {
+  return {
+    amount: price.amount,
+    currency: price.currency,
+    baseAmount: price.baseAmount,
+    discountPercent: price.discountPercent,
+    discountSource: price.discountSource,
+    promoCode: price.promoCode,
+  };
+}
+
+async function notifyPaymentInitiated(tenantId: string, anneeLabel: string, price: SubscriptionPrice, orderNumber?: string | null, error?: string) {
+  const tenant = await Tenant.findById(tenantId).select("designation email telephone").lean();
+  scheduleAdminNotification(
+    error ? `Paiement non initie - ${tenant?.designation ?? tenantId}` : `Paiement initie - ${tenant?.designation ?? tenantId}`,
+    error ? "Echec d'initiation d'un abonnement annuel" : "Nouveau paiement d'abonnement annuel initie",
+    [
+      ["Entreprise", tenant?.designation],
+      ["Contact", [tenant?.email, tenant?.telephone].filter(Boolean).join(" - ")],
+      ["Exercice", anneeLabel],
+      ["Montant", `${price.amount} ${price.currency}`],
+      ["Reduction", price.label],
+      ["Commande FlexPay", orderNumber],
+      ["Erreur", error],
+    ]
+  );
+}
+
+/** Prix de l'abonnement pour le tenant connecté (aperçu avant création). */
+export async function previewSubscriptionPrice(input: {
+  currency: "USD" | "CDF";
+  promoCode?: string;
+}): Promise<ActionResponse<SubscriptionPrice>> {
+  try {
+    const { tenantId } = await requireTenantSession();
+    const { price, error } = await computeSubscriptionPrice({ tenantId, currency: input.currency, promoCode: input.promoCode });
+    if (error) return { success: false, message: error, errors: { promoCode: error } };
+    return { success: true, message: price.label ?? "Tarif standard.", data: price };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Calcul du prix impossible." };
+  }
 }
 
 /* ───── Métriques ───── */
@@ -275,6 +314,7 @@ export async function createAnnee(input: {
   fin: string;
   phone: string;
   currency: "USD" | "CDF";
+  promoCode?: string;
 }): Promise<ActionResponse<{ id: string; paymentInitiated: boolean }>> {
   try {
     const { tenantId } = await requireTenantSession();
@@ -288,11 +328,17 @@ export async function createAnnee(input: {
 
     if (isNaN(parsedDebut.getTime())) errors.debut = "Date de debut invalide.";
     if (isNaN(parsedFin.getTime())) errors.fin = "Date de fin invalide.";
-    if (!input.phone || input.phone.trim().length < 8) {
-      errors.phone = "Numero de telephone invalide.";
-    }
     if (!["USD", "CDF"].includes(input.currency)) {
       errors.currency = "Devise invalide.";
+    }
+    const { price, error: promoError } = await computeSubscriptionPrice({
+      tenantId,
+      currency: input.currency === "CDF" ? "CDF" : "USD",
+      promoCode: input.promoCode,
+    });
+    if (promoError) errors.promoCode = promoError;
+    if (price.amount > 0 && (!input.phone || input.phone.trim().length < 8)) {
+      errors.phone = "Numero de telephone invalide.";
     }
 
     if (Object.keys(errors).length > 0) {
@@ -316,7 +362,36 @@ export async function createAnnee(input: {
       return { success: false, message: "Un exercice pour cette annee calendaire existe deja." };
     }
 
-    const payment = getSubscriptionAmount(input.currency);
+    const label = `${debut.getFullYear()} - ${fin.getFullYear()}`;
+
+    /* Réduction de 100 % : exercice offert, aucun paiement FlexPay */
+    if (price.amount <= 0) {
+      const annee = await Annee.create({
+        tenantId: new Types.ObjectId(tenantId),
+        debut,
+        fin,
+        slug,
+        status: "ACTIVE",
+        provider: {
+          name: "FLEXPAY",
+          orderNumber: null,
+          message: `Exercice offert (${price.label}).`,
+          status: "PAID",
+          paidAt: new Date(),
+          ...priceFields(price),
+        },
+      });
+      await recordPromoUse(price.promoCode);
+      await notifyPaymentInitiated(tenantId, `${label} (offert)`, price);
+      revalidatePath("/annees");
+      revalidatePath("/", "layout");
+      return {
+        success: true,
+        message: "Exercice offert et active.",
+        data: { id: annee._id.toString(), paymentInitiated: false },
+      };
+    }
+
     const annee = await Annee.create({
       tenantId: new Types.ObjectId(tenantId),
       debut,
@@ -328,17 +403,16 @@ export async function createAnnee(input: {
         orderNumber: null,
         message: "Initiation du paiement en cours.",
         status: "PENDING",
-        amount: payment.amount,
-        currency: payment.currency,
         paidAt: null,
+        ...priceFields(price),
       },
     });
 
     const paymentResult = await initiateCollection({
       phone: input.phone.trim(),
-      amount: payment.amount,
+      amount: price.amount,
       reference: `ANNEE-${annee._id.toString()}`,
-      currency: payment.currency,
+      currency: price.currency,
     });
     const paymentInitiated = Boolean(paymentResult.success && paymentResult.orderNumber);
 
@@ -352,13 +426,20 @@ export async function createAnnee(input: {
         },
       }
     );
+    await notifyPaymentInitiated(
+      tenantId,
+      label,
+      price,
+      paymentResult.orderNumber,
+      paymentInitiated ? undefined : paymentResult.error ?? "Echec de l'initiation."
+    );
 
     revalidatePath("/annees");
 
     return {
       success: true,
       message: paymentInitiated
-        ? "Exercice cree, paiement initie."
+        ? "Exercice cree. Validez le paiement sur votre telephone."
         : `Exercice cree, mais le paiement n'a pas pu etre initie : ${paymentResult.error ?? "erreur inconnue"}.`,
       data: { id: annee._id.toString(), paymentInitiated },
     };
@@ -396,12 +477,17 @@ export async function initiateAnneePayment(input: {
       };
     }
 
-    const payment = getSubscriptionAmount(input.currency);
+    /* Le code promo choisi à la création est reconduit, revalidé (période, quota). */
+    const { price } = await computeSubscriptionPrice({
+      tenantId,
+      currency: input.currency === "CDF" ? "CDF" : "USD",
+      promoCode: annee.provider?.promoCode ?? undefined,
+    });
     const result = await initiateCollection({
       phone: input.phone.trim(),
-      amount: payment.amount,
+      amount: price.amount,
       reference: `ANNEE-${annee._id.toString()}`,
-      currency: payment.currency,
+      currency: price.currency,
     });
     const initiated = Boolean(result.success && result.orderNumber);
     await Annee.updateOne(
@@ -413,12 +499,18 @@ export async function initiateAnneePayment(input: {
             orderNumber: result.orderNumber ?? null,
             message: result.message ?? result.error ?? "Echec de l'initiation du paiement.",
             status: initiated ? "PENDING" : "FAILED",
-            amount: payment.amount,
-            currency: payment.currency,
             paidAt: null,
+            ...priceFields(price),
           },
         },
       }
+    );
+    await notifyPaymentInitiated(
+      tenantId,
+      `${annee.debut.getFullYear()} - ${annee.fin.getFullYear()} (relance)`,
+      price,
+      result.orderNumber,
+      initiated ? undefined : result.error ?? "Echec de l'initiation."
     );
     revalidatePath("/annees");
 

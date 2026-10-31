@@ -84,6 +84,32 @@ export interface PlatformPromoInput {
   isPublic: boolean;
 }
 
+/* Les dates saisies (AAAA-MM-JJ) sont des dates de Kinshasa (UTC+1, sans heure d'été). */
+const KINSHASA_OFFSET = "+01:00";
+
+function parseKinshasaDay(value: string, endOfDay: boolean): Date {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test((value ?? "").trim())) return new Date(NaN);
+  return new Date(`${value.trim()}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}${KINSHASA_OFFSET}`);
+}
+
+function validatePromoFields(input: Omit<PlatformPromoInput, "code" | "isPublic">) {
+  const label = (input.label ?? "").trim();
+  const reduction = Number(input.reduction);
+  const startsAt = parseKinshasaDay(input.startsAt, false);
+  // La date de fin inclut toute la journée
+  const endsAt = parseKinshasaDay(input.endsAt, true);
+  const maxUses = input.maxUses === null || input.maxUses === undefined || `${input.maxUses}` === "" ? null : Number(input.maxUses);
+
+  const errors: Record<string, string> = {};
+  if (label.length < 2) errors.label = "Donnez un nom a ce code (ex. Conference Kinshasa 2026).";
+  if (!Number.isFinite(reduction) || reduction < 1 || reduction > 100) errors.reduction = "Entre 1 et 100 %.";
+  if (Number.isNaN(startsAt.getTime())) errors.startsAt = "Date de debut invalide.";
+  if (Number.isNaN(endsAt.getTime())) errors.endsAt = "Date de fin invalide.";
+  else if (!errors.startsAt && endsAt <= startsAt) errors.endsAt = "La fin doit etre apres le debut.";
+  if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1)) errors.maxUses = "Nombre entier superieur a 0, ou vide pour illimite.";
+  return { errors, values: { label, reduction, startsAt, endsAt, maxUses } };
+}
+
 export async function createPlatformPromo(input: PlatformPromoInput): Promise<PlatformActionResponse> {
   try {
     const admin = await getPlatformAdmin();
@@ -91,34 +117,38 @@ export async function createPlatformPromo(input: PlatformPromoInput): Promise<Pl
     await connectToDb();
 
     const code = normalizeCode(input.code);
-    const label = (input.label ?? "").trim();
-    const reduction = Number(input.reduction);
-    const startsAt = new Date(input.startsAt);
-    const endsAt = new Date(input.endsAt);
-    // La date de fin inclut toute la journée
-    endsAt.setUTCHours(23, 59, 59, 999);
-    const maxUses = input.maxUses === null || input.maxUses === undefined || `${input.maxUses}` === "" ? null : Number(input.maxUses);
-
-    const errors: Record<string, string> = {};
+    const { errors, values } = validatePromoFields(input);
     if (!/^[A-Z0-9_-]{3,30}$/.test(code)) errors.code = "3 a 30 caracteres : lettres, chiffres, - ou _.";
-    if (label.length < 2) errors.label = "Donnez un nom a ce code (ex. Conference Kinshasa 2026).";
-    if (!Number.isFinite(reduction) || reduction < 1 || reduction > 100) errors.reduction = "Entre 1 et 100 %.";
-    if (Number.isNaN(startsAt.getTime())) errors.startsAt = "Date de debut invalide.";
-    if (Number.isNaN(endsAt.getTime())) errors.endsAt = "Date de fin invalide.";
-    else if (!errors.startsAt && endsAt <= startsAt) errors.endsAt = "La fin doit etre apres le debut.";
-    if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1)) errors.maxUses = "Nombre entier superieur a 0, ou vide pour illimite.";
     if (Object.keys(errors).length) return { success: false, message: "Certaines informations sont invalides.", errors };
 
     if (await PlatformPromo.exists({ code })) {
       return { success: false, message: "Ce code existe deja.", errors: { code: "Ce code existe deja." } };
     }
 
-    await PlatformPromo.create({ code, label, reduction, startsAt, endsAt, maxUses, isPublic: Boolean(input.isPublic), createdBy: admin.email });
+    await PlatformPromo.create({ code, ...values, isPublic: Boolean(input.isPublic), createdBy: admin.email });
     revalidatePath("/platform/promos");
     revalidatePath("/", "layout");
     return { success: true, message: `Code ${code} cree.` };
   } catch (error: any) {
     return { success: false, message: error.message || "Creation impossible." };
+  }
+}
+
+/** Modifie un code existant (le code lui-même et ses utilisations ne changent pas). */
+export async function updatePlatformPromo(id: string, input: Omit<PlatformPromoInput, "code">): Promise<PlatformActionResponse> {
+  try {
+    if (!(await getPlatformAdmin())) return { success: false, message: "Session administrateur expiree." };
+    await connectToDb();
+    if (!Types.ObjectId.isValid(id)) return { success: false, message: "Code invalide." };
+    const { errors, values } = validatePromoFields(input);
+    if (Object.keys(errors).length) return { success: false, message: "Certaines informations sont invalides.", errors };
+    const result = await PlatformPromo.updateOne({ _id: id }, { $set: { ...values, isPublic: Boolean(input.isPublic) } });
+    if (!result.matchedCount) return { success: false, message: "Code introuvable." };
+    revalidatePath("/platform/promos");
+    revalidatePath("/", "layout");
+    return { success: true, message: "Code mis a jour." };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Mise a jour impossible." };
   }
 }
 

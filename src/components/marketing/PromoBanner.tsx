@@ -19,7 +19,7 @@ export default async function PromoBanner() {
             <p className="text-sm font-medium text-white sm:text-base">
               <span className="font-bold">{promo.label}</span> : -{promo.reduction} % sur votre abonnement avec le code{" "}
               <span className="rounded-md bg-white/20 px-2 py-0.5 font-mono font-bold">{promo.code}</span>
-              <span className="opacity-80"> · jusqu&apos;au {new Date(promo.endsAt).toLocaleDateString("fr-FR")}</span>
+              <span className="opacity-80"> · jusqu&apos;au {new Date(promo.endsAt).toLocaleDateString("fr-FR", { timeZone: "Africa/Kinshasa" })}</span>
             </p>
             <Link
               href={`/signup?code=${encodeURIComponent(promo.code)}`}

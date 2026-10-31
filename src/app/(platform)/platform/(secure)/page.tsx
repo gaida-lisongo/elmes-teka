@@ -58,7 +58,7 @@ export default async function PlatformOverviewPage() {
               )}
               {data.payments.map((p) => (
                 <TableRow key={p.id}>
-                  <TableCell className="whitespace-nowrap px-5 py-3 text-sm text-gray-500">{new Date(p.date).toLocaleString("fr-FR")}</TableCell>
+                  <TableCell className="whitespace-nowrap px-5 py-3 text-sm text-gray-500">{new Date(p.date).toLocaleString("fr-FR", { timeZone: "Africa/Kinshasa" })}</TableCell>
                   <TableCell className="px-5 py-3 text-sm font-medium text-gray-800 dark:text-white/90">{p.tenant}</TableCell>
                   <TableCell className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{p.label}</TableCell>
                   <TableCell className="whitespace-nowrap px-5 py-3 text-sm text-gray-800 dark:text-white/90">{p.amount} {p.currency}</TableCell>

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { createPlatformPromo, updatePlatformPromoFlags } from "@/actions/platform.actions";
+import { createPlatformPromo, updatePlatformPromo, updatePlatformPromoFlags } from "@/actions/platform.actions";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Badge from "@/components/ui/badge/Badge";
@@ -20,7 +20,11 @@ const stateBadge: Record<PlatformPromoRow["state"], { label: string; color: "suc
   DESACTIVE: { label: "Desactive", color: "error" },
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
+// Dates manipulées dans le fuseau de Kinshasa, comme côté serveur
+const TZ = "Africa/Kinshasa";
+const toDay = (iso: string | Date) => new Date(iso).toLocaleDateString("en-CA", { timeZone: TZ });
+const showDay = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { timeZone: TZ });
+const today = () => toDay(new Date());
 const emptyForm = () => ({ code: "", label: "", reduction: "20", startsAt: today(), endsAt: "", maxUses: "", isPublic: true });
 
 const STEPS = [
@@ -37,6 +41,24 @@ export default function PromosClient({ promos }: { promos: PlatformPromoRow[] })
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const startEdit = (promo: PlatformPromoRow) => {
+    setForm({
+      code: promo.code,
+      label: promo.label,
+      reduction: String(promo.reduction),
+      startsAt: toDay(promo.startsAt),
+      endsAt: toDay(promo.endsAt),
+      maxUses: promo.maxUses === null ? "" : String(promo.maxUses),
+      isPublic: promo.isPublic,
+    });
+    setErrors({});
+    setMessage("");
+    setStep(0);
+    setEditingId(promo.id);
+    setOpen(true);
+  };
 
   const update = (field: keyof ReturnType<typeof emptyForm>, value: string | boolean) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -64,15 +86,15 @@ export default function PromosClient({ promos }: { promos: PlatformPromoRow[] })
     if (!validateStep()) return;
     setSaving(true);
     setMessage("");
-    const res = await createPlatformPromo({
-      code: form.code,
+    const fields = {
       label: form.label,
       reduction: Number(form.reduction),
       startsAt: form.startsAt,
       endsAt: form.endsAt,
       maxUses: form.maxUses ? Number(form.maxUses) : null,
       isPublic: form.isPublic,
-    });
+    };
+    const res = editingId ? await updatePlatformPromo(editingId, fields) : await createPlatformPromo({ code: form.code, ...fields });
     setSaving(false);
     if (!res.success) {
       setMessage(res.message);
@@ -109,6 +131,7 @@ export default function PromosClient({ promos }: { promos: PlatformPromoRow[] })
             setErrors({});
             setMessage("");
             setStep(0);
+            setEditingId(null);
             setOpen(true);
           }}
         >
@@ -140,7 +163,7 @@ export default function PromosClient({ promos }: { promos: PlatformPromoRow[] })
                   </TableCell>
                   <TableCell className="px-5 py-3 text-sm text-gray-800 dark:text-white/90">-{p.reduction} %</TableCell>
                   <TableCell className="whitespace-nowrap px-5 py-3 text-sm text-gray-500">
-                    {new Date(p.startsAt).toLocaleDateString("fr-FR")} → {new Date(p.endsAt).toLocaleDateString("fr-FR")}
+                    {showDay(p.startsAt)} → {showDay(p.endsAt)} inclus
                   </TableCell>
                   <TableCell className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{p.uses} / {p.maxUses ?? "∞"}</TableCell>
                   <TableCell className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{p.signups}</TableCell>
@@ -149,6 +172,9 @@ export default function PromosClient({ promos }: { promos: PlatformPromoRow[] })
                   </TableCell>
                   <TableCell className="px-5 py-3">
                     <div className="flex flex-wrap gap-2 text-xs">
+                      <button disabled={busyId === p.id} onClick={() => startEdit(p)} className="rounded-lg px-2.5 py-1 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
+                        Modifier
+                      </button>
                       <button disabled={busyId === p.id} onClick={() => toggle(p, { status: p.status === "ACTIVE" ? "INACTIVE" : "ACTIVE" })} className="rounded-lg px-2.5 py-1 text-brand-500 hover:bg-brand-500/10">
                         {p.status === "ACTIVE" ? "Desactiver" : "Reactiver"}
                       </button>
@@ -164,7 +190,7 @@ export default function PromosClient({ promos }: { promos: PlatformPromoRow[] })
         </div>
       </section>
 
-      <Drawer loading={saving} isOpen={open} onClose={() => setOpen(false)} title="Nouveau code promo" description={STEPS[step].hint}>
+      <Drawer loading={saving} isOpen={open} onClose={() => setOpen(false)} title={editingId ? `Modifier le code ${form.code}` : "Nouveau code promo"} description={STEPS[step].hint}>
         <div className="mb-5">
           <div className="mb-2 flex justify-between text-xs font-medium text-gray-500">
             <span>Etape {step + 1} sur {STEPS.length} · {STEPS[step].title}</span>
@@ -180,7 +206,7 @@ export default function PromosClient({ promos }: { promos: PlatformPromoRow[] })
             <>
               <div>
                 <Label>Code *</Label>
-                <Input value={form.code} onChange={(e) => update("code", e.target.value.toUpperCase().replace(/\s+/g, ""))} placeholder="CONF-KIN-2026" error={!!errors.code} hint={errors.code} />
+                <Input value={form.code} disabled={Boolean(editingId)} onChange={(e) => update("code", e.target.value.toUpperCase().replace(/\s+/g, ""))} placeholder="CONF-KIN-2026" error={!!errors.code} hint={errors.code || (editingId ? "Le code ne peut pas etre modifie." : undefined)} />
               </div>
               <div>
                 <Label>Nom de l&apos;operation *</Label>
@@ -225,7 +251,7 @@ export default function PromosClient({ promos }: { promos: PlatformPromoRow[] })
             {step === 0 ? (
               <Button onClick={() => validateStep() && setStep(1)}>Suivant</Button>
             ) : (
-              <Button onClick={submit} loading={saving}>{saving ? "Creation..." : "Creer le code"}</Button>
+              <Button onClick={submit} loading={saving}>{saving ? "Enregistrement..." : editingId ? "Enregistrer" : "Creer le code"}</Button>
             )}
           </div>
         </div>

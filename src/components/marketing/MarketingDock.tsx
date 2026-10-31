@@ -36,6 +36,9 @@ export default function MarketingDock() {
         <Link href="/" className="et-dock-link hidden md:flex">
           Accueil
         </Link>
+        <Link href="/guide" className="et-dock-link">
+          Guide
+        </Link>
         <Link href="/about" className="et-dock-link hidden md:flex">
           Qui sommes-nous
         </Link>

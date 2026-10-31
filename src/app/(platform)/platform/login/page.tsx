@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getPlatformAdmin } from "@/lib/auth/platform-admin";
-import PlatformLoginForm from "./PlatformLoginForm";
+import PlatformLoginForm from "@/components/platform/PlatformLoginForm";
 
 export default async function PlatformLoginPage({ searchParams }: { searchParams: Promise<{ expired?: string }> }) {
   if (await getPlatformAdmin()) redirect("/platform");

@@ -97,7 +97,7 @@ export default function StocksOverviewClient({
           <Metric label="Lignes de stock" value={filtered.length} />
           <Metric
             label="Valorisation totale"
-            value={filteredValeur.toLocaleString()}
+            value={`${filteredValeur.toLocaleString("fr-FR")} FC`}
           />
           <Metric
             label="Boutiques"
@@ -187,10 +187,10 @@ export default function StocksOverviewClient({
                         <QteBadge qte={row.qte} seuil={row.seuilCritique} />
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">
-                        {row.prixUnitaire.toLocaleString()}
+                        {row.prixUnitaire.toLocaleString("fr-FR")} FC
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-medium">
-                        {row.valeurTotale.toLocaleString()}
+                        {row.valeurTotale.toLocaleString("fr-FR")} FC
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span
@@ -217,7 +217,7 @@ export default function StocksOverviewClient({
                     Valorisation totale
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums text-gray-900 dark:text-white">
-                    {filteredValeur.toLocaleString()}
+                    {filteredValeur.toLocaleString("fr-FR")} FC
                   </td>
                 </tr>
               </tfoot>

@@ -79,10 +79,20 @@ export default async function StocksOverviewPage() {
     .select("_id designation price seuilCritique")
     .lean();
 
+  // Le prix d'un article est une liste { montant, devise } : on valorise le stock en CDF
+  // (prix CDF s'il existe, sinon prix USD converti au taux EXCHANGE).
+  const exchange = Number(process.env.EXCHANGE) || 0;
+  const unitPriceCdf = (prices?: Array<{ amount: number; currency: string }>) => {
+    const cdf = prices?.find((price) => price.currency === "CDF");
+    if (cdf) return cdf.amount;
+    const usd = prices?.find((price) => price.currency === "USD");
+    return usd ? Math.round(usd.amount * exchange) : 0;
+  };
+
   const productMap = new Map(
     products.map((p) => [
       p._id.toString(),
-      { designation: p.designation, price: (p as any).price ?? 0, seuilCritique: (p as any).seuilCritique ?? 0 },
+      { designation: p.designation, price: unitPriceCdf(p.price), seuilCritique: p.seuilCritique ?? 0 },
     ])
   );
 

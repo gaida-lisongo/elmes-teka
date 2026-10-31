@@ -28,9 +28,13 @@ export default function PromoSpotlightCard({ promo }: { promo: Promo }) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    setNow(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
+    const tick = () => setNow(Date.now());
+    const first = setTimeout(tick, 0);
+    const timer = setInterval(tick, 1000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(timer);
+    };
   }, []);
 
   const countdown = now === null ? null : remainingParts(promo.endsAt, now);

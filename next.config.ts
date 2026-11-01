@@ -2,6 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   experimental: { useTypeScriptCli: false, workerThreads: true, cpus: 2 },
+  // pdfkit (via pdfmake) charge ses polices standard par un import interne (#standard-fonts) :
+  // il doit rester hors du bundle serveur, sinon « Cannot find module '#standard-fonts/Helvetica-Bold' ».
+  serverExternalPackages: ["pdfmake", "pdfkit"],
+  // Ces polices sont chargées dynamiquement : le traçage de Vercel ne les voit pas seul.
+  outputFileTracingIncludes: {
+    "/comptabilite/journal": ["./node_modules/.pnpm/pdfkit@*/node_modules/pdfkit/js/standard-fonts/*.cjs"],
+  },
   // Le cluster Pusher n'est pas un secret : on réutilise PUSHER_CLUSTER côté navigateur.
   env: {
     NEXT_PUBLIC_PUSHER_CLUSTER: process.env.NEXT_PUBLIC_PUSHER_CLUSTER ?? process.env.PUSHER_CLUSTER ?? "",

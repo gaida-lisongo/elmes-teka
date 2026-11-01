@@ -22,31 +22,35 @@ Validé par : gaida-lisongo
 Fournisseur : **OpenRouter** (`https://openrouter.ai/api/v1`)
 Variable d'environnement serveur : `OPENROUTER_API_KEY`
 
-### Stratégie : commencer petit, scaler si nécessaire
+### Stratégie : modèles gratuits d'abord, modèle payant en fallback si quota dépassé
 
 Les requêtes ELMES-TEKA sont courtes (~800 tokens entrée + 300 sortie).
-Le coût réel est négligeable — même avec 1 000 tenants Premium actifs.
+Les modèles `:free` d'OpenRouter couvrent 100 % du besoin — **coût IA = $0**.
 
-### Familles de modèles recommandées (du moins cher au plus cher)
+> **Limite des modèles :free** : 50 req/jour sans crédit, 1 000 req/jour dès que le compte
+> OpenRouter a été rechargé de $10 minimum (une seule fois). Suffisant pour tous les tenants
+> Premium combinés au démarrage.
 
-| Niveau | Familles | Coût indicatif /M tokens | Usage |
-|---|---|---|---|
-| **Gratuit** | Llama 3.x free, Gemini Flash free | 0 $ | Tests, démarrage, faible trafic |
-| **Budget** | Qwen 2.5, Phi-3, DeepSeek Chat | 0.007–0.05 $ | Chat quotidien, recommandations |
-| **Standard** | Gemini Flash, Mistral Small | 0.075–0.15 $ | Analyses, dossier financement |
-| **À éviter** | GPT-4o, Claude Sonnet | > 2 $ | Sur-dimensionné pour ce cas |
+### Modèles validés sur OpenRouter (1er novembre 2026)
 
-> **Règle** : vérifier les prix réels sur https://openrouter.ai/models avant implémentation.
-> Filtrer par prix croissant et tester 2-3 candidats en français commercial congolais.
+| Variable | ID OpenRouter | Prix | Contexte | Paramètres actifs | Usage |
+|---|---|---|---|---|---|
+| `AI_MODEL_CHAT` | `nvidia/nemotron-3.5-lightning:free` | $0 | 1M | 3B/30B MoE | Chat rapide, quotidien |
+| `AI_MODEL_ANALYSIS` | `nvidia/nemotron-3-ultra-550b-a55b:free` | $0 | 1M | 55B/550B MoE | Analyses complexes |
+| `AI_MODEL_DOSSIER` | `nvidia/nemotron-3-ultra-550b-a55b:free` | $0 | 1M | 55B/550B MoE | Dossier financement |
+| `AI_MODEL_FALLBACK` | `openrouter/free` | $0 | variable | auto | Auto-route si quota |
 
-### Variables de configuration (IDs à remplir après test)
+**Alternatifs si les modèles ci-dessus ne répondent pas bien en français :**
 
-```dotenv
-AI_MODEL_CHAT=<modèle-budget-validé>        # ex: qwen/qwen-2.5-7b-instruct
-AI_MODEL_ANALYSIS=<modèle-standard-validé>  # ex: google/gemini-flash-1.5
-AI_MODEL_DOSSIER=<modèle-standard-validé>   # ex: google/gemini-flash-1.5
-AI_MODEL_FALLBACK=<modèle-gratuit-validé>   # ex: meta-llama/llama-3.1-8b-instruct:free
-```
+| ID | Prix | Note |
+|---|---|---|
+| `thinkingmachines/inkling:free` | $0 | 975B MoE, multilingue, conversationnel |
+| `thinkingmachines/inkling-small:free` | $0 | 276B MoE, plus léger |
+| `google/gemma-4-26b-a4b-it:free` | $0 | Google, multimodal, 262K ctx |
+| `qwen/qwen3.5-flash-02-23` | ~$0.01/M | Payant, 1M ctx, si free insuffisant |
+
+> **Test de validation** : avant déploiement, envoyer un prompt en français commercial
+> congolais à chaque modèle candidat et comparer la qualité de la réponse.
 
 ### Règle de sélection automatique
 ```
@@ -59,10 +63,10 @@ dossier  → AI_MODEL_DOSSIER   (10 crédits/requête)
 Si credits < 5 → fallback sur AI_MODEL_FALLBACK (chat uniquement)
 ```
 
-### Budget simulé (exemple avec Qwen 2.5)
+### Budget simulé
 100 crédits inclus ≈ 50 questions chat OU 20 analyses OU 10 dossiers.
-Coût réel pour ELMES : **< 0.01 $** pour les 100 crédits inclus avec un modèle budget.
-Même à 1 000 tenants Premium actifs = **< 10 $/mois** de coût IA total.
+Avec les modèles gratuits : **coût IA = $0** par exercice Premium.
+Même à 1 000 tenants Premium actifs = **$0/mois** de coût IA (hors $10 unique de seuil).
 
 ---
 
@@ -275,11 +279,12 @@ Priorité : **P3**
 # OpenRouter (serveur uniquement, jamais NEXT_PUBLIC_)
 OPENROUTER_API_KEY=sk-or-...
 
-# Modèles (optionnel, sinon valeurs par défaut dans llm-client.ts)
-AI_MODEL_CHAT=openai/gpt-6-luna
-AI_MODEL_ANALYSIS=openai/gpt-6-luna
-AI_MODEL_DOSSIER=deepseek/deepseek-v4.1-flash-1017
-AI_MODEL_FALLBACK=z-ai/glm-5.3-flash
+# Modèles (valeurs par défaut dans llm-client.ts si non définies)
+# IDs validés sur OpenRouter le 1er novembre 2026 — gratuits
+AI_MODEL_CHAT=nvidia/nemotron-3.5-lightning:free
+AI_MODEL_ANALYSIS=nvidia/nemotron-3-ultra-550b-a55b:free
+AI_MODEL_DOSSIER=nvidia/nemotron-3-ultra-550b-a55b:free
+AI_MODEL_FALLBACK=openrouter/free
 ```
 
 ---

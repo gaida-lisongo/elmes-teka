@@ -18,6 +18,9 @@ export default async function PlatformSecureLayout({ children }: { children: Rea
               <Link href="/platform/promos" className="rounded-lg px-3 py-1.5 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
                 Codes promo
               </Link>
+              <Link href="/platform/tenants" className="rounded-lg px-3 py-1.5 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
+                Comptes
+              </Link>
             </nav>
           </div>
           <form action={logoutPlatformAdmin} className="flex items-center gap-3 text-sm text-gray-500">

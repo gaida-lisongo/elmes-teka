@@ -2,7 +2,7 @@ import Annee from "@/lib/models/Annee";
 import PlatformPromo from "@/lib/models/PlatformPromo";
 import Promotion from "@/lib/models/Promotion";
 import Store from "@/lib/models/Store";
-import { Tenant } from "@/lib/models/User";
+import { Tenant, User } from "@/lib/models/User";
 import { countPaidReferrals } from "@/lib/payments/pricing";
 import connectToDb from "@/lib/utils/db";
 
@@ -165,6 +165,104 @@ export async function getPlatformPromos(): Promise<PlatformPromoRow[]> {
               : "EN_COURS",
     signups: signups[p.code] ?? 0,
   }));
+}
+
+/* =========================================================
+   GESTION DES TENANTS
+========================================================= */
+
+export interface TenantRow {
+  id: string;
+  designation: string;
+  email: string;
+  telephone: string;
+  matricule: string;
+  userId: string;
+  status: string;
+  plan: string;
+  nRef: string;
+  createdAt: string;
+  activeAnnee: {
+    id: string;
+    debut: string;
+    fin: string;
+    plan: string;
+    status: string;
+    paymentStatus: string;
+  } | null;
+}
+
+export async function getTenants(
+  page = 1,
+  search = ""
+): Promise<{ rows: TenantRow[]; total: number }> {
+  await connectToDb();
+  const PER_PAGE = 20;
+  const skip = (page - 1) * PER_PAGE;
+
+  const tenantFilter: Record<string, unknown> = {};
+  if (search.trim()) {
+    const q = search.trim();
+    tenantFilter.$or = [
+      { designation: { $regex: q, $options: "i" } },
+      { email: { $regex: q, $options: "i" } },
+      { nRef: { $regex: q, $options: "i" } },
+    ];
+  }
+
+  const [tenants, total] = await Promise.all([
+    Tenant.find(tenantFilter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(PER_PAGE)
+      .select("designation email telephone userId status nRef preferredPlan activeAnneeId createdAt")
+      .lean(),
+    Tenant.countDocuments(tenantFilter),
+  ]);
+
+  // Charger les User pour récupérer les matricules
+  const userIds = tenants.map((t) => t.userId);
+  const users = await User.find({ _id: { $in: userIds } })
+    .select("_id matricule")
+    .lean();
+  const userMap = Object.fromEntries(users.map((u) => [u._id.toString(), u.matricule]));
+
+  // Charger les exercices actifs
+  const anneeIds = tenants.map((t) => t.activeAnneeId).filter(Boolean);
+  const annees = anneeIds.length
+    ? await Annee.find({ _id: { $in: anneeIds } })
+        .select("_id debut fin plan status provider")
+        .lean()
+    : [];
+  const anneeMap = Object.fromEntries(annees.map((a) => [a._id.toString(), a]));
+
+  const rows: TenantRow[] = tenants.map((t) => {
+    const annee = t.activeAnneeId ? anneeMap[t.activeAnneeId.toString()] : null;
+    return {
+      id: t._id.toString(),
+      designation: t.designation,
+      email: t.email,
+      telephone: t.telephone,
+      matricule: userMap[t.userId.toString()] ?? "-",
+      userId: t.userId.toString(),
+      status: t.status,
+      plan: t.preferredPlan ?? "STARTER",
+      nRef: t.nRef,
+      createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : String(t.createdAt),
+      activeAnnee: annee
+        ? {
+            id: annee._id.toString(),
+            debut: annee.debut instanceof Date ? annee.debut.toISOString() : String(annee.debut),
+            fin: annee.fin instanceof Date ? annee.fin.toISOString() : String(annee.fin),
+            plan: annee.plan,
+            status: annee.status,
+            paymentStatus: annee.provider?.status ?? "PENDING",
+          }
+        : null,
+    };
+  });
+
+  return { rows, total };
 }
 
 /** Codes promo publics actuellement valides, pour le site internet. */

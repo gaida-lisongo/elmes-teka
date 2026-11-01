@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { EcommerceMetrics } from "@/components/ecommerce/EcommerceMetrics";
-import MonthlySalesChart from "@/components/ecommerce/MonthlySalesChart";
 import MonthlyTarget from "@/components/ecommerce/MonthlyTarget";
 import RecentOrders from "@/components/ecommerce/RecentOrders";
 import DashboardRealtimeUpdater from "@/components/ecommerce/DashboardRealtimeUpdater";
@@ -38,7 +37,9 @@ export default async function DashboardPage({
     productSearch: params.productSearch,
   });
   const tenantSession = data.scope === "TENANT" ? await getTenantSession() : null;
-  const referral = tenantSession ? await getReferralSummary(tenantSession.tenantId, await appOrigin()) : null;
+  const referral = tenantSession
+    ? await getReferralSummary(tenantSession.tenantId, await appOrigin())
+    : null;
   const taux = Number(process.env.TAUX) || 0;
   const exchange = Number(process.env.EXCHANGE) || 0;
   const today = new Date().toLocaleDateString("fr-FR", {
@@ -47,6 +48,7 @@ export default async function DashboardPage({
     month: "long",
     year: "numeric",
   });
+
   return (
     <div className="grid grid-cols-12 gap-4 md:gap-6">
       <DashboardRealtimeUpdater />
@@ -68,35 +70,36 @@ export default async function DashboardPage({
           <DashboardAlerts alerts={data.alerts} />
         </div>
       )}
+
       <div className="col-span-12">
         <EcommerceMetrics today={data.today} />
       </div>
+
       {referral && (
         <div className="col-span-12">
           <ReferralCard referral={referral} />
         </div>
       )}
+
       {data.scope === "TENANT" && data.stores.length > 0 && (
         <div className="col-span-12">
           <StoreSupervision stores={data.stores} />
         </div>
       )}
-      <div className="col-span-12 xl:col-span-7">
-        <MonthlySalesChart
-          series={data.chart}
-          exercises={data.exercises}
-          selected={data.selectedChartExercise}
-        />
-      </div>
-      <div className="col-span-12 xl:col-span-5">
+
+      {/* Bilan + histogramme produits — pleine largeur */}
+      <div className="col-span-12">
         <MonthlyTarget
           balances={data.balances}
           exercises={data.exercises}
           selected={data.selectedTargetExercise}
           taux={taux}
           exchange={exchange}
+          ranking={data.ranking}
+          scope={data.scope}
         />
       </div>
+
       <div
         className={
           data.topClients.length > 0
@@ -110,6 +113,7 @@ export default async function DashboardPage({
           selected={data.selectedRankingExercise}
         />
       </div>
+
       {data.topClients.length > 0 && (
         <div className="col-span-12 xl:col-span-4">
           <TopClients clients={data.topClients} />

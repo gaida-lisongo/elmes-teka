@@ -5,6 +5,7 @@ import { getTenantSession } from "@/lib/auth/require-tenant";
 import connectToDb from "@/lib/utils/db";
 import Annee from "@/lib/models/Annee";
 import { Tenant } from "@/lib/models/User";
+import { listConversations } from "@/lib/ai/conversations";
 import AdvisorClient from "./AdvisorClient";
 
 export const metadata: Metadata = {
@@ -65,12 +66,14 @@ export default async function AdvisorPage() {
   }
 
   const credits = activeAnnee.aiCredits ?? { total: 0, used: 0 };
+  const conversations = await listConversations(session.tenantId, activeAnnee._id.toString());
 
   return (
     <AdvisorClient
       anneeId={activeAnnee._id.toString()}
       creditsTotal={credits.total}
       creditsUsed={credits.used}
+      initialConversations={conversations}
     />
   );
 }

@@ -20,32 +20,50 @@ export function TopClients({ clients }: { clients: TopClientItem[] }) {
         </p>
       ) : (
         <ul className="divide-y divide-gray-100 dark:divide-gray-800">
-          {clients.map((client, i) => (
-            <li
-              key={`${client.clientId}-${i}`}
-              className="flex items-center gap-4 px-6 py-3"
-            >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
-                #{i + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-gray-800 dark:text-white/90">
-                  {client.name}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {client.phone || "—"}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="font-semibold text-gray-800 dark:text-white/90">
-                  {formatRevenue(client.totalRevenue, client.currency)}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {client.orderCount} commande(s)
-                </p>
-              </div>
-            </li>
-          ))}
+          {clients.map((client, i) => {
+            const initials = client.name
+              .split(" ")
+              .slice(0, 2)
+              .map((w) => w.charAt(0).toUpperCase())
+              .join("");
+            const rankColors = [
+              "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400",
+              "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+              "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400",
+            ];
+            const rankColor = rankColors[i] ?? "bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400";
+            return (
+              <li
+                key={`${client.clientId}-${i}`}
+                className="flex items-center gap-3 px-6 py-3.5 transition-colors duration-150 hover:bg-brand-25 dark:hover:bg-white/[0.02]"
+              >
+                <div className="relative shrink-0">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-100 to-brand-200 text-sm font-bold text-brand-700 dark:from-brand-500/20 dark:to-brand-400/10 dark:text-brand-300">
+                    {initials || "?"}
+                  </span>
+                  <span className={`absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold ${rankColor}`}>
+                    {i + 1}
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-gray-800 dark:text-white/90">
+                    {client.name}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {client.phone || "—"}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold text-gray-800 dark:text-white/90">
+                    {formatRevenue(client.totalRevenue, client.currency)}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {client.orderCount} commande{client.orderCount !== 1 ? "s" : ""}
+                  </p>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

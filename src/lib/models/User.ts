@@ -63,6 +63,8 @@ export interface ITenant {
   email: string;
   telephone: string;
   nRef: string;
+  /** Exercice actif — détermine le pack et les fonctionnalités accessibles */
+  activeAnneeId?: Types.ObjectId | null;
   /** Code de parrainage partagé par ce tenant */
   referralCode?: string | null;
   /** Parrain ayant invité ce tenant */
@@ -247,6 +249,7 @@ const TenantSchema = new Schema<ITenant>(
     storeCreationVersion: { type: Number, default: 0 },
     referralCode: { type: String, trim: true, uppercase: true, default: undefined, unique: true, sparse: true },
     referredBy: { type: Schema.Types.ObjectId, ref: "Tenant", default: null, index: true },
+    activeAnneeId: { type: Schema.Types.ObjectId, ref: "Annee", default: null },
     signupPromoCode: { type: String, trim: true, uppercase: true, default: null },
     userId: {
       type: Schema.Types.ObjectId,

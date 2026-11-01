@@ -35,6 +35,7 @@ export function EcommerceMetrics({
         label="CA du jour"
         value={formatAmount(todayRevenueCDF, "CDF")}
         sub={todayRevenueUSD > 0 ? formatAmount(todayRevenueUSD, "USD") : null}
+        accentBorder="border-l-4 border-l-warning-400 dark:border-l-warning-500"
       />
       <KPICard
         icon={<BoxIconLine className="size-5 text-error-500" />}
@@ -97,6 +98,7 @@ function KPICard({
   valueColor,
   sub,
   badge,
+  accentBorder,
 }: {
   icon: ReactNode;
   iconGradient: string;
@@ -105,9 +107,10 @@ function KPICard({
   valueColor?: string;
   sub: string | null;
   badge?: ReactNode;
+  accentBorder?: string;
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-gray-200/80 bg-white/80 p-5 shadow-sm backdrop-blur-sm transition-all duration-200 hover:shadow-md hover:scale-[1.01] dark:border-gray-700/50 dark:bg-white/[0.04] md:p-6">
+    <div className={`group relative overflow-hidden rounded-2xl border border-gray-200/80 bg-white/80 p-5 shadow-sm backdrop-blur-sm transition-all duration-200 hover:shadow-md hover:scale-[1.02] dark:border-gray-700/50 dark:bg-white/[0.04] md:p-6 ${accentBorder ?? ""}`}>
       <div
         className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${iconGradient} shadow-sm`}
       >
@@ -118,13 +121,13 @@ function KPICard({
           {label}
         </span>
         <h4
-          className={`mt-1.5 font-bold text-title-sm ${valueColor ?? "text-gray-800 dark:text-white/90"}`}
+          className={`mt-1.5 tabular-nums font-bold text-title-sm ${valueColor ?? "text-gray-800 dark:text-white/90"}`}
         >
           {value}
         </h4>
         {badge && <div className="mt-2">{badge}</div>}
         {sub && !badge && (
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{sub}</p>
+          <p className="mt-1 tabular-nums text-xs text-gray-500 dark:text-gray-400">{sub}</p>
         )}
       </div>
     </div>

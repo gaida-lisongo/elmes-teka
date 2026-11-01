@@ -45,7 +45,7 @@ export function StoreSupervision({ stores }: { stores: StoreMetric[] }) {
                 key={store.storeId}
                 className={`transition-colors duration-150 hover:bg-brand-25 dark:hover:bg-white/[0.03] ${idx % 2 === 1 ? "bg-gray-50/50 dark:bg-white/[0.01]" : ""}`}
               >
-                <td className="px-5 py-3.5">
+                <td className="px-5 py-3 min-h-[44px]">
                   <div className="flex items-center gap-2.5">
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-xs font-bold text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
                       {store.designation.charAt(0).toUpperCase()}
@@ -55,15 +55,15 @@ export function StoreSupervision({ stores }: { stores: StoreMetric[] }) {
                     </span>
                   </div>
                 </td>
-                <td className="px-5 py-3.5 font-semibold text-brand-600 dark:text-brand-400">
+                <td className="px-5 py-3 tabular-nums font-semibold text-brand-600 dark:text-brand-400">
                   {formatRevenue(store.todayRevenue)}
                 </td>
-                <td className="px-5 py-3.5">
-                  <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                <td className="px-5 py-3">
+                  <span className="tabular-nums inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                     {store.todayOrderCount} vente{store.todayOrderCount !== 1 ? "s" : ""}
                   </span>
                 </td>
-                <td className="px-5 py-3.5">
+                <td className="px-5 py-3">
                   {store.activeSalersToday > 0 ? (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-success-50 px-2.5 py-0.5 text-xs font-medium text-success-700 dark:bg-success-500/10 dark:text-success-400">
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success-500" />

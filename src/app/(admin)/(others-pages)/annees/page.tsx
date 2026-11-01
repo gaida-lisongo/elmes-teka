@@ -25,8 +25,9 @@ export default async function AnneesPage(props: {
     getAnnees(page, limit),
   ]);
 
-  const tenant = await Tenant.findById(session.tenantId).select("preferredPlan").lean();
+  const tenant = await Tenant.findById(session.tenantId).select("preferredPlan activeAnneeId").lean();
   const initialPlan = isPlan(sp?.plan) ? sp.plan : tenant?.preferredPlan ?? "STARTER";
+  const activeAnneeId = tenant?.activeAnneeId?.toString() ?? null;
 
   return (
     <AnneesClient
@@ -35,6 +36,7 @@ export default async function AnneesPage(props: {
       initialMetrics={metricsResult.success ? metricsResult.data : null}
       currentPage={page}
       currentLimit={limit}
+      activeAnneeId={activeAnneeId}
     />
   );
 }

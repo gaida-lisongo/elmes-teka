@@ -127,7 +127,7 @@ export default function MonthlySalesChart({
       <div className="flex items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-            Évolution mensuelle du chiffre d’affaires
+            Évolution mensuelle du chiffre d'affaires
           </h3>
           {pending && <p className="text-xs text-brand-500">Chargement...</p>}
         </div>

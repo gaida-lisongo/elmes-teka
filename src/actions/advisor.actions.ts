@@ -7,6 +7,13 @@ import connectToDb from "@/lib/utils/db";
 import Annee from "@/lib/models/Annee";
 import { callLLM } from "@/lib/ai/llm-client";
 import { buildBusinessContext, formatContextForPrompt } from "@/lib/ai/context-builder";
+import AdvisorConversation from "@/lib/models/AdvisorConversation";
+import {
+  conversationTitle,
+  loadConversation,
+  type ConversationMessage,
+  type ConversationSummary,
+} from "@/lib/ai/conversations";
 import { deductCredits } from "./credits.actions";
 import type { ActionResponse } from "./annees.actions";
 
@@ -85,58 +92,138 @@ export async function getRecommendations(
   const ctx = await buildBusinessContext(session.tenantId, anneeId);
   const prompt = formatContextForPrompt(ctx);
 
-  const raw = await callLLM(
-    "analysis",
-    SYSTEM_CONSEILLER,
-    `Voici les données réelles de l'exercice :\n${prompt}\n\nDonne 4 recommandations concrètes et prioritaires, chacune fondée sur un chiffre du contexte.
-Réponds UNIQUEMENT par un tableau JSON, sans texte autour, au format :
-[{"titre":"5 à 8 mots","action":"ce qu'il faut faire concrètement, 1 à 2 phrases","impact":"le chiffre du contexte qui justifie l'action","priorite":"haute|moyenne|basse"}]`,
-  );
+  let raw: string;
+  try {
+    raw = await callLLM(
+      "analysis",
+      SYSTEM_CONSEILLER,
+      `Voici les données réelles de l'exercice :\n${prompt}\n\nDonne 4 recommandations concrètes et prioritaires, chacune fondée sur un chiffre du contexte.
+  Réponds UNIQUEMENT par un tableau JSON, sans texte autour, au format :
+  [{"titre":"5 à 8 mots","action":"ce qu'il faut faire concrètement, 1 à 2 phrases","impact":"le chiffre du contexte qui justifie l'action","priorite":"haute|moyenne|basse"}]`,
+    );
+  } catch {
+    return { success: false, message: "Le conseiller est momentanément indisponible. Réessayez dans un instant." };
+  }
 
   const recommendations = parseRecommendations(raw);
 
   return { success: true, message: "Recommandations générées.", data: { recommendations } };
 }
 
-export interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
+const MAX_MESSAGES_PER_CONVERSATION = 20;
+
+export interface ChatReply {
+  conversation: ConversationSummary;
+  reply: string;
 }
 
+/**
+ * Envoie une question au conseiller. La conversation est créée au premier message
+ * puis enregistrée en base ; l'historique est relu côté serveur (jamais fourni par le client).
+ */
 export async function sendChatMessage(
   anneeId: string,
+  conversationId: string | null,
   message: string,
-  history: ChatMessage[],
-): Promise<ActionResponse<{ reply: string }>> {
+): Promise<ActionResponse<ChatReply>> {
   const session = await getTenantSession();
   if (!session) return { success: false, message: "Non autorisé." };
 
-  if (!message.trim()) return { success: false, message: "Message vide." };
+  const question = (message ?? "").trim().slice(0, 2000);
+  if (!question) return { success: false, message: "Message vide." };
 
   await connectToDb();
 
   const annee = await verifyPremiumAnnee(anneeId, session.tenantId);
   if (!annee) return { success: false, message: "Exercice Premium actif requis." };
 
+  let conversation = null;
+  if (conversationId) {
+    if (!Types.ObjectId.isValid(conversationId)) return { success: false, message: "Conversation introuvable." };
+    conversation = await AdvisorConversation.findOne({ _id: conversationId, tenantId: session.tenantId, anneeId });
+    if (!conversation) return { success: false, message: "Conversation introuvable." };
+    if (conversation.messages.length >= MAX_MESSAGES_PER_CONVERSATION) {
+      return { success: false, message: "Cette conversation a atteint 20 messages. Commencez-en une nouvelle." };
+    }
+  }
+
   const deductResult = await deductCredits(anneeId, 2);
-  if (!deductResult.success) return deductResult as ActionResponse<{ reply: string }>;
+  if (!deductResult.success) return deductResult as ActionResponse<ChatReply>;
 
   const ctx = await buildBusinessContext(session.tenantId, anneeId);
   const contextLine = `Données réelles de l'exercice :\n${formatContextForPrompt(ctx)}`;
 
-  // Historique limité aux 10 derniers échanges
-  const recentHistory = history.slice(-10);
-  const historyText = recentHistory
-    .map((m) => `${m.role === "user" ? "Client" : "Conseiller"}: ${m.content}`)
+  const historyText = (conversation?.messages ?? [])
+    .slice(-10)
+    .map((m) => `${m.role === "user" ? "Entrepreneur" : "Conseiller"}: ${m.content}`)
     .join("\n");
 
   const userPrompt = historyText
-    ? `${contextLine}\n\nHistorique récent:\n${historyText}\n\nClient: ${message}`
-    : `${contextLine}\n\nClient: ${message}`;
+    ? `${contextLine}\n\nHistorique récent:\n${historyText}\n\nEntrepreneur: ${question}`
+    : `${contextLine}\n\nEntrepreneur: ${question}`;
 
-  const reply = await callLLM("chat", SYSTEM_CONSEILLER, userPrompt);
+  let reply: string;
+  try {
+    reply = (await callLLM("chat", SYSTEM_CONSEILLER, userPrompt)).trim();
+  } catch {
+    return { success: false, message: "Le conseiller est momentanément indisponible. Réessayez dans un instant." };
+  }
 
-  return { success: true, message: "Réponse générée.", data: { reply } };
+  const now = new Date();
+  const newMessages = [
+    { role: "user" as const, content: question, createdAt: now },
+    { role: "assistant" as const, content: reply, createdAt: new Date(now.getTime() + 1) },
+  ];
+
+  if (conversation) {
+    conversation.messages.push(...newMessages);
+    await conversation.save();
+  } else {
+    conversation = await AdvisorConversation.create({
+      tenantId: session.tenantId,
+      anneeId,
+      userId: session.userId,
+      title: conversationTitle(question),
+      messages: newMessages,
+    });
+  }
+
+  return {
+    success: true,
+    message: "Réponse générée.",
+    data: {
+      reply,
+      conversation: {
+        id: conversation._id.toString(),
+        title: conversation.title,
+        messageCount: conversation.messages.length,
+        updatedAt: (conversation.updatedAt ?? now).toISOString(),
+      },
+    },
+  };
+}
+
+/** Ouvre une conversation enregistrée. */
+export async function getConversation(
+  anneeId: string,
+  conversationId: string,
+): Promise<ActionResponse<{ id: string; title: string; messages: ConversationMessage[] }>> {
+  const session = await getTenantSession();
+  if (!session) return { success: false, message: "Non autorisé." };
+  const conv = await loadConversation(session.tenantId, anneeId, conversationId);
+  if (!conv) return { success: false, message: "Conversation introuvable." };
+  return { success: true, message: "Conversation chargée.", data: conv };
+}
+
+/** Supprime une conversation du tenant. */
+export async function deleteConversation(conversationId: string): Promise<ActionResponse<{ id: string }>> {
+  const session = await getTenantSession();
+  if (!session) return { success: false, message: "Non autorisé." };
+  if (!Types.ObjectId.isValid(conversationId)) return { success: false, message: "Conversation introuvable." };
+  await connectToDb();
+  const res = await AdvisorConversation.deleteOne({ _id: conversationId, tenantId: session.tenantId });
+  if (!res.deletedCount) return { success: false, message: "Conversation introuvable." };
+  return { success: true, message: "Conversation supprimée.", data: { id: conversationId } };
 }
 
 export async function generateEnrichedDossier(
@@ -156,23 +243,28 @@ export async function generateEnrichedDossier(
   const ctx = await buildBusinessContext(session.tenantId, anneeId);
   const prompt = formatContextForPrompt(ctx);
 
-  const raw = await callLLM(
-    "dossier",
-    `Tu es un analyste crédit qui prépare le dossier d'un commerçant congolais (RDC) pour une institution de microfinance.
-Règles strictes :
-- Utilise UNIQUEMENT les données fournies. N'invente aucun chiffre, aucun nom, aucune date. N'écris jamais de champ à compléter entre crochets.
-- Si une information manque, écris « Non renseigné dans ELMES-TEKA ».
-- Monnaies : FC et USD.
-- Le score de solvabilité est déjà calculé : reprends-le tel quel, ne le recalcule pas.
-- Français clair, 350 mots maximum, Markdown.`,
-    `Données de l'entreprise :\n${prompt}\n\nRédige le dossier avec exactement ces sections (titres ###) :
-### Présentation
-### Activité commerciale
-### Trésorerie et engagements
-### Points forts
-### Points de vigilance
-### Conclusion pour le financeur`,
-  );
+  let raw: string;
+  try {
+    raw = await callLLM(
+      "dossier",
+      `Tu es un analyste crédit qui prépare le dossier d'un commerçant congolais (RDC) pour une institution de microfinance.
+  Règles strictes :
+  - Utilise UNIQUEMENT les données fournies. N'invente aucun chiffre, aucun nom, aucune date. N'écris jamais de champ à compléter entre crochets.
+  - Si une information manque, écris « Non renseigné dans ELMES-TEKA ».
+  - Monnaies : FC et USD.
+  - Le score de solvabilité est déjà calculé : reprends-le tel quel, ne le recalcule pas.
+  - Français clair, 350 mots maximum, Markdown.`,
+      `Données de l'entreprise :\n${prompt}\n\nRédige le dossier avec exactement ces sections (titres ###) :
+  ### Présentation
+  ### Activité commerciale
+  ### Trésorerie et engagements
+  ### Points forts
+  ### Points de vigilance
+  ### Conclusion pour le financeur`,
+    );
+  } catch {
+    return { success: false, message: "Le conseiller est momentanément indisponible. Réessayez dans un instant." };
+  }
 
   const solv = ctx.solvabilite;
 

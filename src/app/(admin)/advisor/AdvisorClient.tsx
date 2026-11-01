@@ -3,10 +3,13 @@
 import { useState, useRef, useEffect, useTransition } from "react";
 import {
   sendChatMessage,
+  getConversation,
+  deleteConversation,
   getRecommendations,
   generateEnrichedDossier,
   type Recommendation,
 } from "@/actions/advisor.actions";
+import type { ConversationSummary } from "@/lib/ai/conversations";
 import { initiateRecharge } from "@/actions/credits.actions";
 import Badge from "@/components/ui/badge/Badge";
 import Button from "@/components/ui/button/Button";
@@ -22,6 +25,8 @@ import {
   CheckLineIcon,
   PieChartIcon,
   FileIcon,
+  PlusIcon,
+  TrashBinIcon,
 } from "@/icons";
 
 type Message = { role: "user" | "assistant"; content: string; error?: boolean };
@@ -90,6 +95,14 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+function relativeDate(iso: string) {
+  const d = new Date(iso);
+  const days = Math.floor((Date.now() - d.getTime()) / 86_400_000);
+  if (days <= 0) return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  if (days === 1) return "Hier";
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+}
+
 function AssistantAvatar() {
   return (
     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white shadow-theme-xs">
@@ -143,16 +156,21 @@ export default function AdvisorClient({
   anneeId,
   creditsTotal,
   creditsUsed,
+  initialConversations,
 }: {
   anneeId: string;
   creditsTotal: number;
   creditsUsed: number;
+  initialConversations: ConversationSummary[];
 }) {
   const [total] = useState(creditsTotal);
   const [used, setUsed] = useState(creditsUsed);
   const balance = total - used;
 
   const [messages, setMessages] = useState<Message[]>([]);
+  const [conversations, setConversations] = useState<ConversationSummary[]>(initialConversations);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [convLoading, setConvLoading] = useState(false);
   const [input, setInput] = useState("");
   const [isPending, startTransition] = useTransition();
   const [rechargeOpen, setRechargeOpen] = useState(false);
@@ -179,7 +197,7 @@ export default function AdvisorClient({
     el.style.height = `${Math.min(el.scrollHeight, 112)}px`;
   }, [input]);
 
-  const limitReached = messages.length >= MAX_MESSAGES;
+  const limitReached = messages.filter((m) => !m.error).length >= MAX_MESSAGES;
 
   function deduct(cost: number) {
     setUsed((prev) => prev + cost);
@@ -187,20 +205,50 @@ export default function AdvisorClient({
 
   function send(text: string) {
     const userMsg = text.trim();
-    if (!userMsg || isPending || limitReached) return;
+    if (!userMsg || isPending || limitReached || convLoading) return;
     if (balance < 2) { setRechargeOpen(true); return; }
     setInput("");
-    const history = messages.filter((m) => !m.error).slice(-18);
     setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
     startTransition(async () => {
-      const result = await sendChatMessage(anneeId, userMsg, history.map((m) => ({ role: m.role, content: m.content })));
+      const result = await sendChatMessage(anneeId, activeId, userMsg);
       if (result.success) {
+        const conv = result.data.conversation;
         setMessages((prev) => [...prev, { role: "assistant", content: result.data.reply }]);
+        setActiveId(conv.id);
+        setConversations((prev) => [conv, ...prev.filter((c) => c.id !== conv.id)]);
         deduct(2);
       } else {
         setMessages((prev) => [...prev, { role: "assistant", content: result.message, error: true }]);
       }
     });
+  }
+
+  function newConversation() {
+    if (isPending) return;
+    setActiveId(null);
+    setMessages([]);
+    setInput("");
+    inputRef.current?.focus();
+  }
+
+  async function openConversation(id: string) {
+    if (isPending || id === activeId) return;
+    setConvLoading(true);
+    const result = await getConversation(anneeId, id);
+    setConvLoading(false);
+    if (result.success) {
+      setActiveId(id);
+      setMessages(result.data.messages.map((m) => ({ role: m.role, content: m.content })));
+    }
+  }
+
+  async function removeConversation(id: string) {
+    if (!window.confirm("Supprimer cette conversation ?")) return;
+    const result = await deleteConversation(id);
+    if (result.success) {
+      setConversations((prev) => prev.filter((c) => c.id !== id));
+      if (id === activeId) newConversation();
+    }
   }
 
   async function handleGetRecommendations() {
@@ -284,21 +332,72 @@ export default function AdvisorClient({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-        {/* Chat */}
-        <div className="flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] lg:col-span-3">
+      {/* Chat */}
+      <div className="flex overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <aside className="hidden w-64 shrink-0 flex-col border-r border-gray-100 dark:border-gray-800 md:flex">
+          <div className="p-3">
+            <button
+              onClick={newConversation}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-brand-200 bg-brand-25 px-3 py-2 text-sm font-medium text-brand-600 transition hover:bg-brand-50 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300"
+            >
+              <PlusIcon className="h-4 w-4" />
+              Nouvelle conversation
+            </button>
+          </div>
+          <p className="px-4 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">Historique</p>
+          <div className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-3" style={{ maxHeight: 560 }}>
+            {conversations.length === 0 && (
+              <p className="px-2 py-3 text-xs text-gray-400">Vos conversations apparaîtront ici.</p>
+            )}
+            {conversations.map((c) => (
+              <div
+                key={c.id}
+                className={`group flex items-center gap-1 rounded-lg ${c.id === activeId ? "bg-brand-50 dark:bg-brand-500/15" : "hover:bg-gray-50 dark:hover:bg-white/5"}`}
+              >
+                <button onClick={() => openConversation(c.id)} className="min-w-0 flex-1 px-2.5 py-2 text-left">
+                  <p className={`truncate text-sm ${c.id === activeId ? "font-medium text-brand-700 dark:text-brand-300" : "text-gray-700 dark:text-gray-300"}`}>
+                    {c.title}
+                  </p>
+                  <p className="text-xs text-gray-400">{relativeDate(c.updatedAt)} · {c.messageCount} messages</p>
+                </button>
+                <button
+                  onClick={() => removeConversation(c.id)}
+                  aria-label="Supprimer la conversation"
+                  className="mr-1 rounded-md p-1.5 text-gray-400 opacity-0 transition hover:bg-error-50 hover:text-error-500 group-hover:opacity-100 focus:opacity-100"
+                >
+                  <TrashBinIcon className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        <div className="flex min-w-0 flex-1 flex-col">
           <SectionHeader
             icon={<ChatIcon className="h-4 w-4" />}
-            title="Chat conseiller"
-            subtitle="Posez une question sur votre activité"
+            title={activeId ? conversations.find((c) => c.id === activeId)?.title ?? "Chat conseiller" : "Chat conseiller"}
+            subtitle={activeId ? "Conversation enregistrée" : "Posez une question sur votre activité"}
             action={
-              <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-500 dark:bg-white/5">
-                {messages.length}/{MAX_MESSAGES} messages · 2 crédits
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={newConversation}
+                  className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1 text-xs text-gray-600 md:hidden dark:border-gray-700 dark:text-gray-300"
+                >
+                  <PlusIcon className="h-3.5 w-3.5" /> Nouvelle
+                </button>
+                <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-500 dark:bg-white/5">
+                  {messages.filter((m) => !m.error).length}/{MAX_MESSAGES} messages · 2 crédits
+                </span>
+              </div>
             }
           />
 
-          <div ref={scrollRef} className="h-[460px] space-y-5 overflow-y-auto bg-gray-50/60 p-5 dark:bg-transparent">
+          <div ref={scrollRef} className="relative h-[480px] space-y-5 overflow-y-auto bg-gray-50/60 p-5 dark:bg-transparent">
+            {convLoading && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 dark:bg-gray-900/60">
+                <Spinner className="h-6 w-6 text-brand-500" />
+              </div>
+            )}
             {messages.length === 0 && !isPending && (
               <div className="flex h-full flex-col items-center justify-center text-center">
                 <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-500 dark:bg-brand-500/15">
@@ -355,7 +454,8 @@ export default function AdvisorClient({
           <div className="border-t border-gray-100 p-4 dark:border-gray-800">
             {limitReached ? (
               <p className="text-center text-sm text-gray-500">
-                Limite de {MAX_MESSAGES} messages atteinte pour cette conversation. Rechargez la page pour en commencer une nouvelle.
+                Cette conversation a atteint {MAX_MESSAGES} messages.{" "}
+                <button onClick={newConversation} className="font-medium text-brand-600 hover:underline">Commencer une nouvelle conversation</button>
               </p>
             ) : (
               <>
@@ -389,14 +489,16 @@ export default function AdvisorClient({
           </div>
         </div>
 
+      </div>
+
         {/* Recommandations */}
-        <div className="flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] lg:col-span-2">
+        <div className="flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
           <SectionHeader
             icon={<BoltIcon className="h-4 w-4" />}
             title="Recommandations"
             subtitle="Les actions prioritaires du moment"
           />
-          <div className="flex-1 space-y-3 p-5">
+          <div className="grid flex-1 grid-cols-1 gap-3 p-5 md:grid-cols-2">
             {recoLoading &&
               [0, 1, 2].map((k) => (
                 <div key={k} className="animate-pulse rounded-xl border border-gray-100 p-4 dark:border-gray-800">
@@ -407,7 +509,7 @@ export default function AdvisorClient({
               ))}
 
             {!recoLoading && recommendations.length === 0 && (
-              <div className="flex h-full flex-col items-center justify-center py-8 text-center">
+              <div className="flex flex-col items-center justify-center py-6 text-center md:col-span-2">
                 <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-500 dark:bg-brand-500/15">
                   <BoltIcon className="h-6 w-6" />
                 </span>
@@ -441,11 +543,10 @@ export default function AdvisorClient({
                 </div>
               ))}
 
-            {recoError && <p className="text-sm text-error-500">{recoError}</p>}
+            {recoError && <p className="text-sm text-error-500 md:col-span-2">{recoError}</p>}
           </div>
-          <div className="border-t border-gray-100 p-4 dark:border-gray-800">
+          <div className="flex justify-end border-t border-gray-100 p-4 dark:border-gray-800">
             <Button
-              className="w-full"
               onClick={handleGetRecommendations}
               loading={recoLoading}
               disabled={balance < 5}
@@ -455,7 +556,6 @@ export default function AdvisorClient({
             </Button>
           </div>
         </div>
-      </div>
 
       {/* Dossier de financement */}
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">

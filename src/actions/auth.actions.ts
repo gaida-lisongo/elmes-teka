@@ -559,6 +559,85 @@ export async function getCurrentSession() {
   return getSession();
 }
 
+/* =========================================================
+   RÉCUPÉRATION DE COMPTE (sans email)
+========================================================= */
+
+export interface RecoverAccountInput {
+  matricule: string;
+  telephone: string;
+  newEmail: string;
+  newPassword: string;
+  newPasswordConfirmation: string;
+}
+
+/**
+ * Permet à un utilisateur de récupérer son compte via matricule + téléphone.
+ * Met à jour l'email et le mot de passe du compte User + Tenant associé.
+ */
+export async function recoverAccount(
+  input: RecoverAccountInput
+): Promise<ActionResponse<null>> {
+  try {
+    await connectToDb();
+
+    const matricule = (input.matricule ?? "").trim().toUpperCase();
+    const telephone = normalizeTelephone(input.telephone ?? "");
+    const newEmail = normalizeEmail(input.newEmail ?? "");
+    const newPassword = input.newPassword ?? "";
+
+    if (!matricule || !telephone || !newEmail || !newPassword) {
+      return { success: false, message: "Tous les champs sont obligatoires." };
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      return { success: false, message: "L'adresse e-mail est invalide." };
+    }
+
+    if (input.newPassword !== input.newPasswordConfirmation) {
+      return { success: false, message: "La confirmation du mot de passe ne correspond pas." };
+    }
+
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) return { success: false, message: passwordError };
+
+    // Vérification d'identité : matricule ET téléphone doivent correspondre
+    const user = await User.findOne({ matricule, telephone })
+      .select("_id email status")
+      .lean();
+
+    if (!user || user.status !== "ACTIVE") {
+      return { success: false, message: "Aucun compte actif ne correspond à ces informations." };
+    }
+
+    // L'email doit être disponible (sauf si c'est le même)
+    if (user.email !== newEmail) {
+      const emailTaken = await User.exists({ email: newEmail, _id: { $ne: user._id } }).lean();
+      if (emailTaken) {
+        return { success: false, message: "Cette adresse e-mail est déjà utilisée par un autre compte." };
+      }
+    }
+
+    const newSecure = await hashPassword(newPassword);
+
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { email: newEmail, secure: newSecure } }
+    );
+
+    // Synchroniser l'email sur le profil Tenant si applicable
+    const tenant = await Tenant.findOne({ userId: user._id }).select("_id").lean();
+    if (tenant) {
+      await Tenant.updateOne({ _id: tenant._id }, { $set: { email: newEmail } });
+    }
+
+    return { success: true, message: "Compte récupéré avec succès. Vous pouvez maintenant vous connecter.", data: null };
+  } catch (error) {
+    console.error("RECOVER_ACCOUNT_ERROR", error);
+    return { success: false, message: "La récupération a échoué. Réessayez." };
+  }
+}
+
 export async function logoutUser(): Promise<ActionResponse<null>> {
   try {
     await deleteSession();

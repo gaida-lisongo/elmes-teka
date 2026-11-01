@@ -14,6 +14,8 @@ import {
 } from "@/lib/auth/platform-admin";
 import PlatformPromo from "@/lib/models/PlatformPromo";
 import { normalizeCode } from "@/lib/payments/pricing";
+import { Tenant, User } from "@/lib/models/User";
+import Annee from "@/lib/models/Annee";
 import connectToDb from "@/lib/utils/db";
 import { sendMail } from "@/lib/utils/mail";
 
@@ -170,5 +172,98 @@ export async function updatePlatformPromoFlags(
     return { success: true, message: "Code mis a jour." };
   } catch (error: any) {
     return { success: false, message: error.message || "Mise a jour impossible." };
+  }
+}
+
+/* =========================================================
+   GESTION DES TENANTS (admin plateforme)
+========================================================= */
+
+/** Met à jour l'email d'un compte tenant (récupération de compte). */
+export async function adminUpdateTenantEmail(
+  tenantId: string,
+  newEmail: string
+): Promise<PlatformActionResponse> {
+  try {
+    if (!(await getPlatformAdmin())) return { success: false, message: "Session administrateur expirée." };
+    if (!Types.ObjectId.isValid(tenantId)) return { success: false, message: "Tenant invalide." };
+    const email = newEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return { success: false, message: "Adresse e-mail invalide." };
+    }
+    await connectToDb();
+    const tenant = await Tenant.findById(tenantId).select("userId email").lean();
+    if (!tenant) return { success: false, message: "Tenant introuvable." };
+
+    if (tenant.email !== email) {
+      const taken = await User.exists({ email, _id: { $ne: tenant.userId } }).lean();
+      if (taken) return { success: false, message: "Cette adresse e-mail est déjà utilisée." };
+    }
+
+    await Promise.all([
+      User.updateOne({ _id: tenant.userId }, { $set: { email } }),
+      Tenant.updateOne({ _id: tenantId }, { $set: { email } }),
+    ]);
+
+    revalidatePath("/platform/tenants");
+    return { success: true, message: "Email mis à jour avec succès." };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Mise à jour impossible." };
+  }
+}
+
+/** Change le plan d'un exercice (et met à jour preferredPlan du tenant). */
+export async function adminUpdateTenantPlan(
+  tenantId: string,
+  anneeId: string,
+  plan: "STARTER" | "BUSINESS" | "PREMIUM"
+): Promise<PlatformActionResponse> {
+  try {
+    if (!(await getPlatformAdmin())) return { success: false, message: "Session administrateur expirée." };
+    if (!Types.ObjectId.isValid(tenantId) || !Types.ObjectId.isValid(anneeId)) {
+      return { success: false, message: "Identifiants invalides." };
+    }
+    await connectToDb();
+    const annee = await Annee.findOne({ _id: anneeId, tenantId }).select("_id plan aiCredits").lean();
+    if (!annee) return { success: false, message: "Exercice introuvable." };
+
+    const updateFields: Record<string, unknown> = { plan };
+    if (plan === "PREMIUM" && !annee.aiCredits) {
+      updateFields.aiCredits = { total: 100, used: 0, lastResetAt: new Date() };
+    }
+
+    await Promise.all([
+      Annee.updateOne({ _id: anneeId }, { $set: updateFields }),
+      Tenant.updateOne({ _id: tenantId }, { $set: { preferredPlan: plan } }),
+    ]);
+
+    revalidatePath("/platform/tenants");
+    return { success: true, message: `Plan mis à jour : ${plan}.` };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Mise à jour impossible." };
+  }
+}
+
+/** Suspend ou réactive un compte tenant (User + Tenant). */
+export async function adminUpdateTenantStatus(
+  tenantId: string,
+  status: "ACTIVE" | "SUSPENDED"
+): Promise<PlatformActionResponse> {
+  try {
+    if (!(await getPlatformAdmin())) return { success: false, message: "Session administrateur expirée." };
+    if (!Types.ObjectId.isValid(tenantId)) return { success: false, message: "Tenant invalide." };
+    await connectToDb();
+    const tenant = await Tenant.findById(tenantId).select("userId").lean();
+    if (!tenant) return { success: false, message: "Tenant introuvable." };
+
+    await Promise.all([
+      Tenant.updateOne({ _id: tenantId }, { $set: { status } }),
+      User.updateOne({ _id: tenant.userId }, { $set: { status } }),
+    ]);
+
+    revalidatePath("/platform/tenants");
+    return { success: true, message: status === "ACTIVE" ? "Compte réactivé." : "Compte suspendu." };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Mise à jour impossible." };
   }
 }

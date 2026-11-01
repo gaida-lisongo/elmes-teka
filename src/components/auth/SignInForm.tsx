@@ -103,7 +103,7 @@ export default function SignInForm() {
           </div>
         </form>
 
-        <div className="mt-5">
+        <div className="mt-5 space-y-2">
           <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
             Vous lancez votre activite ?{" "}
             <Link
@@ -111,6 +111,15 @@ export default function SignInForm() {
               className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
             >
               Creer un compte entrepreneur
+            </Link>
+          </p>
+          <p className="text-sm text-center text-gray-500 dark:text-gray-500 sm:text-start">
+            Email perdu ?{" "}
+            <Link
+              href="/recover"
+              className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
+            >
+              Récupérer votre compte
             </Link>
           </p>
         </div>

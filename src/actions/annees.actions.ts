@@ -772,3 +772,24 @@ export async function verifyUpgradePayment(anneeId: string, receivedOrderNumber?
     return { success: applied.state === "PAID", message: applied.message };
   } catch (error) { return { success: false, message: error instanceof Error ? error.message : "Vérification impossible." }; }
 }
+
+/** Définit l'exercice actif du tenant (plan ACTIVE + PAID requis). */
+export async function setActiveAnnee(anneeId: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const { tenantId } = await requireTenantSession();
+    if (!Types.ObjectId.isValid(anneeId)) throw new Error("Identifiant d'exercice invalide.");
+    const annee = await Annee.findOne({
+      _id: anneeId,
+      tenantId,
+      status: "ACTIVE",
+      "provider.status": "PAID",
+    }).select("_id").lean();
+    if (!annee) throw new Error("Exercice introuvable ou non éligible comme exercice actif.");
+    await Tenant.updateOne({ _id: tenantId }, { $set: { activeAnneeId: annee._id } });
+    revalidatePath("/dashboard");
+    revalidatePath("/annees");
+    return { success: true, message: "Exercice actif mis à jour." };
+  } catch (error) {
+    return { success: false, message: error instanceof Error ? error.message : "Mise à jour impossible." };
+  }
+}

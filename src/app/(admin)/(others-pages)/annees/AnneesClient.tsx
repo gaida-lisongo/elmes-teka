@@ -16,6 +16,7 @@ import {
   initiateAnneePayment,
   updateAnnee,
   verifyAnneePayment,
+  setActiveAnnee,
 } from "@/actions/annees.actions";
 import { exportAnneeJournal } from "@/actions/exports.actions";
 import ResourcePageShell from "@/components/common/ResourcePageShell";
@@ -36,6 +37,7 @@ interface AnneesClientProps {
   initialMetrics: AnneeMetrics | null;
   currentPage: number;
   currentLimit: number;
+  activeAnneeId: string | null;
 }
 
 function EmptyState({ onCreate }: { onCreate: () => void }) {
@@ -67,9 +69,12 @@ function AnneeCard({
   onVerify,
   onComplete,
   onRetryPayment,
+  onSetActive,
+  isActive = false,
   busy = false,
 }: {
   busy?: boolean;
+  isActive?: boolean;
   annee: AnneeListItem;
   onUpgrade: () => void;
   onEdit: () => void;
@@ -78,6 +83,7 @@ function AnneeCard({
   onVerify: () => void;
   onComplete: () => void;
   onRetryPayment: () => void;
+  onSetActive: () => void;
 }) {
   const resultatClass = annee.resultat >= 0 ? "text-success-500" : "text-error-500";
   const statusClasses: Record<string, string> = {
@@ -142,6 +148,22 @@ function AnneeCard({
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-4 dark:border-gray-800">
+        {annee.status === "ACTIVE" && annee.provider.status === "PAID" && (
+          isActive ? (
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-success-50 px-3 py-1.5 text-xs font-medium text-success-700 dark:bg-success-500/10 dark:text-success-400">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success-500" />
+              Exercice actif
+            </span>
+          ) : (
+            <button
+              onClick={onSetActive}
+              disabled={busy}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-600 disabled:opacity-60"
+            >
+              {busy ? <Spinner className="h-3.5 w-3.5" label="..." /> : "Travailler sur cet exercice"}
+            </button>
+          )
+        )}
         {annee.status === "PENDING" && annee.provider.orderNumber && (
           <button onClick={onVerify} disabled={busy} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-brand-500 hover:bg-brand-500/10 disabled:opacity-60">
             {busy ? <Spinner className="h-3.5 w-3.5" label="Verification..." /> : "Verifier le paiement"}
@@ -178,10 +200,12 @@ export default function AnneesClient({
   initialMetrics,
   currentPage,
   currentLimit,
+  activeAnneeId: initialActiveAnneeId,
 }: AnneesClientProps) {
   const router = useRouter();
   const [data, setData] = useState(initialData);
   const [metrics, setMetrics] = useState(initialMetrics);
+  const [activeAnneeId, setActiveAnneeId] = useState<string | null>(initialActiveAnneeId);
 
   /* Drawers */
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
@@ -330,6 +354,14 @@ export default function AnneesClient({
     setNotice({ variant: res.success ? "success" : "error", title: res.success ? "Exercice cloture" : "Cloture impossible", message: res.message });
   };
 
+  const handleSetActive = async (anneeId: string) => {
+    setBusyId(anneeId);
+    const res = await setActiveAnnee(anneeId);
+    setBusyId(null);
+    if (res.success) setActiveAnneeId(anneeId);
+    setNotice({ variant: res.success ? "success" : "error", title: res.success ? "Exercice actif" : "Erreur", message: res.message });
+  };
+
   const handleRetryPayment = async () => {
     if (!paymentAnneeId) return;
     setActionLoading(true);
@@ -452,6 +484,8 @@ export default function AnneesClient({
                 <AnneeCard
                   key={a.id}
                   annee={a}
+                  isActive={activeAnneeId === a.id}
+                  onSetActive={() => handleSetActive(a.id)}
                   onUpgrade={() => { setUpgradeId(a.id); setUpgradeTarget(a.plan === "BUSINESS" ? "PREMIUM" : "BUSINESS"); setUpgradeQuote(null); setUpgradeOrderNumber(""); setActionMessage(""); }}
                   onEdit={() => {
                     setEditId(a.id);

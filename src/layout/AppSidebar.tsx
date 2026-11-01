@@ -7,7 +7,9 @@ import { useSidebar } from "../context/SidebarContext";
 import {
   BoxIcon,
   BoxCubeIcon,
+  BoltIcon,
   CalenderIcon,
+  ChatIcon,
   ChevronDownIcon,
   DollarLineIcon,
   FolderIcon,
@@ -24,9 +26,11 @@ import {
 import SidebarWidget from "./SidebarWidget";
 
 export type MenuIconName =
+  | "bolt"
   | "box"
   | "boxCube"
   | "calendar"
+  | "chat"
   | "dollar"
   | "folder"
   | "grid"
@@ -125,9 +129,11 @@ const defaultMenuApp: MenuAppSection[] = [
 ];
 
 const menuIcons: Record<MenuIconName, React.ReactNode> = {
+  bolt: <BoltIcon />,
   box: <BoxIcon />,
   boxCube: <BoxCubeIcon />,
   calendar: <CalenderIcon />,
+  chat: <ChatIcon />,
   dollar: <DollarLineIcon />,
   folder: <FolderIcon />,
   grid: <GridIcon />,

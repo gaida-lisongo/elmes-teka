@@ -31,23 +31,35 @@ export default function MonthlySalesChart({
     startTransition(() => router.push(`/?${params.toString()}`));
   };
   const options: ApexOptions = {
-    colors: ["#465fff", "#12b76a"],
+    colors: ["#124A99", "#12b76a"],
     chart: {
       fontFamily: "Outfit, sans-serif",
       type: "bar",
       height: 180,
       toolbar: { show: false },
+      background: "transparent",
     },
     plotOptions: {
       bar: {
         horizontal: false,
         columnWidth: "39%",
-        borderRadius: 5,
+        borderRadius: 6,
         borderRadiusApplication: "end",
       },
     },
+    fill: {
+      type: "gradient",
+      gradient: {
+        shade: "light",
+        type: "vertical",
+        shadeIntensity: 0.3,
+        opacityFrom: 0.9,
+        opacityTo: 0.6,
+        stops: [0, 100],
+      },
+    },
     dataLabels: { enabled: false },
-    stroke: { show: true, width: 4, colors: ["transparent"] },
+    stroke: { show: true, width: 3, colors: ["transparent"] },
     xaxis: {
       categories: [
         "Jan",
@@ -65,10 +77,34 @@ export default function MonthlySalesChart({
       ],
       axisBorder: { show: false },
       axisTicks: { show: false },
+      labels: {
+        style: { fontSize: "12px", colors: "#9ca3af" },
+      },
     },
-    legend: { show: true, position: "top", horizontalAlign: "left" },
-    grid: { yaxis: { lines: { show: true } } },
+    yaxis: {
+      labels: {
+        style: { fontSize: "11px", colors: "#9ca3af" },
+        formatter: (value: number) =>
+          value >= 1000
+            ? `${(value / 1000).toFixed(0)}k`
+            : value.toString(),
+      },
+    },
+    legend: {
+      show: true,
+      position: "top",
+      horizontalAlign: "left",
+      fontSize: "13px",
+      markers: { size: 8 },
+    },
+    grid: {
+      borderColor: "#f3f4f6",
+      yaxis: { lines: { show: true } },
+      xaxis: { lines: { show: false } },
+    },
     tooltip: {
+      theme: "light",
+      style: { fontSize: "13px" },
       y: {
         formatter: (value: number, context) =>
           `${value.toLocaleString("fr-FR")} ${series[context.seriesIndex]?.currency ?? ""}`,

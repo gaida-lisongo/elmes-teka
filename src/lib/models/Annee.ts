@@ -35,6 +35,12 @@ export interface IAnneeUpgrade {
   message?: string;
 }
 
+export interface IAiCredits {
+  total: number;
+  used: number;
+  lastResetAt: Date;
+}
+
 export interface IAnnee {
   plan: Plan;
   upgrade?: IAnneeUpgrade;
@@ -45,6 +51,8 @@ export interface IAnnee {
   slug: string;
   status: AnneeStatus;
   provider: IAnneeProvider;
+  /** Crédits IA — disponibles uniquement avec le pack Premium */
+  aiCredits?: IAiCredits;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -84,11 +92,21 @@ const UpgradeSchema = new Schema<IAnneeUpgrade>({
   message: { type: String, default: "" },
 }, { _id: false });
 
+const AiCreditsSchema = new Schema<IAiCredits>(
+  {
+    total: { type: Number, min: 0, default: 0 },
+    used: { type: Number, min: 0, default: 0 },
+    lastResetAt: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
 const AnneeSchema = new Schema<IAnnee>(
   {
     upgrade: { type: UpgradeSchema, default: undefined },
     upgradeHistory: { type: [UpgradeSchema], default: [] },
     plan: { type: String, enum: ["STARTER", "BUSINESS", "PREMIUM"], default: "STARTER" },
+    aiCredits: { type: AiCreditsSchema, default: undefined },
     tenantId: {
       type: Schema.Types.ObjectId,
       ref: "Tenant",

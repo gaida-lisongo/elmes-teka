@@ -1,10 +1,13 @@
 import { redirect } from "next/navigation";
+import type { Types } from "mongoose";
 
 import { AdminShellProvider } from "@/context/AdminShellContext";
 import { getAdminShellAccount } from "@/lib/auth/admin-shell";
 import Annee from "@/lib/models/Annee";
+import { Tenant } from "@/lib/models/User";
 import AdminLayoutClient from "@/layout/AdminLayoutClient";
 import type { MenuAppSection } from "@/layout/AppSidebar";
+import type { Plan } from "@/lib/payments/plans";
 
 function formatAnneeLabel(debut: Date, fin: Date): string {
   return `${debut.getFullYear()} - ${fin.getFullYear()}`;
@@ -30,6 +33,36 @@ export default async function AdminLayout({
         .sort({ debut: -1 })
         .lean()
     : [];
+
+  // Résoudre l'exercice actif pour les menus conditionnels (tenant uniquement)
+  let activePlan: Plan | null = null;
+  if (shell.account.type === "TENANT" && shell.account.tenantId) {
+    const tenantDoc = await Tenant.findById(shell.account.tenantId)
+      .select("activeAnneeId")
+      .lean();
+
+    let activeAnneeId: Types.ObjectId | null =
+      (tenantDoc?.activeAnneeId as Types.ObjectId | null | undefined) ?? null;
+
+    // Fallback : dernier exercice ACTIVE+PAID si activeAnneeId non défini
+    if (!activeAnneeId) {
+      const fallback = await Annee.findOne({
+        tenantId: shell.account.tenantId,
+        status: "ACTIVE",
+        "provider.status": "PAID",
+      })
+        .select("_id plan")
+        .sort({ fin: -1 })
+        .lean();
+      activeAnneeId = fallback?._id ?? null;
+      if (fallback) activePlan = fallback.plan as Plan;
+    } else {
+      const activeAnnee = await Annee.findById(activeAnneeId)
+        .select("plan")
+        .lean();
+      if (activeAnnee) activePlan = activeAnnee.plan as Plan;
+    }
+  }
 
   const dashboardMenu: MenuAppSection = {
     menuType: "APPLICATION",
@@ -188,9 +221,43 @@ export default async function AdminLayout({
     ],
   };
 
+  const intelligenceMenu: MenuAppSection = {
+    menuType: "INTELLIGENCE",
+    navItems: [
+      {
+        icon: "bolt",
+        name: "Analyses",
+        path: "/intelligence",
+      },
+    ],
+  };
+
+  const advisorMenu: MenuAppSection = {
+    menuType: "IA CONSEILLER",
+    navItems: [
+      {
+        icon: "chat",
+        name: "Conseiller IA",
+        path: "/advisor",
+      },
+    ],
+  };
+
+  const tenantMenuSections: MenuAppSection[] = [
+    dashboardMenu,
+    tenantGestionMenu,
+    tenantComptaMenu,
+  ];
+  if (activePlan === "BUSINESS" || activePlan === "PREMIUM") {
+    tenantMenuSections.push(intelligenceMenu);
+  }
+  if (activePlan === "PREMIUM") {
+    tenantMenuSections.push(advisorMenu);
+  }
+
   const menuApp: MenuAppSection[] =
     shell.account.type === "TENANT"
-      ? [dashboardMenu, tenantGestionMenu, tenantComptaMenu]
+      ? tenantMenuSections
       : [salerMenu, salerComptaMenu];
 
   return (

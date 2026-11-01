@@ -311,27 +311,153 @@ export default function HomePage() {
 
       <section id="pricing" aria-labelledby="pricing-heading" className="bg-brand-800 py-20 lg:py-28">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="mx-auto mb-12 max-w-2xl text-center">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-brand-200">Nos packs</p>
-            <h2 id="pricing-heading" className="mb-4 text-3xl font-bold text-white lg:text-4xl">Une formule pour chaque étape de votre activité</h2>
-            <p className="leading-7 text-white/80">Tarifs annuels par entreprise et exercice comptable. Choisissez votre pack ; vos codes promo et avantages de parrainage restent disponibles.</p>
+
+          {/* Header */}
+          <div className="mx-auto mb-14 max-w-2xl text-center">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-brand-300">Nos packs</p>
+            <h2 id="pricing-heading" className="mb-4 text-3xl font-bold text-white lg:text-4xl">
+              Une formule pour chaque étape de votre activité
+            </h2>
+            <p className="leading-7 text-white/70">
+              Prix par exercice comptable (12 mois), pas par mois. Codes promo et avantages de parrainage applicables à l&apos;activation.
+            </p>
           </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            {Object.entries(PLANS).map(([id, plan]) => (
-              <article key={id} className={`flex flex-col rounded-2xl border p-6 text-white lg:p-8 ${id === "BUSINESS" ? "border-brand-300 bg-brand-500" : "border-white/20 bg-white/5"}`}>
-                <h3 className="text-2xl font-bold">{plan.name}</h3>
-                <p className="mt-2 min-h-12 text-sm leading-6 text-white/80">{id === "STARTER" ? "Les essentiels pour gérer une boutique." : id === "BUSINESS" ? "Le pilotage de vos boutiques et les rapports avancés." : "Les fonctions Business et les futurs outils d’accompagnement IA."}</p>
-                <p className="my-6"><strong className="text-4xl font-bold">{plan.annualUsd} $</strong><span className="ml-2 text-white/80">/ an</span></p>
-                <ul className="mb-8 flex-1 space-y-4">{plan.features.map(feature => <li key={feature} className="flex items-start gap-3 text-sm leading-6"><CheckLineIcon aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-brand-200" />{feature}</li>)}</ul>
-                <Link href={`/signup?plan=${id}`} className="inline-flex min-h-11 items-center justify-center rounded-full bg-white px-5 py-3 text-center font-bold text-brand-500 transition-colors hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-800">Choisir {plan.name}</Link>
-              </article>
-            ))}
+
+          {/* Cards — Business first on mobile */}
+          <div className="flex flex-col gap-6 md:flex-row md:items-stretch">
+
+            {/* Starter */}
+            <article className="flex flex-1 flex-col rounded-2xl border border-white/20 bg-white/5 p-7 md:order-1 lg:p-8">
+              <div>
+                <h3 className="text-xl font-bold text-white">Starter</h3>
+                <p className="mt-1.5 text-sm leading-6 text-white/65">Les essentiels pour gérer votre boutique.</p>
+                <p className="mt-5 mb-6">
+                  <strong className="text-4xl font-extrabold text-white">{PLANS.STARTER.annualUsd} $</strong>
+                  <span className="ml-2 text-sm text-white/60">/ exercice</span>
+                </p>
+              </div>
+              <ul className="mb-8 flex-1 space-y-3">
+                {[
+                  "Ventes, stocks et clients",
+                  "Tableau de bord essentiel",
+                  "Export Excel",
+                  "1 boutique",
+                ].map((f) => (
+                  <li key={f} className="flex items-start gap-3 text-sm leading-6 text-white/80">
+                    <CheckLineIcon aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-brand-300" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/signup?plan=STARTER"
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/40 px-5 py-3 text-center text-sm font-semibold text-white transition-colors hover:border-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              >
+                Commencer avec Starter
+              </Link>
+            </article>
+
+            {/* Business — featured, first on mobile */}
+            <article className="relative flex flex-1 flex-col rounded-2xl border-2 border-brand-300 bg-gradient-to-br from-brand-50/10 to-brand-400/5 p-7 shadow-xl shadow-brand-900/30 md:order-2 md:-mt-4 md:-mb-4 lg:p-8">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                <span className="rounded-full bg-brand-400 px-4 py-1 text-xs font-bold text-white shadow-md">
+                  Le plus populaire
+                </span>
+              </div>
+              <div className="mt-2">
+                <h3 className="text-xl font-bold text-white">Business</h3>
+                <p className="mt-1.5 text-sm leading-6 text-white/70">Le pilotage complet de vos boutiques.</p>
+                <p className="mt-5 mb-6">
+                  <strong className="text-4xl font-extrabold text-white">{PLANS.BUSINESS.annualUsd} $</strong>
+                  <span className="ml-2 text-sm text-white/60">/ exercice</span>
+                </p>
+              </div>
+              <ul className="mb-8 flex-1 space-y-3">
+                {[
+                  "Tout Starter",
+                  "Multi-boutiques illimitées",
+                  "Analyses mining (BCG, RFM, benchmark)",
+                  "Export PDF rapports",
+                ].map((f) => (
+                  <li key={f} className="flex items-start gap-3 text-sm leading-6 text-white/90">
+                    <CheckLineIcon aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-brand-300" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/signup?plan=BUSINESS"
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-brand-400 px-5 py-3 text-center font-bold text-white transition-colors hover:bg-brand-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              >
+                Commencer avec Business
+              </Link>
+            </article>
+
+            {/* Premium */}
+            <article className="flex flex-1 flex-col rounded-2xl bg-gradient-to-br from-brand-900 to-brand-800 p-7 ring-1 ring-white/10 md:order-3 lg:p-8">
+              <div>
+                <h3 className="text-xl font-bold text-white">Premium</h3>
+                <p className="mt-1.5 text-sm leading-6 text-white/65">Business + IA Conseiller intégré.</p>
+                <p className="mt-5 mb-6">
+                  <strong className="text-4xl font-extrabold text-white">{PLANS.PREMIUM.annualUsd} $</strong>
+                  <span className="ml-2 text-sm text-white/60">/ exercice</span>
+                </p>
+              </div>
+              <ul className="mb-8 flex-1 space-y-3">
+                {[
+                  "Tout Business",
+                  "IA Conseiller (chatbot)",
+                  "Recommandations automatiques",
+                  "Dossier financement enrichi",
+                  "100 crédits IA inclus",
+                ].map((f) => (
+                  <li key={f} className="flex items-start gap-3 text-sm leading-6 text-white/80">
+                    <CheckLineIcon aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-brand-300" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/signup?plan=PREMIUM"
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-white px-5 py-3 text-center font-bold text-brand-900 transition-colors hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              >
+                Commencer avec Premium
+              </Link>
+            </article>
+
           </div>
-          <div className="mx-auto mt-8 max-w-3xl space-y-3 text-center text-sm leading-6 text-white/80">
-            <p>L’abonnement couvre l’exercice comptable choisi, jusqu’au 31 décembre. Le montant final et la réduction applicable sont confirmés avant le paiement.</p>
-            <p>Passez à un pack supérieur en payant la différence au prorata du temps restant, sans changer l’échéance.</p>
-            <p>Les fonctions IA de Premium sont en préparation. Elles ne sont pas encore disponibles et ne garantissent pas l’obtention d’un crédit.</p>
+
+          {/* Note */}
+          <p className="mt-8 text-center text-sm text-white/50">
+            Prix par exercice comptable (12 mois), pas par mois. Passez à un pack supérieur en payant la différence au prorata du temps restant.
+          </p>
+
+          {/* FAQ */}
+          <div className="mx-auto mt-16 max-w-3xl">
+            <h3 className="mb-6 text-center text-lg font-semibold text-white">Questions fréquentes</h3>
+            <dl className="space-y-4">
+              {[
+                {
+                  q: "Qu’est-ce qu’un exercice comptable ?",
+                  a: "Un exercice est une période de 12 mois correspondant à votre année commerciale. Le prix est unique par exercice, pas mensuel.",
+                },
+                {
+                  q: "Puis-je passer d’un pack à l’autre ?",
+                  a: "Oui. L’upgrade est proraté au jour près selon la durée restante de votre exercice. Vous payez uniquement la différence.",
+                },
+                {
+                  q: "Comment fonctionnent les crédits IA ?",
+                  a: "Les crédits sont liés à l’exercice, pas au compte. 100 crédits sont inclus avec Premium. Vous pouvez en recharger à tout moment via FlexPay.",
+                },
+              ].map(({ q, a }) => (
+                <div key={q} className="rounded-xl border border-white/10 bg-white/5 px-6 py-4">
+                  <dt className="font-semibold text-white">{q}</dt>
+                  <dd className="mt-1.5 text-sm leading-6 text-white/65">{a}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
+
         </div>
       </section>
 

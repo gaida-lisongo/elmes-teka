@@ -18,6 +18,7 @@ import {
   type TenantType,
 } from "@/lib/models/User";
 import Store from "@/lib/models/Store";
+import Annee from "@/lib/models/Annee";
 import { ensureReferralCode, findUsablePromo, normalizeCode } from "@/lib/payments/pricing";
 
 const scrypt = promisify(callbackScrypt);
@@ -529,11 +530,22 @@ export async function authenticateUser(
       storeId: account.storeId,
     });
 
+    // Pour un tenant, vérifier s'il a un exercice actif et payé
+    let redirectTo = "/dashboard";
+    if (account.accountType === "TENANT" && account.tenantId) {
+      const hasActiveAnnee = await Annee.exists({
+        tenantId: account.tenantId,
+        status: "ACTIVE",
+        "provider.status": "PAID",
+      });
+      if (!hasActiveAnnee) redirectTo = "/onboarding";
+    }
+
     return {
       success: true,
       message: "Connexion reussie.",
       data: {
-        redirectTo: "/dashboard",
+        redirectTo,
         accountType: account.accountType,
       },
     };

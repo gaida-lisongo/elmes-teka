@@ -1,5 +1,3 @@
-"use server";
-
 import Annee from "@/lib/models/Annee";
 import connectToDb from "@/lib/utils/db";
 

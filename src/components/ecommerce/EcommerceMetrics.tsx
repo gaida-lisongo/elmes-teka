@@ -28,62 +28,70 @@ export function EcommerceMetrics({
   const netPositive = todayNetCDF >= 0;
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 md:gap-6">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* CA du jour — accent warning */}
       <KPICard
-        icon={<DollarLineIcon className="size-5 text-brand-500" />}
-        iconGradient="from-brand-50 to-brand-100 dark:from-brand-500/10 dark:to-brand-400/5"
+        icon={<DollarLineIcon className="size-4 text-warning-600 dark:text-warning-400" />}
+        iconBg="bg-warning-50 dark:bg-warning-500/10"
         label="CA du jour"
         value={formatAmount(todayRevenueCDF, "CDF")}
-        sub={todayRevenueUSD > 0 ? formatAmount(todayRevenueUSD, "USD") : null}
-        accentBorder="border-l-4 border-l-warning-400 dark:border-l-warning-500"
+        valueColor="text-gray-900 dark:text-white"
+        sub={todayRevenueUSD > 0 ? `≈ ${formatAmount(todayRevenueUSD, "USD")}` : null}
+        accent="border-l-[3px] border-l-warning-400 dark:border-l-warning-500"
       />
+
+      {/* Dépenses */}
       <KPICard
-        icon={<BoxIconLine className="size-5 text-error-500" />}
-        iconGradient="from-error-50 to-red-100 dark:from-error-500/10 dark:to-error-400/5"
+        icon={<BoxIconLine className="size-4 text-error-500 dark:text-error-400" />}
+        iconBg="bg-error-50 dark:bg-error-500/10"
         label="Dépenses du jour"
         value={formatAmount(todayExpenseCDF, "CDF")}
+        valueColor="text-gray-900 dark:text-white"
         sub={`${today.expenses.expenseCount} dépense(s)`}
       />
+
+      {/* Résultat net */}
       <KPICard
         icon={
-          netPositive ? (
-            <ArrowUpIcon className="size-5 text-success-500" />
-          ) : (
-            <ArrowDownIcon className="size-5 text-error-500" />
-          )
-        }
-        iconGradient={
           netPositive
-            ? "from-success-50 to-green-100 dark:from-success-500/10 dark:to-success-400/5"
-            : "from-error-50 to-red-100 dark:from-error-500/10 dark:to-error-400/5"
+            ? <ArrowUpIcon className="size-4 text-success-600 dark:text-success-400" />
+            : <ArrowDownIcon className="size-4 text-error-500 dark:text-error-400" />
         }
-        label="Résultat net du jour"
+        iconBg={
+          netPositive
+            ? "bg-success-50 dark:bg-success-500/10"
+            : "bg-error-50 dark:bg-error-500/10"
+        }
+        label="Résultat net"
         value={formatAmount(Math.abs(todayNetCDF), "CDF")}
         valueColor={
           netPositive
-            ? "text-success-600 dark:text-success-400"
+            ? "text-success-700 dark:text-success-400"
             : "text-error-600 dark:text-error-400"
         }
         badge={
           netPositive ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-success-50 px-2 py-0.5 text-xs font-medium text-success-700 dark:bg-success-500/10 dark:text-success-400">
-              <ArrowUpIcon className="size-3" />
+            <span className="inline-flex items-center gap-1 rounded-md bg-success-50 px-1.5 py-0.5 text-[11px] font-medium text-success-700 dark:bg-success-500/10 dark:text-success-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-success-500" />
               Bénéfice
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-error-50 px-2 py-0.5 text-xs font-medium text-error-700 dark:bg-error-500/10 dark:text-error-400">
-              <ArrowDownIcon className="size-3" />
+            <span className="inline-flex items-center gap-1 rounded-md bg-error-50 px-1.5 py-0.5 text-[11px] font-medium text-error-700 dark:bg-error-500/10 dark:text-error-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-error-500" />
               Déficit
             </span>
           )
         }
         sub={null}
       />
+
+      {/* Ventes */}
       <KPICard
-        icon={<CheckLineIcon className="size-5 text-success-500" />}
-        iconGradient="from-success-50 to-green-100 dark:from-success-500/10 dark:to-success-400/5"
+        icon={<CheckLineIcon className="size-4 text-brand-500 dark:text-brand-400" />}
+        iconBg="bg-brand-50 dark:bg-brand-500/10"
         label="Ventes du jour"
         value={today.revenue.transactionCount.toString()}
+        valueColor="text-gray-900 dark:text-white"
         sub="transaction(s)"
       />
     </div>
@@ -92,42 +100,56 @@ export function EcommerceMetrics({
 
 function KPICard({
   icon,
-  iconGradient,
+  iconBg,
   label,
   value,
   valueColor,
   sub,
   badge,
-  accentBorder,
+  accent,
 }: {
   icon: ReactNode;
-  iconGradient: string;
+  iconBg: string;
   label: string;
   value: string;
-  valueColor?: string;
+  valueColor: string;
   sub: string | null;
   badge?: ReactNode;
-  accentBorder?: string;
+  accent?: string;
 }) {
   return (
-    <div className={`group relative overflow-hidden rounded-2xl border border-gray-200/80 bg-white/80 p-5 shadow-sm backdrop-blur-sm transition-all duration-200 hover:shadow-md hover:scale-[1.02] dark:border-gray-700/50 dark:bg-white/[0.04] md:p-6 ${accentBorder ?? ""}`}>
-      <div
-        className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${iconGradient} shadow-sm`}
-      >
-        {icon}
-      </div>
-      <div className="mt-4">
-        <span className="text-sm text-gray-500 dark:text-gray-400">
+    <div
+      className={[
+        "relative flex flex-col gap-3 overflow-hidden rounded-xl border border-gray-200 bg-white p-5",
+        "transition-shadow duration-200 hover:shadow-sm",
+        "dark:border-gray-800 dark:bg-white/[0.03]",
+        accent ?? "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {/* Top row: label + icon */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
           {label}
         </span>
-        <h4
-          className={`mt-1.5 tabular-nums font-bold text-title-sm ${valueColor ?? "text-gray-800 dark:text-white/90"}`}
+        <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${iconBg}`}>
+          {icon}
+        </span>
+      </div>
+
+      {/* Value */}
+      <div>
+        <p
+          className={`tabular-nums text-2xl font-bold leading-none tracking-tight ${valueColor}`}
         >
           {value}
-        </h4>
+        </p>
         {badge && <div className="mt-2">{badge}</div>}
         {sub && !badge && (
-          <p className="mt-1 tabular-nums text-xs text-gray-500 dark:text-gray-400">{sub}</p>
+          <p className="mt-1.5 tabular-nums text-xs text-gray-400 dark:text-gray-500">
+            {sub}
+          </p>
         )}
       </div>
     </div>

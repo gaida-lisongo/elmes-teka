@@ -41,9 +41,28 @@ export default async function DashboardPage({
   const referral = tenantSession ? await getReferralSummary(tenantSession.tenantId, await appOrigin()) : null;
   const taux = Number(process.env.TAUX) || 0;
   const exchange = Number(process.env.EXCHANGE) || 0;
+  const today = new Date().toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
   return (
     <div className="grid grid-cols-12 gap-4 md:gap-6">
       <DashboardRealtimeUpdater />
+
+      {/* Page header */}
+      <div className="col-span-12 flex items-center justify-between pb-1">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+            Tableau de bord
+          </h1>
+          <p className="mt-0.5 text-sm capitalize text-gray-400 dark:text-gray-500">
+            {today}
+          </p>
+        </div>
+      </div>
+
       {data.alerts.length > 0 && (
         <div className="col-span-12">
           <DashboardAlerts alerts={data.alerts} />

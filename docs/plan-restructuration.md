@@ -22,26 +22,47 @@ Validé par : gaida-lisongo
 Fournisseur : **OpenRouter** (`https://openrouter.ai/api/v1`)
 Variable d'environnement serveur : `OPENROUTER_API_KEY`
 
-| Rôle | Modèle | ID OpenRouter | Pourquoi |
+### Stratégie : commencer petit, scaler si nécessaire
+
+Les requêtes ELMES-TEKA sont courtes (~800 tokens entrée + 300 sortie).
+Le coût réel est négligeable — même avec 1 000 tenants Premium actifs.
+
+### Familles de modèles recommandées (du moins cher au plus cher)
+
+| Niveau | Familles | Coût indicatif /M tokens | Usage |
 |---|---|---|---|
-| Chat quotidien, recommandations courtes | **GPT-6 Luna** | `openai/gpt-6-luna` | Bon français, faible latence, 0.10/0.50 $/M tokens |
-| Analyse complexe, dossier financement | **DeepSeek V4.1 Flash** | `deepseek/deepseek-v4.1-flash-1017` | Meilleur raisonnement, 0.15/0.60 $/M tokens |
-| Fallback économique (crédits bas) | **GLM 5.3 Flash** | `z-ai/glm-5.3-flash` | Le moins cher, 0.016/0.148 $/M tokens |
+| **Gratuit** | Llama 3.x free, Gemini Flash free | 0 $ | Tests, démarrage, faible trafic |
+| **Budget** | Qwen 2.5, Phi-3, DeepSeek Chat | 0.007–0.05 $ | Chat quotidien, recommandations |
+| **Standard** | Gemini Flash, Mistral Small | 0.075–0.15 $ | Analyses, dossier financement |
+| **À éviter** | GPT-4o, Claude Sonnet | > 2 $ | Sur-dimensionné pour ce cas |
+
+> **Règle** : vérifier les prix réels sur https://openrouter.ai/models avant implémentation.
+> Filtrer par prix croissant et tester 2-3 candidats en français commercial congolais.
+
+### Variables de configuration (IDs à remplir après test)
+
+```dotenv
+AI_MODEL_CHAT=<modèle-budget-validé>        # ex: qwen/qwen-2.5-7b-instruct
+AI_MODEL_ANALYSIS=<modèle-standard-validé>  # ex: google/gemini-flash-1.5
+AI_MODEL_DOSSIER=<modèle-standard-validé>   # ex: google/gemini-flash-1.5
+AI_MODEL_FALLBACK=<modèle-gratuit-validé>   # ex: meta-llama/llama-3.1-8b-instruct:free
+```
 
 ### Règle de sélection automatique
 ```
 type PromptType = "chat" | "analysis" | "dossier"
 
-chat     → gpt-6-luna       (2 crédits/requête)
-analysis → gpt-6-luna       (5 crédits/requête)
-dossier  → deepseek-v4.1    (10 crédits/requête)
+chat     → AI_MODEL_CHAT      (2 crédits/requête)
+analysis → AI_MODEL_ANALYSIS  (5 crédits/requête)
+dossier  → AI_MODEL_DOSSIER   (10 crédits/requête)
 
-Si credits < 10 → fallback sur glm-5.3-flash pour chat uniquement
+Si credits < 5 → fallback sur AI_MODEL_FALLBACK (chat uniquement)
 ```
 
-### Budget simulé
+### Budget simulé (exemple avec Qwen 2.5)
 100 crédits inclus ≈ 50 questions chat OU 20 analyses OU 10 dossiers.
-Coût réel pour ELMES : ~0.90 $ pour les 100 crédits inclus (marge couverte par les 200 $/an).
+Coût réel pour ELMES : **< 0.01 $** pour les 100 crédits inclus avec un modèle budget.
+Même à 1 000 tenants Premium actifs = **< 10 $/mois** de coût IA total.
 
 ---
 

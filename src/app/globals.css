@@ -5,6 +5,8 @@
 @theme {
   --font-*: initial;
   --font-outfit: "DejaVu Sans", "Outfit", system-ui, -apple-system, sans-serif;
+  --font-fira-sans: "Fira Sans", "DejaVu Sans", system-ui, -apple-system, sans-serif;
+  --font-fira-code: "Fira Code", "DejaVu Sans Mono", ui-monospace, monospace;
 
   --breakpoint-*: initial;
   --breakpoint-2xsm: 375px;

@@ -3,7 +3,8 @@
 import type { ApexOptions } from "apexcharts";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
+import { useRef, useTransition } from "react";
+import { useTheme } from "@/context/ThemeContext";
 import type {
   DashboardChartSeries,
   ExerciseOption,
@@ -25,6 +26,14 @@ export default function MonthlySalesChart({
   const router = useRouter();
   const search = useSearchParams();
   const [pending, startTransition] = useTransition();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+  const reducedMotion = useRef(
+    typeof window !== "undefined"
+      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      : false
+  );
+
   const change = (value: string) => {
     const params = new URLSearchParams(search.toString());
     params.set("chartAnnee", value);
@@ -38,6 +47,7 @@ export default function MonthlySalesChart({
       height: 180,
       toolbar: { show: false },
       background: "transparent",
+      animations: { enabled: !reducedMotion.current },
     },
     plotOptions: {
       bar: {
@@ -78,12 +88,12 @@ export default function MonthlySalesChart({
       axisBorder: { show: false },
       axisTicks: { show: false },
       labels: {
-        style: { fontSize: "12px", colors: "#9ca3af" },
+        style: { fontSize: "12px", colors: isDark ? "#6b7280" : "#9ca3af" },
       },
     },
     yaxis: {
       labels: {
-        style: { fontSize: "11px", colors: "#9ca3af" },
+        style: { fontSize: "11px", colors: isDark ? "#6b7280" : "#9ca3af" },
         formatter: (value: number) =>
           value >= 1000
             ? `${(value / 1000).toFixed(0)}k`
@@ -96,14 +106,15 @@ export default function MonthlySalesChart({
       horizontalAlign: "left",
       fontSize: "13px",
       markers: { size: 8 },
+      labels: { colors: isDark ? "#d1d5db" : "#374151" },
     },
     grid: {
-      borderColor: "#f3f4f6",
+      borderColor: isDark ? "#1f2937" : "#f3f4f6",
       yaxis: { lines: { show: true } },
       xaxis: { lines: { show: false } },
     },
     tooltip: {
-      theme: "light",
+      theme: isDark ? "dark" : "light",
       style: { fontSize: "13px" },
       y: {
         formatter: (value: number, context) =>
@@ -116,7 +127,7 @@ export default function MonthlySalesChart({
       <div className="flex items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-            Évolution mensuelle du chiffre d’affaires
+            Évolution mensuelle du chiffre d'affaires
           </h3>
           {pending && <p className="text-xs text-brand-500">Chargement...</p>}
         </div>

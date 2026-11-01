@@ -54,10 +54,10 @@ export function TopClients({ clients }: { clients: TopClientItem[] }) {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-gray-800 dark:text-white/90">
+                  <p className="tabular-nums font-semibold text-gray-800 dark:text-white/90">
                     {formatRevenue(client.totalRevenue, client.currency)}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="tabular-nums text-xs text-gray-500">
                     {client.orderCount} commande{client.orderCount !== 1 ? "s" : ""}
                   </p>
                 </div>

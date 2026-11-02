@@ -1,0 +1,321 @@
+\chapter{Discussions}
+\label{chap:discussions}
+
+Ce chapitre interprète les résultats présentés au chapitre~\ref{chap:resultats} à la lumière
+des deux hypothèses de l'étude et de leur portée réelle. La section~\ref{sec:disc-h1} traite
+de la signification du taux de non-conformité observé ; la section~\ref{sec:disc-h2} discute
+la robustesse du module et la valeur informative d'un intervalle de confiance de largeur nulle ;
+la section~\ref{sec:disc-hors-domaine} délimite le périmètre d'usage licite de la fonction ;
+les sections~\ref{sec:disc-validite-interne} et~\ref{sec:disc-validite-externe} examinent
+respectivement les menaces à la validité interne et les conditions de généralisation.
+
+% ------------------------------------------------------------------
+\section{L'artefact respecte-t-il sa spécification ? (H1)}
+\label{sec:disc-h1}
+
+\subsection{Interprétation du taux de non-conformité}
+\label{subsec:disc-h1-taux}
+
+Sur 12\,000 essais, 200 présentent au moins un écart entre le moteur JavaScript
+\texttt{computeRFM} et la référence Python calculant les sommes en centimes entiers, soit un
+taux de non-conformité de $1{,}667\,\%$ (IC Monte-Carlo à $95\,\%$ : $[1{,}448\,\% ;\, 1{,}904\,\%]$,
+tableau~\ref{tab:resultats-conformite-bilan}). L'intervalle confirme que cette valeur n'est
+pas un artefact de l'échantillonnage Monte-Carlo : la borne supérieure reste inférieure à
+$2\,\%$, seuil opérationnel implicitement retenu dans le protocole expérimental comme limite
+de tolérance pour le contexte de petits commerçants congolais.
+
+La question est double : ce taux est-il statistiquement significatif, et est-il acceptable
+pour l'usage auquel le module est destiné ? Sur le premier point, la réponse est affirmative ;
+200 essais non conformes sur 12\,000 ne relèvent pas du bruit d'estimation et signalent un
+mécanisme systématique reproductible. Sur le second point, l'appréciation dépend du contexte
+opérationnel. Un taux de conformité de $98{,}3\,\%$ demeure élevé pour un module de
+segmentation destiné à des PME informelles dont les données d'entrée sont elles-mêmes soumises
+à des imprécisions de saisie. La segmentation RFM sert ici à orienter des actions commerciales
+— identifier les clients à fidéliser, ceux à réactiver — et non à produire des états
+comptables certifiés. Dans ce cadre décisionnel, une erreur de segmentation portant sur le
+score $M$ d'un client isolé, dans une situation de montants proches d'un seuil de tercile,
+est susceptible de n'avoir aucune conséquence pratique sur la stratégie commerciale adoptée.
+
+Il convient néanmoins de ne pas minimiser ce résultat : les erreurs observées sont
+déterministes et reproductibles à partir des mêmes graines, et les $1{,}667\,\%$ traduisent
+une fragilité structurelle du moteur, non un bruit aléatoire corrigeable par répétition.
+
+\subsection{Cause identifiée : accumulation en virgule flottante}
+\label{subsec:disc-h1-cause}
+
+Les 489 occurrences de score $M$ erroné et les 2 occurrences d'étiquette erronée qui en
+découlent ont une cause unique et identifiable : l'addition des montants de commandes est
+effectuée en virgule flottante IEEE~754 double précision dans le moteur TypeScript, alors que
+la référence Python additionne les mêmes montants convertis en centimes entiers. Lorsque
+plusieurs commandes sont agrégées, l'erreur d'arrondi cumulée peut modifier la relation
+d'ordre entre deux clients dont les sommes affichées sont identiques. Le contre-exemple
+minimal est reproduit au tableau~\ref{tab:resultats-contre-exemple} : les clients 00001 et
+00002 affichent tous deux $30{,}05$~USD après trois commandes, mais leur représentation
+interne en virgule flottante diffère d'un epsilon infime, ce qui déplace le score $M$ du
+client~00002 de~1 à~2.
+
+Ce type d'erreur est bien documenté dans la littérature sur l'arithmétique en virgule flottante
+\citep{Haissinsky2012} et dans les guides de pratique numérique \citep{Ribatet_nd}. Il n'est
+pas propre à TypeScript ou à JavaScript ; il affecte tout langage reposant sur la norme
+IEEE~754 sans couche d'arrondi explicite au niveau des sommes. Des bibliothèques de calcul
+monétaire comme \texttt{decimal.js} ou \texttt{dinero.js} apportent une réponse classique,
+au prix d'une dépendance supplémentaire et d'une migration des structures de données internes.
+La correction pourrait également être réalisée nativement, en arrondissant chaque somme
+partielle au centime le plus proche avant toute comparaison de quantiles, ce qui supprimerait
+le mécanisme identifié sans modifier l'algorithme de segmentation.
+
+\paragraph{Ce que H1 prouve et ce qu'il ne prouve pas.}
+La conformité mesurée dans cette étude porte sur la logique de segmentation RFM de
+\texttt{computeRFM} au commit \texttt{b062a93a}, comparée à une référence indépendante en
+Python. Elle démontre que le moteur reproduit fidèlement les règles de tercilisation dans
+$98{,}3\,\%$ des configurations testées et identifie une cause précise dans les $1{,}7\,\%$
+restants. Elle ne constitue pas une évaluation de l'utilité commerciale des segments produits,
+de leur pertinence prédictive pour les comportements d'achat réels, ni de leur adéquation au
+marché congolais. Ces questions relèvent d'une validation de contenu \citep{Salminen2023} et
+d'une validation prospective \citep{Fader2005} qui excèdent le périmètre de la présente
+campagne.
+
+Il convient également de distinguer la conformité de l'implémentation de la pertinence du
+choix de la méthode RFM elle-même. La littérature récente \citep{ViannaFilho2026,
+Kassambara2026} soulève régulièrement la question de savoir si une segmentation en terciles
+sur trois dimensions constitue la meilleure approche pour capturer la hétérogénéité des
+comportements clients. Ces débats sont légitimes, mais ils portent sur la conception de
+l'artefact — en particulier sur le choix des seuils et du nombre de groupes — et non sur
+la conformité de l'implémentation à sa propre spécification. La présente évaluation ne
+prend pas position sur ce premier niveau de choix ; elle évalue uniquement la fidélité de
+l'exécution à la règle telle qu'elle est définie dans la codebase d'ELMES-TEKA.
+
+% ------------------------------------------------------------------
+\section{Le module est-il robuste aux imprécisions courantes ? (H2)}
+\label{sec:disc-h2}
+
+\subsection{Un résultat plus fort qu'attendu}
+\label{subsec:disc-h2-force}
+
+Les quatre cellules admissibles pour le critère H2 — tailles $n \in \{50,\, 200\}$,
+profils \texttt{regular} et \texttt{skewed}, bruit monétaire $\pm1\,\%$, clients éloignés
+des seuils selon la règle à $5\,\%$ — présentent toutes un taux de changement moyen nul,
+avec des intervalles de confiance ponctuels $[0\,\% ;\, 0\,\%]$
+(tableau~\ref{tab:resultats-h2}). La borne supérieure de chaque intervalle est strictement
+inférieure au seuil de $5\,\%$ fixé par le protocole ; la décision est «~Compatible~» pour
+les quatre cellules.
+
+Ce résultat est plus fort que ce qui était strictement nécessaire pour satisfaire H2. Le
+critère aurait été respecté avec des taux inférieurs à $5\,\%$ ; l'observation de $0\,\%$
+exact dans toutes les répétitions n'était pas attendue a priori et mérite une explication.
+
+\subsection{Pourquoi les clients éloignés sont stables}
+\label{subsec:disc-h2-pourquoi}
+
+La stabilité complète s'explique par la définition même de la condition d'éloignement. Un
+client est dit éloigné si sa distance normalisée à chacun des six seuils initiaux ($s_{R1}$,
+$s_{R2}$, $s_{F1}$, $s_{F2}$, $s_{M1}$, $s_{M2}$) est supérieure à $5\,\%$. Une
+perturbation monétaire de $\pm1\,\%$ ne peut pas déplacer un seuil de tercile au-delà de
+$5\,\%$ sur la dimension $M$ lorsque les clients sont distribués de façon régulière ou
+dissymétrique, car le déplacement d'un quantile dépend de l'ensemble de la distribution et
+non d'un seul client. Un client situé à plus de $5\,\%$ de chaque seuil possède donc une
+«~marge de sécurité~» qui absorbe le bruit de $\pm1\,\%$ sans franchir le seuil le plus
+proche. Dans ce sens, la condition d'éloignement est une garantie théorique de stabilité,
+et le résultat observé confirme empiriquement que la campagne n'a pas rencontré de cas où
+cette garantie aurait été mise en défaut dans les 100 répétitions par cellule.
+
+\paragraph{La figure~\ref{fig:ann-sensibilite-montants} (Annexe~\ref{ann:reproduction})
+illustre ce mécanisme} : les taux de changement global augmentent avec l'intensité du bruit
+monétaire pour les profils \texttt{regular} et \texttt{skewed}, mais les clients éloignés
+ne changent pas sous $\pm1\,\%$.
+
+\subsection{Signification d'un intervalle de confiance $[0\,\% ;\, 0\,\%]$}
+\label{subsec:disc-h2-ic}
+
+L'intervalle de confiance $[0\,\% ;\, 0\,\%]$ signifie que, parmi les 100 répétitions de
+chaque cellule, aucune n'a produit un changement de segment pour un client éloigné. Il
+traduit une absence de variation observée, non une démonstration qu'aucun changement n'est
+possible dans n'importe quelle configuration d'usage. Comme rappelé à la
+section~\ref{sec:resultats-cibles}, un intervalle Monte-Carlo de largeur nulle ne constitue
+pas une preuve d'une probabilité de changement identiquement nulle ; il signifie simplement
+que l'estimateur ponctuel et ses deux bornes coïncident au zéro empirique.
+
+Cette précision est importante pour éviter une surinterprétation : le résultat ne garantit
+pas la robustesse du module pour des corpus réels très différents des mécanismes générateurs
+synthétiques utilisés dans la campagne, ni pour des niveaux de bruit supérieurs à $\pm1\,\%$.
+La figure~\ref{fig:ann-sensibilite-montants} montre que pour les profils non-ties, les taux
+de changement global augmentent graduellement de $\pm1\,\%$ à $\pm20\,\%$ de bruit monétaire,
+ce qui confirme que la robustesse est conditionnelle au niveau de perturbation.
+
+\subsection{Positionnement dans la littérature}
+\label{subsec:disc-h2-litterature}
+
+La question de la robustesse d'une segmentation RFM aux imprécisions des données d'entrée est
+peu traitée comme objet explicite d'étude dans la littérature récente. \citet{Rajendran2024}
+et \citet{Sobantu2025} proposent des évaluations de méthodes de segmentation RFM dans des
+contextes applicatifs variés, mais sans critère formel équivalent au taux de changement sous
+perturbation contrôlée. \citet{Mingmongkhol2023} analyse la sensibilité d'une segmentation
+RFM à la pondération des dimensions, sans soumettre l'algorithme à des erreurs de données
+synthétiques. Cette étude adopte une approche différente, plus proche des protocoles de
+simulation de robustesse utilisés en évaluation de méthodes statistiques \citep{Morris2019},
+ce qui rend la comparaison directe difficile mais justifie l'originalité de la démarche
+adoptée.
+
+% ------------------------------------------------------------------
+\section{Quelles situations sortent du domaine d'usage ?}
+\label{sec:disc-hors-domaine}
+
+\subsection{Le profil identique (\emph{ex~æquo}) : un signal de qualité des données}
+\label{subsec:disc-ties}
+
+Le profil \texttt{ties} — tous les clients présentant exactement le même nombre de commandes,
+la même date de dernier achat et le même ticket unitaire — n'est pas inclus dans le critère
+H2. Cette exclusion est une décision du protocole expérimental, motivée avant l'analyse des
+résultats par le fait que ce profil se situe hors du domaine d'usage normal de la fonction
+\texttt{computeRFM}. Elle ne résulte pas d'une observation \emph{a posteriori} visant à
+retirer des données gênantes.
+
+Le comportement observé sur ce profil justifie cette décision. Sous perturbation de dates,
+les taux de changement atteignent 42 à 63~\% selon la taille du corpus
+(tableau~\ref{tab:resultats-ties-dates}). L'explication est structurelle : lorsque tous les
+clients ont les mêmes valeurs $R$, $F$ et $M$, les seuils de tercile ne sont pas définis de
+façon unique — tout point de la plage commune entre deux clients constitue un seuil valide.
+L'ajout d'un bruit infime sur les dates modifie les relations d'ordre entre clients de façon
+arbitraire, ce qui déplace les seuils aléatoirement et produit une recomposition complète des
+groupes. Ce comportement n'est pas un défaut de l'algorithme ; il reflète l'indétermination
+mathématique des quantiles sur des valeurs identiques.
+
+En pratique, un corpus réel présentant des valeurs RFM entièrement homogènes signale un
+problème de qualité des données en amont : doublons de clients, saisie en lot à valeur fixe,
+ou consolidation erronée. Le profil \texttt{ties} constitue ainsi un cas limite qui
+n'invalide pas H2 mais délimite le périmètre à l'intérieur duquel la robustesse mesurée est
+pertinente. Les cinq comportements hors domaine identifiés dans la campagne
+(tableau~\ref{tab:resultats-hors-domaine}) — mélange de devises, identifiant absent, date
+invalide, date future, montant négatif — confirment que la fonction \texttt{computeRFM}
+n'effectue pas de contrôle métier en entrée et s'appuie sur les couches amont du SaaS pour
+garantir la qualité des données transmises.
+
+\subsection{Le corpus de taille $n = 3$ : seuil minimal de stabilité}
+\label{subsec:disc-n3}
+
+Les essais conduits sur des corpus de trois clients ont servi à la mesure de conformité (H1)
+mais ont été exclus du critère H2. À cette taille, le premier tiers d'un groupe de trois
+clients correspond à un unique client, ce qui rend les seuils de tercile extrêmement sensibles
+à toute modification individuelle. Le calcul reste mathématiquement valide, mais la
+segmentation obtenue varie fortement d'une répétition à l'autre, non en raison d'un défaut
+de l'algorithme, mais parce que la notion de «~troisième~» n'est pas stable sur un ensemble
+de trois éléments.
+
+Cette limite n'est pas propre à ELMES-TEKA ; elle est inhérente à toute méthode de
+segmentation par quantiles. La recommandation opérationnelle qui en découle est qu'un corpus
+d'au moins une dizaine de clients constitue un minimum raisonnable pour que les segments RFM
+soient interprétables de façon stable. \citet{Yoseph2023} et \citet{Ray2023} utilisent
+des corpus de plusieurs centaines à plusieurs milliers de clients dans leurs études
+applicatives, sans que cette contrainte minimale soit explicitement discutée ; elle semble
+traitée comme une évidence pratique. La présente campagne la confirme de façon expérimentale.
+
+% ------------------------------------------------------------------
+\section{La méthode de validation est-elle appropriée ? (menaces à la validité interne)}
+\label{sec:disc-validite-interne}
+
+\subsection{Forces du protocole}
+\label{subsec:disc-vi-forces}
+
+Le protocole expérimental présente plusieurs caractéristiques qui renforcent la validité
+interne des résultats. Les graines de génération et de perturbation sont explicitement
+consignées pour chaque essai, ce qui garantit la reproductibilité complète de la campagne.
+L'appariement systématique de chaque corpus perturbé à son corpus initial d'origine supprime
+la variabilité inter-corpus qui aurait confondé les effets de la perturbation avec des
+différences structurelles entre jeux de données. Le cadre \emph{ADEMP} proposé par
+\citet{Morris2019} a été suivi comme structure de présentation, ce qui facilite la
+comparaison avec d'autres études de simulation et rend les choix méthodologiques explicites.
+
+La référence Python indépendante est construite sur un principe arithmétique différent du
+moteur évalué — addition en centimes entiers contre addition en virgule flottante —, ce qui
+lui confère une capacité de détection ciblée sur le mécanisme de non-conformité identifié.
+La disponibilité de l'archive expérimentale complète avec empreinte SHA-256 \citep{ViannaFilho2026}
+assure la traçabilité des résultats jusqu'à leur source.
+
+\subsection{Limites de la référence}
+\label{subsec:disc-vi-limites-ref}
+
+La référence Python n'est pas une implémentation certifiée par une tierce partie indépendante.
+Elle a été développée pour les besoins de la campagne à partir de la spécification de
+\texttt{computeRFM} et pourrait contenir des erreurs propres qui ne seraient pas détectées
+par comparaison avec le moteur TypeScript. Les neuf cas manuels (section~\ref{subsec:resultats-cas-manuels})
+ont été vérifiés contre la spécification et donnent confiance dans le comportement de la
+référence sur les configurations limites, mais cette vérification ne couvre pas l'ensemble de
+l'espace des entrées.
+
+Cette limite est structurelle dans toute démarche de validation par référence construite à
+la volée ; elle appelle à terme une certification de la référence par un tiers ou une
+vérification formelle de son algorithme de tercilisation.
+
+\subsection{Profils synthétiques non calibrés}
+\label{subsec:disc-vi-synth}
+
+Les profils de génération — \texttt{regular}, \texttt{skewed}, \texttt{ties} — ont été
+construits pour couvrir des distributions contrastées, mais ils n'ont pas été calibrés sur
+des données de transactions réelles de petits commerçants congolais. Les valeurs de montants,
+les distributions de fréquence et les horizons temporels utilisés dans la campagne peuvent
+s'éloigner sensiblement de ce qui est observé dans un portefeuille réel d'ELMES-TEKA. Les
+résultats décrivent donc le comportement de la fonction sur ces mécanismes générateurs
+spécifiques, non son comportement en production, comme le souligne la contrainte méthodologique
+rappelée à la section~\ref{sec:resultats-hors-domaine}.
+
+\subsection{Périmètre de l'évaluation}
+\label{subsec:disc-vi-perimetre}
+
+La campagne évalue la fonction \texttt{computeRFM} de façon isolée, à l'interface entre des
+données de transactions en entrée et des vecteurs de scores en sortie. Elle ne mesure pas le
+comportement de la couche MongoDB, des routes HTTP, du système d'authentification multi-tenant,
+ni des effets économiques de la segmentation sur les commerçants. Ces dimensions font partie
+de l'artefact complet ELMES-TEKA \citep{James2023} mais dépassent le périmètre défini par
+les hypothèses H1 et H2.
+
+% ------------------------------------------------------------------
+\section{Quelles généralisations sont licites ? (menaces externes et perspectives)}
+\label{sec:disc-validite-externe}
+
+\subsection{Limites de généralisation}
+\label{subsec:disc-ve-limites}
+
+Les résultats sont valables pour la logique de \texttt{computeRFM} telle que codée au commit
+\texttt{b062a93a7be96d082dee9afe66b9f4f1f9ebecaa}. Toute modification du code de segmentation
+— changement du nombre de groupes, remplacement des terciles par d'autres quantiles, ajout
+d'une couche d'arrondi monétaire — invaliderait les mesures obtenues et nécessiterait une
+nouvelle campagne de validation. Ce point est d'importance pratique : si le correctif
+arithmétique recommandé par H1 est appliqué, il conviendrait de confirmer que le taux de
+non-conformité est bien ramené à zéro dans les conditions ayant produit des écarts.
+
+Les données synthétiques ne sont pas représentatives de l'ensemble des commerçants congolais
+utilisant ELMES-TEKA. Les distributions de montants, les fréquences d'achat et les profils
+de récence varient selon le secteur d'activité, la taille du marché et les habitudes de
+paiement locales. Une conclusion du type «~le module est robuste pour les petits commerçants
+congolais~» irait au-delà de ce que les données synthétiques permettent d'établir.
+
+\subsection{Perspectives de validation}
+\label{subsec:disc-ve-perspectives}
+
+Plusieurs directions permettraient d'étendre la portée de la présente évaluation. Une
+validation sur données réelles anonymisées, extraites de la base de production d'ELMES-TEKA,
+permettrait de calibrer les mécanismes générateurs et de mesurer la sensibilité du module
+sur des distributions effectives \citep{Salminen2023}. Cette validation soulèverait
+toutefois des contraintes de confidentialité liées à la nature multi-tenant de la plateforme.
+
+L'extension à un contexte multi-devises — en particulier la cohabitation du franc congolais
+(CDF) et du dollar américain (USD), pratique courante dans le commerce kinois — constituerait
+une priorité métier. Le comportement hors domaine observé lors du mélange de devises
+(tableau~\ref{tab:resultats-hors-domaine}) montre que la fonction traite actuellement toutes
+les valeurs comme commensurables, ce qui produit des montants agrégés économiquement
+incohérents.
+
+Une validation prospective comparerait les segments produits par \texttt{computeRFM} avec
+les comportements de réachat ultérieurs des clients, testant ainsi la validité prédictive des
+étiquettes \citep{Fader2005}. Ce type de validation excède la portée d'une évaluation de
+conformité algorithmique, mais il est indispensable pour établir la valeur décisionnelle des
+segments dans le contexte opérationnel. Des modèles stochastiques de valeur client tels que
+Pareto/NBD \citep{Fader2005} ou les variantes bayésiennes récentes pourraient fournir une
+référence externe pour juger de la qualité discriminante des cinq catégories retenues.
+
+Enfin, l'incorporation d'analyses de sensibilité globale \citep{Lakens2013} permettrait
+d'estimer la contribution relative des dimensions $R$, $F$ et $M$ à la variabilité
+inter-sessions de la segmentation, au-delà de l'analyse par scénario conduite dans la
+présente campagne. Ces pistes constituent des prolongements naturels, conditionnels à la
+disponibilité de données réelles et à l'accord des parties prenantes d'ELMES-TEKA sur les
+modalités d'accès.

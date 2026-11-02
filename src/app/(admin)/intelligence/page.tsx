@@ -148,27 +148,167 @@ export default async function IntelligencePage() {
       <Section
         title="Segmentation clients RFM"
         subtitle="Recency · Frequency · Monetary"
-        badge={segmentAnalysis.hasDifference ? "Différence détectée (p < 0,05)" : undefined}
+        badge={segmentAnalysis.hasDifference ? "Différence significative (p < 0,05)" : undefined}
       >
         {!segmentAnalysis.segments.length ? (
           <Empty text="Aucune transaction client." />
         ) : (
           <>
-            {/* Résultat ANOVA avec degrés de liberté et valeur p */}
-            {segmentAnalysis.fStat > 0 && (
-              <p className={`mb-2 text-sm font-medium ${segmentAnalysis.hasDifference ? "text-success-600 dark:text-success-400" : "text-gray-500"}`}>
-                ANOVA — F({segmentAnalysis.dfBetween}, {segmentAnalysis.dfWithin}) = {segmentAnalysis.fStat},
-                {" "}p = {segmentAnalysis.pValue < 0.0001 ? "< 0,0001" : segmentAnalysis.pValue.toFixed(4)}
-                {segmentAnalysis.hasDifference
-                  ? " — différence significative au seuil α = 5 %."
-                  : " — pas de différence significative au seuil α = 5 %."}
+            {/* ── Vérification des hypothèses ── */}
+            <div className="mb-3 overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-800">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-white/[0.02]">
+                    {["Hypothèse vérifiée", "Test", "Statistique", "p", "Résultat"].map((h) => (
+                      <th key={h} className="px-3 py-2 text-left font-medium uppercase tracking-wider text-gray-400">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  <tr>
+                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400">Normalité des résidus</td>
+                    <td className="px-3 py-2 text-gray-500">Jarque-Bera</td>
+                    <td className="px-3 py-2 font-mono">{segmentAnalysis.normality.statistic.toFixed(2)}</td>
+                    <td className="px-3 py-2 font-mono">
+                      {segmentAnalysis.normality.method === "skipped"
+                        ? "—"
+                        : segmentAnalysis.normality.pValue < 0.0001
+                          ? "< 0,0001"
+                          : segmentAnalysis.normality.pValue.toFixed(4)}
+                    </td>
+                    <td className="px-3 py-2">
+                      {segmentAnalysis.normality.method === "skipped" ? (
+                        <span className="text-gray-400">Non testé</span>
+                      ) : segmentAnalysis.normality.reject ? (
+                        <span className="font-medium text-error-600 dark:text-error-400">Rejetée</span>
+                      ) : (
+                        <span className="font-medium text-success-600 dark:text-success-400">Non rejetée</span>
+                      )}
+                      {!segmentAnalysis.normality.reliable && segmentAnalysis.normality.method !== "skipped" && (
+                        <span className="ml-1 text-amber-500">(n &lt; 20)</span>
+                      )}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2 text-gray-600 dark:text-gray-400">Homoscédasticité</td>
+                    <td className="px-3 py-2 text-gray-500">Levene-BF</td>
+                    <td className="px-3 py-2 font-mono">{segmentAnalysis.homoscedasticity.statistic.toFixed(2)}</td>
+                    <td className="px-3 py-2 font-mono">
+                      {segmentAnalysis.homoscedasticity.method === "skipped"
+                        ? "—"
+                        : segmentAnalysis.homoscedasticity.pValue < 0.0001
+                          ? "< 0,0001"
+                          : segmentAnalysis.homoscedasticity.pValue.toFixed(4)}
+                    </td>
+                    <td className="px-3 py-2">
+                      {segmentAnalysis.homoscedasticity.method === "skipped" ? (
+                        <span className="text-gray-400">Non testé</span>
+                      ) : segmentAnalysis.homoscedasticity.reject ? (
+                        <span className="font-medium text-error-600 dark:text-error-400">Rejetée</span>
+                      ) : (
+                        <span className="font-medium text-success-600 dark:text-success-400">Non rejetée</span>
+                      )}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* ── Méthode retenue ── */}
+            <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+              <span className="font-medium text-gray-700 dark:text-gray-200">
+                Méthode :
+              </span>{" "}
+              {segmentAnalysis.methodReason}
+            </p>
+
+            {/* ── Résultat du test principal ── */}
+            {segmentAnalysis.selectedMethod === "anova" && segmentAnalysis.anova && (
+              <p className={`mb-3 text-sm font-medium ${segmentAnalysis.anova.significant ? "text-success-600 dark:text-success-400" : "text-gray-500"}`}>
+                ANOVA — F({segmentAnalysis.anova.dfBetween}, {segmentAnalysis.anova.dfWithin}) = {segmentAnalysis.anova.fStat},
+                {" "}p = {segmentAnalysis.anova.pValue < 0.0001 ? "< 0,0001" : segmentAnalysis.anova.pValue.toFixed(4)}
+                {segmentAnalysis.anova.significant
+                  ? " — différence significative à α = 5 %."
+                  : " — pas de différence significative à α = 5 %."}
               </p>
             )}
-            {/* Avertissement de circularité */}
+            {segmentAnalysis.selectedMethod === "kruskal-wallis" && segmentAnalysis.kruskalWallis && (
+              <p className={`mb-3 text-sm font-medium ${segmentAnalysis.kruskalWallis.significant ? "text-success-600 dark:text-success-400" : "text-gray-500"}`}>
+                Kruskal-Wallis — H({segmentAnalysis.kruskalWallis.df}) = {segmentAnalysis.kruskalWallis.statistic},
+                {" "}p = {segmentAnalysis.kruskalWallis.pValue < 0.0001 ? "< 0,0001" : segmentAnalysis.kruskalWallis.pValue.toFixed(4)}
+                {segmentAnalysis.kruskalWallis.significant
+                  ? " — différence significative à α = 5 %."
+                  : " — pas de différence significative à α = 5 %."}
+              </p>
+            )}
+
+            {/* ── Post-hoc (si significatif) ── */}
+            {(() => {
+              const posthoc =
+                segmentAnalysis.anova?.posthoc.length
+                  ? segmentAnalysis.anova.posthoc
+                  : segmentAnalysis.kruskalWallis?.posthoc ?? [];
+              const posthocLabel =
+                segmentAnalysis.anova?.posthocMethod === "bonferroni-t"
+                  ? "Bonferroni-t"
+                  : segmentAnalysis.anova?.posthocMethod === "games-howell"
+                    ? "Games-Howell"
+                    : "Dunn-Bonferroni";
+              if (!posthoc.length) return null;
+              return (
+                <div className="mb-3">
+                  <p className="mb-1 text-xs font-medium uppercase tracking-wider text-gray-400">
+                    Comparaisons post-hoc ({posthocLabel})
+                  </p>
+                  <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-800">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-white/[0.02]">
+                          {["Paire", "Statistique", "p ajusté", "Sig."].map((h) => (
+                            <th key={h} className="px-3 py-2 text-left font-medium uppercase tracking-wider text-gray-400">
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                        {posthoc.map((p) => (
+                          <tr key={p.pair.join("-")} className="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+                            <td className="px-3 py-2 text-gray-700 dark:text-gray-300">
+                              {p.pair[0]} / {p.pair[1]}
+                            </td>
+                            <td className="px-3 py-2 font-mono text-gray-600 dark:text-gray-400">
+                              {p.statLabel} = {p.stat}
+                            </td>
+                            <td className="px-3 py-2 font-mono">
+                              {p.pAdjusted < 0.0001 ? "< 0,0001" : p.pAdjusted.toFixed(4)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {p.significant ? (
+                                <span className="font-bold text-success-600 dark:text-success-400">*</span>
+                              ) : (
+                                <span className="text-gray-400">ns</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── Avertissement de circularité ── */}
             <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-700/40 dark:bg-amber-500/10 dark:text-amber-300">
               Analyse exploratoire : la dimension monétaire (M) du segment est construite à partir du CA,
-              qui est aussi la variable comparée. Cette ANOVA ne constitue pas une preuve prédictive.
+              qui est aussi la variable comparée. Ces résultats ne constituent pas une preuve prédictive
+              sans séparation temporelle t0/t1.
             </p>
+
+            {/* ── Tableau des segments ── */}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>

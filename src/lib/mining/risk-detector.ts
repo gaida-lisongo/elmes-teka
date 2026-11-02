@@ -4,6 +4,7 @@ import Commande from "@/lib/models/Commande";
 import Depense from "@/lib/models/Depense";
 import Stock from "@/lib/models/Stock";
 import Product from "@/lib/models/Product";
+import Store from "@/lib/models/Store";
 
 function olsSlope(y: number[]): number {
   const n = y.length;
@@ -51,7 +52,14 @@ export async function detectRisks(
 
   const soldProductIds = recentSales.map((r) => r._id);
 
+  // Isolation multi-tenant : récupérer uniquement les boutiques de ce tenant/exercice
+  const stores = await Store.find({ tenantId: tid, anneeId: aid })
+    .select("_id")
+    .lean();
+  const shopIds = stores.map((s) => s._id);
+
   const stocks = await Stock.find({
+    shopId: { $in: shopIds },
     anneeId: aid,
     status: "ACTIVE",
     "stocks.product": { $in: soldProductIds },
@@ -67,19 +75,44 @@ export async function detectRisks(
     }
   }
 
+  // Récupérer les seuils critiques des produits vendus récemment
+  const soldProducts = await Product.find({ _id: { $in: soldProductIds } })
+    .select("designation seuilCritique")
+    .lean();
+  const productInfoMap = new Map(
+    soldProducts.map((p) => [p._id.toString(), p]),
+  );
+
   const rupturedIds = soldProductIds.filter(
     (pid) => (stockMap.get(pid.toString()) ?? 0) <= 0,
   );
+  const nearCriticalIds = soldProductIds.filter((pid) => {
+    const qty = stockMap.get(pid.toString()) ?? 0;
+    const seuil = productInfoMap.get(pid.toString())?.seuilCritique ?? 0;
+    return qty > 0 && seuil > 0 && qty < seuil;
+  });
 
   if (rupturedIds.length > 0) {
-    const products = await Product.find({ _id: { $in: rupturedIds } })
-      .select("designation")
-      .lean();
+    const names = rupturedIds
+      .map((pid) => productInfoMap.get(pid.toString())?.designation ?? "Inconnu")
+      .filter(Boolean);
     alerts.push({
       type: "RUPTURE",
       severity: "HIGH",
       message: `${rupturedIds.length} produit(s) en rupture de stock avec des ventes récentes.`,
-      affectedItems: products.map((p) => p.designation),
+      affectedItems: names,
+    });
+  }
+
+  if (nearCriticalIds.length > 0) {
+    const names = nearCriticalIds
+      .map((pid) => productInfoMap.get(pid.toString())?.designation ?? "Inconnu")
+      .filter(Boolean);
+    alerts.push({
+      type: "RUPTURE",
+      severity: "MEDIUM",
+      message: `${nearCriticalIds.length} produit(s) en dessous du seuil critique avec des ventes récentes.`,
+      affectedItems: names,
     });
   }
 
@@ -109,6 +142,17 @@ export async function detectRisks(
 
   const ca = (caAgg[0] as { ca: number } | undefined)?.ca ?? 0;
   const totalDep = (depAgg[0] as { total: number } | undefined)?.total ?? 0;
+
+  // Faux négatif corrigé : dépenses sans CA → alerte immédiate
+  if (ca === 0 && totalDep > 0) {
+    alerts.push({
+      type: "LIQUIDITE",
+      severity: "HIGH",
+      message: `Dépenses de ${Math.round(totalDep).toLocaleString()} enregistrées sans chiffre d'affaires.`,
+      affectedItems: [],
+    });
+  }
+
   const depRatio = ca > 0 ? totalDep / ca : 0;
 
   if (depRatio > 0.8) {

@@ -101,7 +101,7 @@ export async function sendChatMessage(
 
 export async function generateEnrichedDossier(
   anneeId: string,
-): Promise<ActionResponse<{ dossier: string; score: number; disclaimer: string }>> {
+): Promise<ActionResponse<{ dossier: string; score: number | null; disclaimer: string }>> {
   const session = await getTenantSession();
   if (!session) return { success: false, message: "Non autorisé." };
 
@@ -111,7 +111,7 @@ export async function generateEnrichedDossier(
   if (!annee) return { success: false, message: "Exercice Premium actif requis." };
 
   const deductResult = await deductCredits(anneeId, 10);
-  if (!deductResult.success) return deductResult as ActionResponse<{ dossier: string; score: number; disclaimer: string }>;
+  if (!deductResult.success) return deductResult as ActionResponse<{ dossier: string; score: number | null; disclaimer: string }>;
 
   const ctx = await buildBusinessContext(session.tenantId, anneeId);
   const prompt = formatContextForPrompt(ctx);
@@ -124,9 +124,10 @@ Inclus une évaluation de la viabilité (score indicatif /100). Réponds en fran
     `Données de l'entreprise :\n${prompt}\n\nRédige le dossier de financement enrichi.`,
   );
 
-  // Extrait un score si présent dans la réponse
+  // Score extrait du texte libre du LLM — indicatif et non déterministe.
+  // Fallback : null (non disponible) si le LLM n'a pas fourni de fraction n/100.
   const scoreMatch = raw.match(/(\d{1,3})\s*\/\s*100/);
-  const score = scoreMatch ? Math.min(100, parseInt(scoreMatch[1], 10)) : 60;
+  const score = scoreMatch ? Math.min(100, parseInt(scoreMatch[1], 10)) : null;
 
   return {
     success: true,

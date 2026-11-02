@@ -338,11 +338,13 @@ function bonferroniTPosthoc(
 }
 
 /**
- * Post-hoc Games-Howell (ANOVA hétéroscédastique).
- * Utilise les degrés de liberté de Welch-Satterthwaite et la distribution t.
- * Correction Bonferroni sur le nombre de paires (approximation conservative).
+ * Post-hoc Welch-t-Bonferroni (ANOVA hétéroscédastique).
+ * Utilise les degrés de liberté de Welch-Satterthwaite et la distribution t bilatérale.
+ * Correction Bonferroni sur le nombre de paires C(k,2).
+ * Note : le Games-Howell standard utilise la distribution de l'étendue studentisée q(k,df)
+ * — non implémentée ici. Méthode conservative équivalente sous Bonferroni.
  */
-function gamesHowellPosthoc(segments: SegmentStats[]): PosthocPair[] {
+function welchTBonferroniPosthoc(segments: SegmentStats[]): PosthocPair[] {
   const k = segments.length;
   const numPairs = (k * (k - 1)) / 2;
   const pairs: PosthocPair[] = [];
@@ -369,6 +371,43 @@ function gamesHowellPosthoc(segments: SegmentStats[]): PosthocPair[] {
     }
   }
   return pairs.sort((a, b) => a.pAdjusted - b.pAdjusted);
+}
+
+/**
+ * ANOVA de Welch (one-way) pour groupes hétéroscédastiques.
+ * Welch B.L. (1951), Biometrika 38(3/4), 330-336.
+ * w_j = n_j / s_j²  ;  ȳ_w = Σ(w_j ȳ_j)/W  ;  W = Σ w_j
+ * F_w = Σ w_j(ȳ_j - ȳ_w)² / (k-1) / (1 + 2(k-2)/(k²-1) × Σ (1-w_j/W)²/(n_j-1))
+ * df2 = (k²-1) / (3 × Σ (1-w_j/W)²/(n_j-1))
+ */
+function welchOneWayAnova(
+  segments: SegmentStats[],
+  groups: number[][],
+): { fStat: number; df1: number; df2: number; pValue: number } {
+  const k = segments.length;
+  // Utiliser la variance brute recalculée depuis les groupes pour éviter les arrondis
+  const ws = groups.map((g, i) => {
+    const n = g.length;
+    const mean = segments[i]!.avgRevenue;
+    const variance = n > 1 ? g.reduce((s, v) => s + (v - mean) ** 2, 0) / (n - 1) : 0;
+    return { n, mean, s2: variance };
+  });
+  const totalW = ws.reduce((s, w) => s + (w.s2 > 0 ? w.n / w.s2 : 0), 0);
+  if (totalW === 0) return { fStat: 0, df1: k - 1, df2: 0, pValue: 1 };
+  const grandMeanW = ws.reduce((s, w) => s + (w.s2 > 0 ? (w.n / w.s2) * w.mean : 0), 0) / totalW;
+  const ssBetween = ws.reduce((s, w) => {
+    const wj = w.s2 > 0 ? w.n / w.s2 : 0;
+    return s + wj * (w.mean - grandMeanW) ** 2;
+  }, 0);
+  const correction = ws.reduce((s, w) => {
+    const wj = w.s2 > 0 ? w.n / w.s2 : 0;
+    return s + ((1 - wj / totalW) ** 2) / Math.max(1, w.n - 1);
+  }, 0);
+  const df1 = k - 1;
+  const df2 = (k * k - 1) / (3 * correction);
+  const denominator = 1 + (2 * (k - 2)) / (k * k - 1) * correction;
+  const fStat = denominator > 0 ? ssBetween / df1 / denominator : 0;
+  return { fStat, df1, df2, pValue: fPValue(fStat, df1, df2) };
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -433,7 +472,9 @@ export interface AnovaResult {
   dfWithin: number;
   pValue: number;
   significant: boolean;
-  posthocMethod: "bonferroni-t" | "games-howell" | "none";
+  /** "welch" quand Levene a rejeté l'homoscédasticité, "classical" sinon. */
+  testType: "classical" | "welch";
+  posthocMethod: "bonferroni-t" | "welch-t-bonferroni" | "none";
   posthoc: PosthocPair[];
 }
 
@@ -598,6 +639,10 @@ export function compareSegments(rfmData: RFMEntry[]): SegmentComparisonResult {
   };
   if (k < 2 || N <= k || groups.some((g) => g.length < 2)) return empty;
 
+  // Variance nulle : un groupe avec toutes valeurs identiques rend ANOVA et Levene
+  // non estimables (F non défini). Basculer vers KW directement.
+  const hasZeroVariance = segments.some((s) => s.stdDevRevenue === 0);
+
   // ── Résidus poolés pour le test de normalité ──────────────
   const residuals: number[] = [];
   for (let gi = 0; gi < k; gi++) {
@@ -633,18 +678,22 @@ export function compareSegments(rfmData: RFMEntry[]): SegmentComparisonResult {
   };
 
   // ── Décision de méthode ───────────────────────────────────
-  const useKW = normality.reject;
+  // Variance nulle → tests paramétriques non estimables → KW obligatoire
+  const useKW = normality.reject || hasZeroVariance;
 
   if (useKW) {
     // ── Kruskal-Wallis ────────────────────────────────────
     const kw = kruskalWallis(groups);
     const posthoc = kw.pValue < 0.05 ? dunnBonferroni(groups, segNames) : [];
+    const kwReason = hasZeroVariance
+      ? "Variance intra-groupe nulle détectée → tests paramétriques non estimables → Kruskal-Wallis."
+      : "Normalité des résidus rejetée (JB p < 0,05) → test non paramétrique.";
     return {
       segments,
       normality,
       homoscedasticity,
       selectedMethod: "kruskal-wallis",
-      methodReason: "Normalité des résidus rejetée (JB p < 0,05) → test non paramétrique.",
+      methodReason: kwReason,
       anova: null,
       kruskalWallis: {
         ...kw,
@@ -656,7 +705,38 @@ export function compareSegments(rfmData: RFMEntry[]): SegmentComparisonResult {
     };
   }
 
-  // ── ANOVA paramétrique ────────────────────────────────────
+  if (homoscedasticity.reject) {
+    // ── ANOVA de Welch (hétéroscédasticité détectée) ──────
+    // Welch B.L. (1951) — remplace l'ANOVA classique à variance poolée
+    const welch = welchOneWayAnova(segments, groups);
+    // p-value comparée à pleine précision, arrondi uniquement pour l'affichage
+    const welchSignificant = welch.pValue < 0.05;
+    const welchPosthoc: PosthocPair[] = welchSignificant
+      ? welchTBonferroniPosthoc(segments)
+      : [];
+    return {
+      segments,
+      normality,
+      homoscedasticity,
+      selectedMethod: "anova",
+      methodReason: "Normalité non rejetée, hétéroscédasticité détectée → ANOVA de Welch (1951) + post-hoc Welch-t-Bonferroni.",
+      anova: {
+        fStat: Math.round(welch.fStat * 100) / 100,
+        dfBetween: welch.df1,
+        dfWithin: Math.round(welch.df2 * 10) / 10,
+        pValue: Math.round(welch.pValue * 10000) / 10000,
+        significant: welchSignificant,
+        testType: "welch",
+        posthocMethod: welchSignificant ? "welch-t-bonferroni" : "none",
+        posthoc: welchPosthoc,
+      },
+      kruskalWallis: null,
+      hasDifference: welchSignificant,
+      circularityNote: CIRCULARITY,
+    };
+  }
+
+  // ── ANOVA classique (homoscédasticité non rejetée) ────────
   const grandMean = rfmData.reduce((s, r) => s + r.totalRevenue, 0) / N;
   const ssBetween = segments.reduce(
     (s, seg) => s + seg.count * (seg.avgRevenue - grandMean) ** 2, 0);
@@ -668,38 +748,28 @@ export function compareSegments(rfmData: RFMEntry[]): SegmentComparisonResult {
   const dfBetween = k - 1, dfWithin = N - k;
   const msWithin = dfWithin > 0 ? ssWithin / dfWithin : 0;
   const fStat = msWithin > 0 ? (ssBetween / dfBetween) / msWithin : 0;
-  const pValueAnova = Math.round(fPValue(fStat, dfBetween, dfWithin) * 10000) / 10000;
+  // Comparaison à pleine précision IEEE 754 — arrondi uniquement pour l'affichage
+  const pValueAnova = fPValue(fStat, dfBetween, dfWithin);
   const anovaSignificant = pValueAnova < 0.05;
 
-  let posthocMethod: AnovaResult["posthocMethod"] = "none";
-  let posthoc: PosthocPair[] = [];
-  if (anovaSignificant) {
-    if (homoscedasticity.reject) {
-      posthocMethod = "games-howell";
-      posthoc = gamesHowellPosthoc(segments);
-    } else {
-      posthocMethod = "bonferroni-t";
-      posthoc = bonferroniTPosthoc(segments, msWithin, dfWithin);
-    }
-  }
-
-  const methodReason = homoscedasticity.reject
-    ? "Normalité non rejetée, mais hétéroscédasticité détectée → ANOVA + post-hoc Games-Howell."
-    : "Normalité et homoscédasticité non rejetées → ANOVA paramétrique + post-hoc Bonferroni-t.";
+  const posthoc: PosthocPair[] = anovaSignificant
+    ? bonferroniTPosthoc(segments, msWithin, dfWithin)
+    : [];
 
   return {
     segments,
     normality,
     homoscedasticity,
     selectedMethod: "anova",
-    methodReason,
+    methodReason: "Normalité et homoscédasticité non rejetées → ANOVA classique (Fisher) + post-hoc Bonferroni-t.",
     anova: {
       fStat: Math.round(fStat * 100) / 100,
       dfBetween,
       dfWithin,
-      pValue: pValueAnova,
+      pValue: Math.round(pValueAnova * 10000) / 10000,
       significant: anovaSignificant,
-      posthocMethod,
+      testType: "classical",
+      posthocMethod: anovaSignificant ? "bonferroni-t" : "none",
       posthoc,
     },
     kruskalWallis: null,

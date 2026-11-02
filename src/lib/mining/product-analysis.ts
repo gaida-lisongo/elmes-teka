@@ -26,8 +26,9 @@ function olsSlope(y: number[]): { a: number; b: number; r2: number; rmse: number
   return { a, b, r2, rmse };
 }
 
-function weightedMA(y: number[]): number {
-  const weights = [4, 4, 3, 3, 2, 2, 1, 1];
+function weightedMA(y: number[]): { forecast: number; rmse: number } {
+  // Poids croissants : semaines récentes ont le poids le plus élevé
+  const weights = [1, 1, 2, 2, 3, 3, 4, 4];
   const n = Math.min(y.length, 8);
   const slice = y.slice(-n);
   let wSum = 0;
@@ -37,7 +38,26 @@ function weightedMA(y: number[]): number {
     total += slice[i] * w;
     wSum += w;
   }
-  return wSum === 0 ? 0 : total / wSum;
+  const forecast = wSum === 0 ? 0 : total / wSum;
+  // Résidus MA : différence entre chaque valeur et la WMA des valeurs précédentes
+  let ssRes = 0;
+  let resCount = 0;
+  for (let i = 1; i < slice.length; i++) {
+    const prev = slice.slice(0, i);
+    const nPrev = Math.min(prev.length, 8);
+    const prevSlice = prev.slice(-nPrev);
+    let wSumPrev = 0, totalPrev = 0;
+    for (let j = 0; j < prevSlice.length; j++) {
+      const w = weights[8 - nPrev + j];
+      totalPrev += prevSlice[j] * w;
+      wSumPrev += w;
+    }
+    const fitted = wSumPrev === 0 ? 0 : totalPrev / wSumPrev;
+    ssRes += (slice[i] - fitted) ** 2;
+    resCount++;
+  }
+  const rmse = resCount > 0 ? Math.sqrt(ssRes / resCount) : 0;
+  return { forecast, rmse };
 }
 
 export function forecastNextWeek(series: number[]): {
@@ -48,13 +68,18 @@ export function forecastNextWeek(series: number[]): {
   high: number;
 } {
   if (series.length === 0) return { forecast: 0, rmse: 0, r2: 0, low: 0, high: 0 };
-  const { a, b, r2, rmse } = olsSlope(series);
+  const { a, b, r2, rmse: olsRmse } = olsSlope(series);
   const n = series.length;
   let forecast: number;
+  let rmse: number;
   if (r2 >= 0.3) {
     forecast = a + b * (n + 1);
+    rmse = olsRmse;
   } else {
-    forecast = weightedMA(series);
+    const ma = weightedMA(series);
+    forecast = ma.forecast;
+    // Intervalle issu des résidus MA, non de l'RMSE OLS
+    rmse = ma.rmse > 0 ? ma.rmse : olsRmse;
   }
   forecast = Math.max(0, forecast);
   const interval = 1.5 * rmse;

@@ -253,8 +253,8 @@ export default async function IntelligencePage() {
               const posthocLabel =
                 segmentAnalysis.anova?.posthocMethod === "bonferroni-t"
                   ? "Bonferroni-t"
-                  : segmentAnalysis.anova?.posthocMethod === "games-howell"
-                    ? "Games-Howell"
+                  : segmentAnalysis.anova?.posthocMethod === "welch-t-bonferroni"
+                    ? "Welch-t-Bonferroni"
                     : "Dunn-Bonferroni";
               if (!posthoc.length) return null;
               return (

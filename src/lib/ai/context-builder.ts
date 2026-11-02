@@ -1,5 +1,7 @@
 import Annee from "@/lib/models/Annee";
 import connectToDb from "@/lib/utils/db";
+import { detectRisks } from "@/lib/mining/risk-detector";
+import { computeSolvabilityScore } from "@/lib/mining/financial-solver";
 
 // Limite texte brute ~800 tokens ≈ 3200 chars
 const MAX_CHARS = 3200;
@@ -31,14 +33,42 @@ export async function buildBusinessContext(
   const debut = new Date(annee.debut).getFullYear();
   const fin = new Date(annee.fin).getFullYear();
 
-  // Contexte de base — les modules mining enrichissent ce contexte
-  // quand ils seront disponibles. Pour l'instant on construit un prompt minimal.
+  // Charger alertes et score réels depuis les modules mining
+  let alertesText = "Aucune alerte détectée.";
+  let resumeFinancierText = "Score diagnostique non disponible.";
+
+  try {
+    const [alerts, scoreResult] = await Promise.all([
+      detectRisks(tenantId, anneeId),
+      computeSolvabilityScore(tenantId, anneeId),
+    ]);
+
+    if (alerts.length > 0) {
+      const lines = alerts.map(
+        (a) => `[${a.severity}] ${a.type} — ${a.message}`,
+      );
+      alertesText = lines.join(" | ");
+    }
+
+    resumeFinancierText =
+      `Score diagnostique commercial : ${scoreResult.score}/100 ` +
+      `(régularité ${scoreResult.components.regularite}/25, ` +
+      `croissance ${scoreResult.components.croissance}/25, ` +
+      `diversification ${scoreResult.components.diversification}/25, ` +
+      `marge ${scoreResult.components.marge}/25). ` +
+      `Interprétation : ${scoreResult.interpretation}.`;
+  } catch {
+    // Échec silencieux — le contexte reste minimal mais non fictif
+    alertesText = "Calcul des alertes indisponible.";
+    resumeFinancierText = "Calcul du score indisponible.";
+  }
+
   const context: BusinessContext = {
     exercice: `${debut}–${fin}`,
     pack: annee.plan,
-    resumeFinancier: "Données financières de l'exercice en cours.",
-    alertes: "Aucune alerte critique détectée.",
-    segments: "Segmentation clients disponible dans le module Intelligence.",
+    resumeFinancier: resumeFinancierText,
+    alertes: alertesText,
+    segments: "Segmentation RFM disponible dans le module Intelligence.",
   };
 
   return context;

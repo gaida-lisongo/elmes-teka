@@ -87,7 +87,8 @@ export async function computeSolvabilityScore(
   const slopePct = mu > 0 ? (slope / mu) * 100 : 0;
   const croissance = clamp(Math.round(50 + slopePct * 5));
 
-  /* ── CA total + top client ─────────────────────────────── */
+  /* ── CA + top client + dépenses sur la même fenêtre 8 semaines ── */
+  // Horizons homogénéisés : toutes les composantes mesurent la même période
   const [caAgg, clientAgg, depAgg] = await Promise.all([
     Commande.aggregate([
       {
@@ -95,6 +96,7 @@ export async function computeSolvabilityScore(
           tenantId: tid,
           anneeId: aid,
           status: { $in: ["CONFIRMED", "PAID", "DELIVERED"] },
+          createdAt: { $gte: eightWeeksAgo },
         },
       },
       { $group: { _id: null, ca: { $sum: "$totalAmount" } } },
@@ -105,6 +107,7 @@ export async function computeSolvabilityScore(
           tenantId: tid,
           anneeId: aid,
           status: { $in: ["CONFIRMED", "PAID", "DELIVERED"] },
+          createdAt: { $gte: eightWeeksAgo },
         },
       },
       { $group: { _id: "$clientId", ca: { $sum: "$totalAmount" } } },
@@ -117,6 +120,7 @@ export async function computeSolvabilityScore(
           tenantId: tid,
           anneeId: aid,
           status: { $in: ["APPROVED", "PAID"] },
+          createdAt: { $gte: eightWeeksAgo },
         },
       },
       { $group: { _id: null, total: { $sum: "$totalAmount" } } },
@@ -130,8 +134,10 @@ export async function computeSolvabilityScore(
   const topClientShare = caTotal > 0 ? (topClientCA / caTotal) * 100 : 100;
   const diversification = clamp(Math.round(100 - topClientShare));
 
-  const margeRatio = caTotal > 0 ? Math.max(0, (caTotal - totalDep) / caTotal) : 0;
-  const marge = clamp(Math.round(margeRatio * 100));
+  // Marge réelle (peut être négative) — clampée à 0 uniquement pour le score
+  // La valeur brute est disponible pour l'affichage
+  const margeRatio = caTotal > 0 ? (caTotal - totalDep) / caTotal : 0;
+  const marge = clamp(Math.round(Math.max(0, margeRatio) * 100));
 
   const score = Math.round((regularite * 0.25 + croissance * 0.25 + diversification * 0.25 + marge * 0.25));
 

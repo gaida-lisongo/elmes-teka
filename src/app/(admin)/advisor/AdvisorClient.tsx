@@ -203,7 +203,7 @@ export default function AdvisorClient({
         {dossierText && (
           <div className="mt-4 rounded-xl border border-brand-100 bg-brand-25 p-4 text-sm leading-relaxed text-gray-700 dark:border-brand-500/10 dark:bg-brand-500/5 dark:text-gray-300 whitespace-pre-wrap">
             {dossierText}
-            <p className="mt-3 text-xs text-gray-400 italic">Ce score est indicatif et calculé de façon déterministe. Il ne constitue pas une décision de crédit.</p>
+            <p className="mt-3 text-xs text-gray-400 italic">Ce dossier est généré par IA à titre indicatif à partir de vos données réelles. Il ne constitue pas une décision de financement ou de crédit.</p>
           </div>
         )}
       </div>

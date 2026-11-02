@@ -1,0 +1,399 @@
+\chapter{Matériels et méthodes}
+\label{chap:methodes}
+
+Ce chapitre présente le cadre épistémologique, les variables, l'environnement technique et le
+protocole expérimental retenus pour évaluer la fonction \texttt{computeRFM} d'ELMES-TEKA.
+La présentation suit le cadre \emph{ADEMP} proposé par \citet{Morris2019}, dont les cinq
+composantes — Objectifs, Mécanismes générateurs de données, Cibles, Méthodes et Mesures de
+performance — structurent l'ensemble du dispositif. Le détail opérationnel est consigné à
+l'Annexe~\ref{ann:protocole}.
+
+% ------------------------------------------------------------------
+\section{Positionnement épistémologique : Design Science Research, posture pragmatique
+et évaluation par simulation}
+\label{sec:methodes-epistemologie}
+
+\subsection{Design Science Research comme stratégie globale}
+\label{subsec:methodes-dsr}
+
+La recherche s'inscrit dans le paradigme du \emph{Design Science Research}
+(DSR) tel que formalisé par % TODO: \citep{Hevner2004}.
+Dans ce cadre, la connaissance scientifique est produite par la construction et
+l'évaluation d'artefacts destinés à résoudre des problèmes pratiques. ELMES-TEKA
+constitue l'artefact central de la démarche : conçu pour répondre aux besoins de gestion
+commerciale des petits entrepreneurs congolais, il intègre un moteur de segmentation RFM
+dont la validité algorithmique doit être établie avant tout usage en conditions réelles.
+
+Le DSR se déploie en cinq étapes successives : (1)~la conscience du problème, soit
+l'identification des risques associés à un calcul de segmentation erroné dans un contexte
+multi-tenant ; (2)~la suggestion, matérialisée par la fonction \texttt{computeRFM} en
+TypeScript ; (3)~le développement de l'artefact, soit l'instrumentation du banc de
+simulation ; (4)~l'\textbf{évaluation}, qui constitue la contribution principale du présent
+mémoire ; et (5)~la conclusion, apportant les implications pour la pratique et la recherche.
+Le mémoire se concentre donc sur l'étape évaluative du cycle DSR.
+
+\subsection{Posture pragmatique}
+\label{subsec:methodes-pragmatisme}
+
+La posture épistémologique adoptée est pragmatique : la connaissance produite vaut par
+son utilité et par la capacité de l'artefact à résoudre les problèmes concrets des
+commerçants. Il ne s'agit pas d'établir une vérité universelle sur les algorithmes RFM,
+mais de déterminer si \texttt{computeRFM} se comporte de manière fiable dans les
+conditions d'usage prévues par ELMES-TEKA. Cette posture justifie le recours à des
+corpus synthétiques construits pour couvrir des configurations représentatives et des
+cas limites, plutôt qu'à des données de terrain dont la collecte dépasserait le périmètre
+du mémoire.
+
+\subsection{Raisonnement hypothético-déductif}
+\label{subsec:methodes-hypotheses}
+
+La vérification des deux hypothèses de recherche procède par raisonnement
+hypothético-déductif, en cohérence avec une posture post-positiviste. Deux propositions
+falsifiables sont formulées et soumises à des tests empiriques sur données synthétiques :
+
+\begin{itemize}
+  \item \textbf{H1 (conformité)} : la fonction TypeScript \texttt{computeRFM} produit des
+    résultats identiques à l'implémentation Python de référence, pour tout corpus relevant
+    du domaine couvert par la campagne.
+  \item \textbf{H2 (robustesse)} : les clients dont les valeurs RFM sont éloignées des
+    seuils de terciles ne changent pas de segment lorsqu'une perturbation monétaire de
+    $\pm1\,\%$ est appliquée à leurs montants de commandes.
+\end{itemize}
+
+Chaque hypothèse est opérationnalisée par un critère de décision quantitatif dont le seuil
+est fixé avant l'exécution de la campagne, conformément au principe de préenregistrement
+préconisé par \citet{Lakens2013}.
+
+\subsection{Cadre ADEMP de présentation de la simulation}
+\label{subsec:methodes-ademp}
+
+La simulation est présentée selon le cadre \emph{ADEMP} proposé par \citet{Morris2019} et
+détaillé dans \citet{Morris2019slides}. Ce cadre décompose toute étude de simulation en cinq
+composantes explicites :
+
+\begin{enumerate}
+  \item \textbf{Aims (Objectifs)} : déterminer si \texttt{computeRFM} est conforme à la
+    référence indépendante (H1) et si la segmentation est robuste à une perturbation
+    monétaire modérée pour les clients éloignés des seuils (H2).
+  \item \textbf{Data-generating mechanisms (Mécanismes générateurs)} : trois profils de
+    génération de corpus — régulier (distribution uniforme discrète), dissymétrique
+    (distributions exponentielle et log-normale), identique (valeurs constantes) — croisés
+    avec quatre tailles de corpus ($n \in \{3, 10, 50, 200\}$ clients).
+  \item \textbf{Estimands (Cibles)} : taux de non-conformité inter-implémentations (H1) et
+    taux de changement de segment parmi les clients éloignés sous bruit monétaire $\pm1\,\%$
+    (H2).
+  \item \textbf{Methods (Méthodes)} : comparaison exacte au centime USD entre le moteur
+    JavaScript \texttt{computeRFM} et l'oracle Python indépendant ; classification des
+    clients éloignés des seuils selon la règle à $5\,\%$ décrite au
+    paragraphe~\ref{subsec:methodes-critere-h2}.
+  \item \textbf{Performance measures (Mesures de performance)} : taux de non-conformité
+    global, taux de changement de segment sur clients éloignés, borne supérieure de
+    l'intervalle de confiance Monte-Carlo à $95\,\%$, taux de clients perdus
+    (\texttt{lost\_rate}) et indice de Rand ajusté (\texttt{ari}).
+\end{enumerate}
+
+\subsection{Limites épistémiques}
+\label{subsec:methodes-limites-epistemiques}
+
+Les corpus utilisés dans cette étude sont synthétiques et ne sont pas calibrés sur des
+données issues d'entreprises congolaises réelles. Les résultats décrivent le comportement
+de \texttt{computeRFM} sur les mécanismes générateurs retenus ; ils ne permettent pas de
+conclure directement sur le comportement attendu en production ni sur les distributions
+réelles des données des commerçants congolais. Cette limite constitue une frontière
+épistémique inhérente à toute évaluation par simulation préalable au déploiement terrain.
+
+% ------------------------------------------------------------------
+\section{Variables d'étude}
+\label{sec:methodes-variables}
+
+Le tableau~\ref{tab:ann-dictionnaire} (Annexe~\ref{ann:protocole}) présente le dictionnaire
+complet des variables. Les éléments essentiels sont résumés ci-dessous.
+
+\paragraph{Variables indépendantes (VI).}
+Les variables indépendantes définissent les conditions expérimentales :
+
+\begin{itemize}
+  \item \textbf{Taille du corpus} : $n \in \{3, 10, 50, 200\}$ clients par essai ; cette
+    variation permet d'observer l'effet de la masse de données sur la stabilité des terciles.
+  \item \textbf{Profil de génération} : trois modalités — \texttt{regular} (uniforme discret
+    sur les montants et les fréquences), \texttt{skewed} (exponentielle pour les fréquences,
+    log-normale pour les montants), \texttt{ties} (valeurs identiques pour tous les clients,
+    induisant des ex~æquo systématiques dans les calculs de terciles).
+  \item \textbf{Type de perturbation} : neuf variantes appliquées à chaque corpus initial —
+    bruit monétaire ($\pm1\,\%$, $\pm5\,\%$, $\pm20\,\%$), décalage de dates ($\pm1$~jour,
+    $\pm7$~jours), injection de commandes dupliquées ($1\,\%$, $5\,\%$ du nombre de
+    commandes), suppression de commandes ($1\,\%$, $5\,\%$ du nombre de commandes).
+\end{itemize}
+
+\paragraph{Variables dépendantes (VD).}
+\begin{itemize}
+  \item \textbf{Taux de non-conformité} (H1) : proportion d'essais dans lesquels au moins
+    un client présente un écart entre le moteur JavaScript et l'oracle Python, que ce soit
+    sur l'un des trois scores ($s_R$, $s_F$, $s_M$) ou sur l'étiquette de segment.
+  \item \textbf{Taux de changement de segment sur clients éloignés} (H2) : proportion de
+    clients éloignés des seuils de terciles dont le segment diffère entre la partition initiale
+    et la partition après perturbation.
+\end{itemize}
+
+\paragraph{Variables de contrôle (VC).}
+\begin{itemize}
+  \item Graine maître : \texttt{20261102} (date de référence de la campagne).
+  \item Générateur pseudo-aléatoire : Mulberry32, déterministe et portable entre
+    environnements.
+  \item Date d'observation fixe : 1\textsuperscript{er}~octobre~2026 à 00:00:00~UTC.
+  \item Devise : USD exclusivement.
+\end{itemize}
+
+La table de configuration complète figure au tableau~\ref{tab:ann-configuration}
+(Annexe~\ref{ann:protocole}).
+
+% ------------------------------------------------------------------
+\section{Environnement technique et versions}
+\label{sec:methodes-environnement}
+
+\begin{table}[htb]
+  \centering
+  \caption{Environnement technique de la campagne de simulation.}
+  \label{tab:methodes-environnement}
+  \begin{tabular}{ll}
+    \toprule
+    Composant & Version \\
+    \midrule
+    Node.js        & 24.22.1 \\
+    TypeScript     & 5.9.3 \\
+    Python         & 3.12.14 \\
+    NumPy          & 2.3.5 \\
+    pandas         & 2.2.3 \\
+    SciPy          & 1.17.0 \\
+    Matplotlib     & 3.10.8 \\
+    Commit applicatif & \texttt{\small b062a93a7be96d082dee9afe66b9f4f1f9ebecaa} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+La fonction évaluée est \texttt{computeRFM}, telle qu'elle existe dans le dépôt
+ELMES-TEKA au commit \texttt{b062a93a7be96d082dee9afe66b9f4f1f9ebecaa}. Aucune
+modification fonctionnelle n'est apportée au code applicatif pendant la campagne ;
+seule une couche d'instrumentation externe est ajoutée pour intercepter les appels
+et enregistrer les sorties.
+
+L'oracle Python est une implémentation indépendante développée spécifiquement pour
+cette étude. Il reproduit la même logique de calcul des terciles et les mêmes règles
+d'attribution des segments RFM que la fonction TypeScript, mais en additionnant les
+montants en centimes entiers afin d'éliminer les erreurs d'arrondi propres à
+l'arithmétique à virgule flottante. L'oracle est développé sans partager de code avec
+le moteur JavaScript ; son indépendance est une condition nécessaire à la validité de
+la comparaison.
+
+Les statuts de commandes retenus pour le calcul RFM sont : \texttt{CONFIRMED},
+\texttt{PAID} et \texttt{DELIVERED}. Seules les commandes libellées en USD sont prises
+en compte ; les commandes dans d'autres devises sont exclues du calcul sans lever
+d'exception.
+
+Les mécanismes de génération des données et les paramètres des distributions sont
+décrits au tableau~\ref{tab:ann-generateurs} (Annexe~\ref{ann:protocole}).
+
+% ------------------------------------------------------------------
+\section{Protocole d'expérimentation}
+\label{sec:methodes-protocole}
+
+\subsection{Structure de la campagne}
+\label{subsec:methodes-structure}
+
+La campagne porte sur \textbf{12\,000~essais} résultant du croisement exhaustif des
+conditions expérimentales suivantes :
+
+\begin{itemize}
+  \item 4 tailles de corpus : $n \in \{3, 10, 50, 200\}$ ;
+  \item 3 profils de génération : \texttt{regular}, \texttt{skewed}, \texttt{ties} ;
+  \item 100 répétitions par cellule, chacune tirée avec une graine distincte dérivée
+    de la graine maître \texttt{20261102} ;
+  \item 10 variantes par répétition : la situation initiale (sans perturbation) et
+    9 perturbations.
+\end{itemize}
+
+La combinaison $4 \times 3 \times 100 \times 10 = 12\,000$ essais constitue le domaine
+principal de la campagne. Cinq configurations supplémentaires hors domaine (devise mixte,
+identifiant absent, date invalide, date future, montant négatif) ont été soumises à titre
+exploratoire et sont traitées séparément au chapitre~\ref{chap:resultats}.
+
+\subsection{Principe d'appariement des perturbations}
+\label{subsec:methodes-appariement}
+
+Chaque perturbation est appariée au corpus initial de la même répétition. Elle est
+générée indépendamment à partir d'une graine de perturbation dérivée de la graine de
+corpus, de sorte que deux perturbations distinctes appliquées au même corpus initial
+ne se cumulent pas. Les seuils de terciles sont recalculés intégralement après chaque
+perturbation ; ils ne sont jamais reportés d'une variante à l'autre. Ce principe garantit
+que chaque essai constitue une comparaison entre deux états indépendants du même corpus
+de départ.
+
+\subsection{Mécanismes de génération des profils}
+\label{subsec:methodes-generateurs}
+
+\paragraph{Profil régulier (\texttt{regular}).}
+Le nombre de commandes par client est tiré d'une distribution uniforme discrète sur
+$[1;\, 20]$. Les montants unitaires sont tirés uniformément sur $[1{,}00;\, 100{,}00]$~USD,
+arrondis au centime. Les dates de commande sont réparties uniformément dans les douze mois
+précédant la date d'observation.
+
+\paragraph{Profil dissymétrique (\texttt{skewed}).}
+Le nombre de commandes suit une distribution exponentielle tronquée, produisant une
+majorité de clients peu actifs et une minorité de clients très actifs. Les montants
+suivent une distribution log-normale, générant des valeurs concentrées autour d'un faible
+ticket moyen avec une queue épaisse vers les montants élevés. Ce profil vise à reproduire
+les asymétries documentées dans les bases de données clients réelles
+\citep{Fader2005, Salminen2023}.
+
+\paragraph{Profil identique (\texttt{ties}).}
+Tous les clients du corpus partagent exactement le même nombre de commandes (trois),
+la même date de dernier achat (trente jours avant la date d'observation) et le même
+montant de ticket (10,00~USD). Ce profil force des ex~æquo systématiques dans les trois
+dimensions RFM, testant ainsi le comportement de la fonction dans les cas de dégénérescence
+des terciles.
+
+\paragraph{Commandes anciennes.}
+Dans les profils régulier et dissymétrique, un sous-ensemble de commandes est généré
+avec des dates antérieures à la fenêtre principale et des montants multipliés par un
+facteur aléatoire compris dans $[0{,}80;\, 1{,}20]$, afin d'introduire de l'hétérogénéité
+dans la dimension temporelle sans modifier la distribution globale des montants.
+
+\subsection{Perturbations appliquées}
+\label{subsec:methodes-perturbations}
+
+Le tableau~\ref{tab:methodes-perturbations} récapitule les neuf perturbations appliquées
+à chaque corpus initial.
+
+\begin{table}[htb]
+  \centering
+  \caption{Les neuf perturbations appliquées à chaque corpus initial.}
+  \label{tab:methodes-perturbations}
+  \small
+  \begin{tabular}{llp{0.45\textwidth}}
+    \toprule
+    Identifiant & Dimension & Description \\
+    \midrule
+    \texttt{amount\_noise\_1pct}  & Monétaire  & Multiplication de chaque montant par un facteur uniforme sur $[0{,}99;\, 1{,}01]$ \\
+    \texttt{amount\_noise\_5pct}  & Monétaire  & Multiplication par un facteur uniforme sur $[0{,}95;\, 1{,}05]$ \\
+    \texttt{amount\_noise\_20pct} & Monétaire  & Multiplication par un facteur uniforme sur $[0{,}80;\, 1{,}20]$ \\
+    \texttt{date\_noise\_1d}      & Temporelle & Décalage aléatoire de $\pm1$~jour sur chaque date de commande \\
+    \texttt{date\_noise\_7d}      & Temporelle & Décalage aléatoire de $\pm7$~jours sur chaque date de commande \\
+    \texttt{duplicates\_1pct}     & Structure  & Duplication aléatoire de $1\,\%$ des commandes existantes \\
+    \texttt{duplicates\_5pct}     & Structure  & Duplication aléatoire de $5\,\%$ des commandes existantes \\
+    \texttt{missing\_1pct}        & Structure  & Suppression aléatoire de $1\,\%$ des commandes existantes \\
+    \texttt{missing\_5pct}        & Structure  & Suppression aléatoire de $5\,\%$ des commandes existantes \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ------------------------------------------------------------------
+\section{Critères de conformité et de robustesse}
+\label{sec:methodes-criteres}
+
+\subsection{Critère de conformité H1}
+\label{subsec:methodes-critere-h1}
+
+Un essai est déclaré \textbf{non conforme} dès qu'au moins un client présente, pour cet
+essai, un écart entre le moteur JavaScript et l'oracle Python sur l'un des éléments
+suivants :
+
+\begin{itemize}
+  \item le score de récence $s_R \in \{1, 2, 3\}$ ;
+  \item le score de fréquence $s_F \in \{1, 2, 3\}$ ;
+  \item le score de montant $s_M \in \{1, 2, 3\}$ ;
+  \item l'étiquette de segment parmi les cinq catégories : «~Champions~»,
+    «~Loyaux~», «~À risque~», «~Petits acheteurs~», «~Potentiels~».
+\end{itemize}
+
+La comparaison est exacte au centime USD : deux sommes identiques en représentation
+décimale à deux chiffres sont considérées égales, quelle que soit leur représentation
+interne en virgule flottante. L'oracle Python réalise toutes les sommes de montants en
+centimes entiers avant de diviser par 100 pour obtenir la valeur en USD ; cette convention
+constitue la référence.
+
+Le taux de non-conformité est défini par :
+\[
+  \tau_{\mathrm{H1}} = \frac{\text{nombre d'essais non conformes}}{\text{nombre total d'essais}}.
+\]
+
+La décision de compatibilité avec H1 n'est pas fondée sur un seuil arbitraire de
+$\tau_{\mathrm{H1}}$ ; il s'agit au contraire de caractériser la nature et la source
+des écarts observés, conformément à l'objectif diagnostique du mémoire.
+
+\subsection{Critère de robustesse H2}
+\label{subsec:methodes-critere-h2}
+
+\paragraph{Définition des clients éloignés.}
+Soient $q_{d,j}$ le $j$-ème quantile de la dimension $d \in \{R, F, M\}$, avec $j \in
+\{1, 2\}$ correspondant aux deux seuils de tercile (tercile inférieur et tercile
+supérieur). Un client $i$ est dit \textbf{éloigné} de tous les seuils si, pour chacune
+des six paires $(d, j)$, la distance normalisée suivante est strictement supérieure à
+$5\,\%$ :
+
+\begin{equation}
+  \frac{\bigl|x_{i,d} - q_{d,j}\bigr|}{\max\!\bigl(|q_{d,j}|,\, 1\bigr)} > 0{,}05,
+  \quad \forall\, d \in \{R, F, M\},\; j \in \{1, 2\}.
+  \label{eq:critere-eloignement}
+\end{equation}
+
+Cette règle garantit que les clients retenus pour évaluer H2 ne sont pas proches d'une
+frontière de segmentation, de sorte qu'une perturbation mineure ne devrait pas les faire
+changer de tercile — et donc de segment — sous l'hypothèse de robustesse.
+
+\paragraph{Cellules admissibles pour H2.}
+Seules les cellules vérifiant les trois conditions suivantes sont admissibles pour le
+critère H2 :
+
+\begin{enumerate}
+  \item taille de corpus $n \in \{50, 200\}$ ;
+  \item profil \texttt{regular} ou \texttt{skewed} (le profil \texttt{ties} est exclu en
+    raison de la dégénérescence de ses seuils de tercile) ;
+  \item scénario de bruit monétaire $\pm1\,\%$ (\texttt{amount\_noise\_1pct}).
+\end{enumerate}
+
+De plus, une répétition n'est admissible que si les deux partitions (initiale et perturbée)
+comportent au moins dix clients communs éloignés au sens de l'équation~\eqref{eq:critere-eloignement}. Une cellule est retenue si elle comprend au moins 80~répétitions
+admissibles.
+
+\paragraph{Indicateur et règle de décision.}
+Le taux de changement de segment sur clients éloignés est calculé pour chaque répétition
+admissible. Un intervalle de confiance Monte-Carlo à $95\,\%$ est construit par loi~$t$
+à partir des répétitions admissibles d'une cellule, puis tronqué à $[0;\, 1]$. La
+décision est déclarée \textbf{Compatible} avec H2 si la borne supérieure de cet intervalle
+est strictement inférieure ou égale à $5\,\%$. Ce seuil est fixé avant l'exécution de la
+campagne.
+
+% ------------------------------------------------------------------
+\section{Vérification préliminaire par cas manuels}
+\label{sec:methodes-cas-manuels}
+
+Avant le lancement de la campagne automatisée de 12\,000~essais, neuf cas manuels ont été
+construits à la main et enregistrés dans le fichier \texttt{conformity.json}. Cette étape
+préliminaire vise à valider l'oracle Python avant de l'utiliser comme référence pour
+l'ensemble des essais automatisés.
+
+Chaque cas manuel est conçu pour couvrir une configuration limite susceptible de
+révéler un défaut de l'oracle ou une divergence de convention entre les deux
+implémentations. Les neuf configurations couvertes sont les suivantes :
+
+\begin{enumerate}
+  \item corpus vide (aucun client, aucune commande) ;
+  \item six clients aux frontières exactes des quantiles, couvrant les cinq groupes
+    de segments en même temps ;
+  \item client singleton (un seul client dans le corpus) ;
+  \item valeurs toutes identiques (ex~æquo parfaits sur les trois dimensions) ;
+  \item filtrage par statut de commande (\texttt{CONFIRMED}, \texttt{PAID},
+    \texttt{DELIVERED}) — vérification que les commandes à d'autres statuts sont ignorées ;
+  \item exclusion par tenant et exercice — vérification de l'isolation multi-tenant ;
+  \item client présent dans le répertoire mais sans commande admissible ;
+  \item montant nul sur l'ensemble des commandes d'un client ;
+  \item date de commande avec fraction de journée — vérification du traitement de la
+    partie entière pour le calcul de récence.
+\end{enumerate}
+
+Le tableau~\ref{tab:ann-cas-manuels} (Annexe~\ref{ann:protocole}) liste les entrées et
+sorties attendues de chacun des neuf cas. La satisfaction de ces cas ne constitue pas une
+preuve d'absence d'écart dans la campagne principale ; elle établit uniquement que l'oracle
+Python et le moteur JavaScript s'accordent sur les configurations limites les plus
+prévisibles, ce qui est une condition nécessaire à la validité de la comparaison
+automatisée.

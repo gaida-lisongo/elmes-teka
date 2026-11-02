@@ -1,0 +1,404 @@
+\chapter{Revue de la littérature}
+\label{chap:revue}
+
+Ce chapitre situe la présente étude dans son double contexte intellectuel : d'une part, les
+travaux relatifs à la segmentation clientèle par le modèle RFM et à son usage dans les
+plateformes de gestion ; d'autre part, les méthodes d'évaluation par simulation permettant
+de mesurer la conformité et la robustesse d'un module algorithmique. La revue s'organise en
+quatre sections. La première ancre la problématique dans la réalité des petits commerçants
+congolais et dans les limites des solutions SaaS disponibles. La deuxième présente le modèle
+RFM en distinguant rigoureusement ses trois familles d'implémentation, leurs hypothèses
+respectives et leurs limites documentées. La troisième pose les critères généraux permettant
+d'évaluer un module de segmentation, sans anticiper les résultats de la campagne. La quatrième
+introduit le cadre méthodologique de la simulation par Monte-Carlo, en particulier le cadre
+ADEMP proposé par \citet{Morris2019}, et identifie les configurations dégénérées susceptibles
+d'affecter la stabilité des segmentations.
+
+% ------------------------------------------------------------------
+\section{Artefact et besoin : SaaS de gestion et segmentation des petits commerçants}
+\label{sec:revue-artefact}
+
+\subsection{Le petit commerce congolais et le déficit d'outils adaptés}
+\label{subsec:revue-contexte-rdc}
+
+La République démocratique du Congo compte une part importante de son activité économique
+dans le secteur des très petites entreprises et du commerce informel. Ces acteurs exercent
+souvent sans comptabilité formelle, dans un environnement monétaire dual (franc congolais et
+dollar américain), avec un accès irrégulier à l'infrastructure numérique. \citet{Yoseph2023}
+documentent la difficulté structurelle des TPE africaines à adopter des systèmes de gestion
+conçus pour des contextes économiques distincts : les solutions génériques, développées pour
+des marchés occidentaux ou asiatiques, intègrent rarement les logiques de devises multiples,
+de transactions partielles ou de clientèle non bancarisée.
+
+Dans ce contexte, ELMES-TEKA est conçu comme un SaaS de gestion commerciale multi-tenant,
+destiné à fournir aux entrepreneurs congolais formels et informels un outil de suivi des
+ventes, des stocks, des dépenses et des clients. L'une de ses fonctionnalités analytiques
+est un module de segmentation clientèle fondé sur le modèle RFM, dont l'objectif est de
+classer les acheteurs selon leur valeur comportementale afin d'orienter les décisions
+commerciales.
+
+\subsection{La segmentation comme fonction analytique dans un SaaS de gestion}
+\label{subsec:revue-segmentation-saas}
+
+\citet{Salminen2023} soulignent que les modules analytiques intégrés dans des plateformes
+commerciales répondent à une logique différente de celle des outils analytiques autonomes :
+ils doivent produire des résultats stables, comparables d'un exercice à l'autre, et
+interprétables par des utilisateurs non statisticiens. Dans cette optique, un module de
+segmentation doit non seulement produire des résultats corrects, mais également se comporter
+de manière prévisible face à des variations mineures des données d'entrée.
+
+La question de la stabilité est particulièrement sensible dans le contexte des petits
+commerçants, dont les données transactionnelles sont souvent bruitées : erreurs de saisie,
+arrondis monétaires, doublons de commandes, corrections a posteriori. Un module incapable de
+traiter ces imperfections de manière cohérente produirait des classements instables, minant
+la confiance des utilisateurs dans les recommandations commerciales générées.
+
+\subsection{Positionnement de la présente étude}
+\label{subsec:revue-positionnement}
+
+L'évaluation conduite dans ce mémoire relève de la démarche de Design Science Research
+(\emph{DSR}). Dans ce cadre, la fonction \texttt{computeRFM} est l'artefact dont l'étape
+\emph{evaluate} consiste à mesurer la conformité à une référence indépendante et la
+robustesse aux perturbations réalistes. Cette posture épistémologique, dite pragmatique et
+post-positiviste, est cohérente avec l'objectif d'amélioration d'un produit en cours de
+développement : il ne s'agit pas de tester une hypothèse théorique sur la segmentation en
+général, mais d'établir des garanties mesurables sur un module logiciel précis, dans les
+conditions d'usage définies par son contexte.
+
+% ------------------------------------------------------------------
+\section{Le modèle RFM : données, quantiles, familles et limites connues}
+\label{sec:revue-rfm}
+
+\subsection{Origines et composantes du modèle}
+\label{subsec:revue-rfm-origines}
+
+Le modèle RFM est fondé sur trois dimensions comportementales d'un client :
+la \emph{Récence} ($R$), soit le temps écoulé depuis le dernier achat ; la
+\emph{Fréquence} ($F$), soit le nombre de transactions sur une période donnée ; et le
+\emph{Montant} ($M$, parfois désigné \emph{Monetary Value}), soit la somme totale dépensée
+sur la même période. Ces trois dimensions sont calculées individuellement pour chaque client
+à partir de l'historique transactionnel disponible.
+
+\citet{Fader2005} attribuent l'origine pratique de ce modèle aux praticiens du marketing
+direct des années 1990, qui cherchaient un outil simple pour hiérarchiser les listes de
+clients en vue de campagnes postales. La force du modèle réside précisément dans cette
+simplicité : trois valeurs numériques suffisent à résumer le profil comportemental d'un
+client, sans nécessiter de modélisation probabiliste complexe ni de données démographiques.
+
+Dans ELMES-TEKA, la Récence est définie comme le nombre de jours depuis le dernier achat
+enregistré pour un exercice donné ; la Fréquence comme le nombre de commandes acceptées
+(statuts \texttt{CONFIRMED}, \texttt{PAID} ou \texttt{DELIVERED}) ; le Montant comme la
+somme des montants de ces mêmes commandes.
+
+\subsection{Les trois familles d'implémentation RFM}
+\label{subsec:revue-rfm-familles}
+
+Une confusion fréquente dans la littérature consiste à traiter le modèle RFM comme une
+méthode uniforme. Il existe en réalité trois familles d'implémentation distinctes, reposant
+sur des hypothèses et des propriétés mathématiques différentes.
+
+\paragraph{Famille 1 — Score par règles et terciles (ou quintiles).}
+La première famille, et la plus répandue dans les outils commerciaux, attribue à chaque
+client un score discret par découpage en quantiles de la distribution empirique de chaque
+dimension. \citet{Salminen2023} décrivent ce mécanisme comme une normalisation ordinale :
+pour chaque dimension, les seuils sont calculés de manière à répartir les clients en groupes
+d'effectifs approximativement égaux. Un score de tercile $s \in \{1, 2, 3\}$ est attribué en
+fonction du rang dans la distribution. C'est cette famille qu'implémente ELMES-TEKA, avec
+cinq catégories finales (\emph{Champions}, \emph{Loyaux}, \emph{À risque},
+\emph{Petits acheteurs}, \emph{Potentiels}) définies par des règles portant sur les scores
+$s_R$, $s_F$ et $s_M$.
+
+La simplicité de cette approche a un coût bien documenté. \citet{ViannaFilho2026} rappellent
+que le découpage en terciles est sensible aux égalités (\emph{ties}) : lorsque plusieurs
+clients présentent exactement la même valeur sur une dimension, leur affectation à un groupe
+dépend du mécanisme de résolution des ex-æquo, qui peut varier d'une implémentation à
+l'autre. Cette instabilité est particulièrement marquée pour les corpus de petite taille, où
+un seul client peut représenter un tiers de la distribution. Par ailleurs, \citet{Sobantu2025}
+soulignent que la méthode par terciles n'est pas monotone au sens strict pour les valeurs
+situées précisément aux seuils : une variation infinitésimale d'un montant peut entraîner un
+changement de score si elle déplace le client d'un côté ou de l'autre d'un seuil.
+
+\paragraph{Famille 2 — Clustering non supervisé (K-means et variantes).}
+La deuxième famille utilise des algorithmes de regroupement pour partitionner l'espace
+tridimensionnel $(R, F, M)$ en clusters homogènes. \citet{Rajendran2024} proposent une
+implémentation fondée sur K-means pour la segmentation de clientèle dans le commerce de
+détail, en justifiant le nombre de clusters par le critère de la silhouette ou de la
+méthode du coude. \citet{Sobantu2025} comparent K-means et K-médoïdes dans un contexte de
+commerce en ligne africain et concluent que K-médoïdes est plus robuste aux valeurs
+aberrantes, au prix d'une complexité computationnelle plus élevée.
+
+Cette famille se distingue de la première par son caractère non déterministe au sens de
+la graine d'initialisation et par l'absence de catégories sémantiques prédéfinies : les
+segments obtenus dépendent des données et ne correspondent pas nécessairement aux cinq
+groupes habituels du modèle RFM classique.
+
+\paragraph{Famille 3 — Modèles stochastiques (Pareto/NBD et dérivés).}
+La troisième famille modélise explicitement le processus d'achat comme un processus
+stochastique. \citet{Fader2005} proposent le modèle Pareto/NBD (\emph{Negative Binomial
+Distribution}), dans lequel la fréquence des achats suit une loi de Poisson dont le paramètre
+varie entre clients selon une loi gamma, et la durée de vie active du client suit une loi
+exponentielle dont le paramètre varie selon une loi gamma. Ce modèle permet d'estimer la
+probabilité qu'un client soit encore «~vivant~» et de prédire son comportement futur.
+
+La complexité de calibration et d'interprétation de cette famille la rend peu adaptée aux
+outils grand public ou aux contextes de petits commerces disposant de données limitées.
+ELMES-TEKA n'appartient pas à cette famille.
+
+\subsection{Limites communes et problème des catégories dégénérées}
+\label{subsec:revue-rfm-limites}
+
+Quelle que soit la famille d'implémentation, le modèle RFM présente des limites structurelles
+reconnues. \citet{Salminen2023} rappellent que le modèle ne capture pas les motivations
+d'achat, la fidélité attitudinale, ni les effets de saisonnalité à court terme. La dimension
+Montant ignore la composition du panier et peut conduire à ranger dans la même catégorie
+des clients aux profils très différents.
+
+Un cas limite particulièrement important pour l'évaluation d'un module de segmentation est
+celui des corpus dits \emph{dégénérés} ou \emph{ex-æquo} : un corpus où tous les clients
+présentent les mêmes valeurs sur une ou plusieurs dimensions. Dans ce cas, le découpage en
+terciles est mathématiquement sous-déterminé, car toute partition en groupes d'effectifs
+égaux est valide. \citet{ViannaFilho2026} identifient ce cas comme une configuration
+hors-domaine pour les méthodes par quantiles, dans la mesure où les hypothèses implicites
+de la méthode — la dispersion suffisante des valeurs pour définir des seuils stables —
+ne sont pas satisfaites. Les comportements observés dans ce type de corpus ne peuvent pas
+être interprétés comme des mesures de performance au sens habituel ; ils décrivent un
+comportement hors-domaine défini par la construction même du corpus.
+
+% ------------------------------------------------------------------
+\section{Évaluer un module de segmentation : conformité, robustesse et reproductibilité}
+\label{sec:revue-evaluation}
+
+\subsection{Conformité à une référence indépendante}
+\label{subsec:revue-conformite}
+
+L'évaluation d'un module algorithmique peut poursuivre deux objectifs distincts. Le premier
+est la vérification de la conformité (\emph{verification}) : le module produit-il les sorties
+attendues pour des entrées données ? Cette question suppose l'existence d'une référence
+indépendante, par rapport à laquelle les sorties du module peuvent être comparées. Dans le
+cas d'un module de segmentation basé sur des terciles, la référence peut être une
+implémentation dans un langage ou un environnement différent, en s'assurant que les
+hypothèses sur la représentation des nombres sont explicitement contrôlées.
+
+\citet{Salminen2023} insistent sur l'importance de définir précisément ce que l'on entend
+par «~sortie correcte~» avant de mesurer la conformité : pour un module de segmentation
+numérique, les erreurs d'arrondi et les accumulations de virgule flottante peuvent produire
+des sorties différant de la référence sans qu'aucune erreur logique ne soit en cause.
+L'unité d'analyse doit donc être clairement posée — l'essai, le client, la dimension — et
+le critère de non-conformité doit être explicitement défini avant la collecte des données.
+
+\subsection{Robustesse aux perturbations}
+\label{subsec:revue-robustesse}
+
+Le second objectif est la vérification de la robustesse (\emph{validation}) : le module
+produit-il des résultats stables lorsque les données d'entrée sont soumises à des
+perturbations réalistes ? Cette question est distincte de la précédente : un module peut
+être conforme à sa référence et néanmoins instable, ou inversement.
+
+Dans le contexte d'une plateforme de gestion commerciale, les perturbations réalistes
+incluent les erreurs de saisie monétaire (arrondis, corrections), les modifications de dates
+de transaction, les doublons de commandes et les suppressions accidentelles. La robustesse
+d'un module de segmentation peut être mesurée par le taux de changement de segment parmi
+les clients communs à deux partitions produites à partir d'un corpus initial et d'un corpus
+perturbé. \citet{Rajendran2024} utilisent une logique analogue dans l'évaluation de leur
+méthode de segmentation, en mesurant la stabilité des clusters sous rééchantillonnage.
+
+La définition du critère de compatibilité requiert de poser une borne acceptée en amont.
+\citet{Lakens2013} soulignent l'importance de distinguer la significativité statistique de
+la pertinence pratique : un test qui détecte un changement statistiquement significatif peut
+décrire un effet trop faible pour avoir une conséquence commerciale. Dans une étude de
+robustesse, la borne opérationnelle — le seuil au-delà duquel un taux de changement est
+considéré comme incompatible — doit être définie par des considérations métier, non par un
+seuil statistique arbitraire. La borne supérieure d'un intervalle de confiance Monte-Carlo
+constitue un instrument de décision naturel pour ce type de comparaison.
+
+\subsection{Perspectives analytiques complémentaires}
+\label{subsec:revue-perspectives}
+
+Plusieurs outils analytiques sont mobilisables dans une phase ultérieure d'évaluation plus
+approfondie, lorsqu'une cible indépendante est disponible. L'analyse de variance (ANOVA),
+le test de Welch adapté aux variances inégales, les tests post-hoc de comparaisons multiples,
+les mesures d'effet (\emph{d} de Cohen, $\eta^2$), la régression logistique pour la
+prédiction du changement de segment, et les indicateurs de discrimination tels que la courbe
+ROC et l'AUC permettent de caractériser les effets de manière plus fine. Ces méthodes
+supposent cependant la disponibilité d'une variable cible indépendante du processus de
+segmentation lui-même, ce qui n'est pas le cas dans une étude de robustesse interne.
+Elles constituent des perspectives naturelles pour une évaluation comparative entre plusieurs
+implémentations ou sur des données de terrain réelles, mais elles ne font pas partie du
+protocole de la campagne présentée dans ce mémoire.
+
+La reproductibilité des résultats est une condition supplémentaire, distincte de la
+conformité et de la robustesse. Elle concerne la capacité d'un tiers à reconstruire
+identiquement les résultats à partir du code source, des données et de la procédure
+documentés. Dans le cadre de cette étude, la reproductibilité est assurée par la fixation
+de graines aléatoires, la documentation des versions logicielles et l'archivage complet de
+l'environnement d'exécution.
+
+% ------------------------------------------------------------------
+\section{Simulation pour l'évaluation de méthodes : ADEMP, Monte-Carlo et catégories dégénérées}
+\label{sec:revue-simulation}
+
+\subsection{Le rôle de la simulation dans l'évaluation des méthodes statistiques}
+\label{subsec:revue-simulation-role}
+
+L'évaluation d'une méthode par simulation est une pratique établie en statistique et en
+informatique lorsque les propriétés théoriques de la méthode sont difficiles à dériver
+analytiquement, ou lorsque les hypothèses requises par une démonstration formelle ne sont
+pas satisfaites dans le cas d'usage. \citet{Ribatet_nd} présentent la simulation de
+Monte-Carlo comme un outil générique permettant d'approximer des quantités mathématiques
+par la répétition d'un grand nombre d'expériences aléatoires indépendantes, dont la
+moyenne converge vers la quantité d'intérêt par la loi des grands nombres.
+
+Dans le contexte de l'évaluation d'un module logiciel, la simulation sert un double objectif.
+D'une part, elle permet d'explorer le comportement du module sur un espace de configurations
+plus large que ce que permettrait l'observation directe. D'autre part, elle fournit des
+estimations assorties d'intervalles de confiance, permettant de quantifier l'incertitude
+liée au nombre fini de répétitions.
+
+\subsection{Le cadre ADEMP}
+\label{subsec:revue-ademp}
+
+\citet{Morris2019} proposent un cadre de présentation des études de simulation, désigné
+par l'acronyme ADEMP, structurant cinq composantes essentielles d'une étude de simulation :
+
+\begin{enumerate}
+  \item \textbf{Aims} (\emph{objectifs}) : l'objectif scientifique de l'étude, posé sous
+    forme de question ou d'hypothèse mesurable ;
+  \item \textbf{Data-generating mechanisms} (\emph{mécanismes générateurs de données}) :
+    les procédures permettant de construire les jeux de données synthétiques soumis à la
+    méthode évaluée ;
+  \item \textbf{Estimands} (\emph{cibles}) : les quantités que l'étude cherche à estimer ou
+    à évaluer, définies indépendamment de la méthode ;
+  \item \textbf{Methods} (\emph{méthodes}) : la ou les méthodes comparées ou évaluées, dont
+    les propriétés sont mesurées par rapport aux cibles ;
+  \item \textbf{Performance measures} (\emph{mesures de performance}) : les indicateurs
+    quantitatifs permettant de répondre à l'objectif, accompagnés de leur incertitude Monte-Carlo.
+\end{enumerate}
+
+Ce cadre est mobilisé dans la présente étude pour présenter la campagne de simulation
+conduite sur la fonction \texttt{computeRFM}. Son utilisation comme grille de lecture
+n'implique pas un préenregistrement historique de la campagne ; il s'agit d'un outil
+de structuration de la présentation, adopté \emph{a posteriori} pour garantir la clarté
+et la reproductibilité du rapport d'évaluation.
+
+\citet{Morris2019} insistent par ailleurs sur la nécessité de quantifier l'incertitude
+Monte-Carlo des mesures de performance elles-mêmes. Pour un estimateur de proportion tel
+que le taux de non-conformité ou le taux de changement de segment, l'incertitude est
+estimée par un intervalle de confiance fondé sur la loi $t$ à partir de la variance
+empirique des répétitions. Cette précision méthodologique est indispensable pour éviter de
+conclure à la robustesse d'un module sur la seule base d'un taux moyen, sans quantifier
+la variabilité inter-répétitions.
+
+\subsection{Mécanismes générateurs et profils de corpus}
+\label{subsec:revue-simulation-dgm}
+
+La conception des mécanismes générateurs de données est une étape critique d'une étude de
+simulation. \citet{Morris2019} distinguent deux types de mécanismes : les mécanismes
+\emph{paramétriques}, qui construisent des données selon un modèle probabiliste explicite,
+et les mécanismes \emph{empiriques}, qui rééchantillonnent des données observées. Dans le
+cas présent, des mécanismes paramétriques sont utilisés pour produire des corpus synthétiques
+de clients caractérisés par leur Récence, leur Fréquence et leur Montant.
+
+Trois profils de distribution sont pertinents pour cette étude :
+
+\begin{itemize}
+  \item Le profil \emph{régulier} (\texttt{regular}), dans lequel les valeurs sont
+    distribuées de manière relativement homogène, reproduisant un contexte commercial
+    ordinaire avec une certaine diversité de comportements clients ;
+  \item Le profil \emph{dissymétrique} (\texttt{skewed}), dans lequel quelques clients
+    concentrent une part importante de l'activité, reproduisant une distribution de Pareto
+    courante dans le commerce de détail ;
+  \item Le profil \emph{ex-æquo} (\texttt{ties}), dans lequel tous les clients présentent
+    exactement les mêmes valeurs sur les trois dimensions, constituant un cas dégénéré au
+    sens de la méthode des terciles.
+\end{itemize}
+
+Ce dernier profil mérite une attention particulière. Comme le montrent \citet{ViannaFilho2026},
+une segmentation par terciles sur un corpus où tous les clients sont identiques est
+mathématiquement ambiguë : les seuils de terciles ne peuvent pas être définis de manière
+unique, et la résolution des ex-æquo par tout algorithme concret introduit une forme
+d'arbitraire. Les résultats obtenus sur ce profil ne mesurent pas la robustesse au sens
+de la résistance aux perturbations, mais décrivent le comportement de l'algorithme dans une
+configuration que son domaine de validité n'inclut pas. Ils constituent néanmoins une
+information utile pour circonscrire les limites du module évalué.
+
+\subsection{Perturbations et cellules de la campagne}
+\label{subsec:revue-simulation-perturbations}
+
+La conception des perturbations appliquées aux corpus reflète les conditions d'usage
+réelles de la plateforme. \citet{Morris2019} recommandent que les perturbations soient
+motivées par le contexte applicatif plutôt que par des choix purement statistiques : elles
+doivent correspondre à des erreurs ou des variations plausibles dans les données de terrain.
+
+Dans le contexte d'une plateforme de gestion commerciale pour petits commerçants congolais,
+les perturbations réalistes incluent :
+
+\begin{itemize}
+  \item le bruit monétaire, c'est-à-dire les variations de montant liées aux arrondis de
+    prix ou aux corrections de saisie ;
+  \item les décalages de dates, introduits par des corrections de dates de transaction ou
+    des enregistrements différés ;
+  \item les doublons de commandes, résultant d'enregistrements redondants ;
+  \item les commandes manquantes, résultant de suppressions ou de rejets a posteriori.
+\end{itemize}
+
+Pour chaque type de perturbation, plusieurs intensités sont testées afin de caractériser la
+relation entre l'intensité de la perturbation et le taux de changement de segment. La
+conception en cellules — croisement de la taille du corpus, du profil de distribution et
+du scénario de perturbation — permet d'isoler les effets de chaque facteur et d'identifier
+les configurations pour lesquelles le module est le plus sensible.
+
+\subsection{Intervalles de confiance Monte-Carlo et critère de décision}
+\label{subsec:revue-simulation-ic}
+
+L'incertitude des estimateurs de proportion calculés par simulation est quantifiable par
+des intervalles de confiance Monte-Carlo. Pour un taux observé $\hat{p}$ sur $B$ répétitions,
+l'intervalle de confiance asymptotique à $(1-\alpha)$ fondé sur la loi normale est :
+
+\begin{equation}
+  \hat{p} \;\pm\; z_{1-\alpha/2} \;\sqrt{\frac{\hat{p}(1-\hat{p})}{B}}
+  \label{eq:ic-monte-carlo}
+\end{equation}
+
+\noindent où $z_{1-\alpha/2}$ est le quantile de la loi normale standard. Pour un nombre
+modéré de répétitions, \citet{Morris2019} recommandent d'utiliser la loi $t$ à $B - 1$ degrés
+de liberté à la place de la loi normale, ce qui produit des intervalles légèrement plus
+conservateurs mais mieux calibrés.
+
+La décision de compatibilité repose sur la comparaison entre la borne supérieure de
+l'intervalle de confiance et une borne opérationnelle définie avant la campagne. Ce
+mécanisme est cohérent avec la recommandation de \citet{Lakens2013} de recourir à des
+tests d'équivalence ou d'infériorité pour les études de robustesse, dans lesquelles
+l'objectif est de montrer qu'un effet est suffisamment petit pour être négligeable, et non
+qu'il est différent de zéro.
+
+% ------------------------------------------------------------------
+\section{Synthèse et lacunes identifiées}
+\label{sec:revue-synthese}
+
+La revue de la littérature fait apparaître les éléments suivants, qui structurent la
+contribution de la présente étude.
+
+Premièrement, le modèle RFM par terciles, tel qu'implémenté dans ELMES-TEKA, est une
+approche légère et interprétable, mais qui comporte des limites structurelles bien
+documentées : sensibilité aux ex-æquo, instabilité aux seuils, indifférence aux profils
+monetaires complexes. Ces limites sont inhérentes à la famille d'implémentation choisie
+et ne constituent pas nécessairement un défaut de l'artefact, mais elles délimitent son
+domaine de validité.
+
+Deuxièmement, l'évaluation d'un module de segmentation dans un SaaS de gestion doit
+distinguer la conformité à une référence — question de vérification — et la robustesse
+aux perturbations — question de validation. Ces deux dimensions requièrent des protocoles
+distincts, des critères de décision définis avant la collecte et une quantification explicite
+de l'incertitude.
+
+Troisièmement, la simulation de Monte-Carlo, encadrée par le schéma ADEMP de
+\citet{Morris2019}, fournit un protocole méthodologique adapté à l'évaluation d'un module
+logiciel lorsque les propriétés analytiques de la méthode sont difficiles à dériver. Elle
+permet de couvrir un espace large de configurations, d'isoler les effets des facteurs
+d'intérêt et de produire des estimateurs accompagnés de leur incertitude.
+
+Enfin, la littérature consultée ne documente pas d'étude d'évaluation par simulation du
+module RFM d'un SaaS de gestion commerciale destiné aux petits commerçants d'Afrique
+subsaharienne. La présente étude comble partiellement cette lacune, en produisant des
+mesures de conformité et de robustesse sur un artefact réel, dans un contexte applicatif
+précis.

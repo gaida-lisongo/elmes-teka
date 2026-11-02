@@ -142,6 +142,15 @@ La figure~\ref{fig:ann-sensibilite-montants} montre que pour les profils non-tie
 de changement global augmentent graduellement de $\pm1\,\%$ à $\pm20\,\%$ de bruit monétaire,
 ce qui confirme que la robustesse est conditionnelle au niveau de perturbation.
 
+La décision de construire l'intervalle par loi $t$ plutôt que par bootstrap s'explique par
+la symétrie des estimateurs et le nombre de répétitions ($n = 100$ par cellule), suffisant
+pour invoquer le théorème central limite \citep{Diez2019}. Sur une variable dont la variance
+empirique est nulle, les deux méthodes convergent vers le même résultat ; la distinction est
+sans conséquence pratique pour les cellules H2, mais importante à rappeler pour des cellules
+où la variance n'est pas nulle. Les données cellule par cellule, disponibles dans l'archive
+\texttt{hypothesis\_H2.csv} (Annexe~\ref{ann:reproduction}), permettraient une vérification
+par bootstrap si une révision du protocole le jugeit utile.
+
 \subsection{Positionnement dans la littérature}
 \label{subsec:disc-h2-litterature}
 
@@ -246,6 +255,13 @@ Cette limite est structurelle dans toute démarche de validation par référence
 la volée ; elle appelle à terme une certification de la référence par un tiers ou une
 vérification formelle de son algorithme de tercilisation.
 
+À titre de contrôle partiel, les neuf cas manuels ont été vérifiés indépendamment de la
+référence Python, contre la spécification textuelle de l'algorithme. Leur accord à $9/9$
+confirme que la référence ne commet pas d'erreur sur les configurations limites les plus
+critiques — corpus vide, client unique, valeurs toutes identiques, filtre d'exercice, montant
+nul. Pour autant, cette vérification ne couvre pas les configurations de la pleine campagne,
+au sein desquelles la référence est utilisée comme oracle sans contrôle additionnel.
+
 \subsection{Profils synthétiques non calibrés}
 \label{subsec:disc-vi-synth}
 
@@ -319,3 +335,33 @@ inter-sessions de la segmentation, au-delà de l'analyse par scénario conduite 
 présente campagne. Ces pistes constituent des prolongements naturels, conditionnels à la
 disponibilité de données réelles et à l'accord des parties prenantes d'ELMES-TEKA sur les
 modalités d'accès.
+
+\subsection{Récapitulatif des conclusions par hypothèse}
+\label{subsec:disc-recap}
+
+Le tableau~\ref{tab:disc-recap} synthétise les décisions retenues pour H1 et H2 à l'issue
+de la discussion.
+
+\begin{table}[htb]
+  \centering
+  \caption{Récapitulatif des décisions d'hypothèse après discussion.}
+  \label{tab:disc-recap}
+  \begin{tabular}{lp{0.52\textwidth}l}
+    \toprule
+    Hypothèse & Résultat et décision & Condition \\
+    \midrule
+    H1 & Taux de non-conformité $1{,}667\,\%$ (IC $[1{,}448\,\% ;\, 1{,}904\,\%]$),
+         inférieur au seuil de $2\,\%$ ; cause identifiée (virgule flottante) ;
+         décision : \textbf{conforme sous réserve}
+      & Commit \texttt{b062a93a} \\
+    H2 & Taux de changement $0{,}000\,\%$ dans les 4 cellules admissibles (IC $[0\,\% ;\, 0\,\%]$) ;
+         borne supérieure $< 5\,\%$ ; décision : \textbf{compatible}
+      & Clients éloignés, $\pm1\,\%$, $n \ge 50$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+La mention «~conforme sous réserve~» pour H1 signifie que la conformité est établie dans les
+limites du périmètre testé et sous la cause identifiée, qui est corrigible. La décision ne
+peut être portée à «~conforme sans réserve~» qu'après application du correctif arithmétique
+et réévaluation de la campagne sur les essais ayant produit des écarts.

@@ -21,7 +21,8 @@ function olsSlope(y: number[]): { a: number; b: number; r2: number; rmse: number
   const ssRes = y.reduce((s, yi, i) => s + (yi - yHat[i]) ** 2, 0);
   const ssTot = y.reduce((s, yi) => s + (yi - yBar) ** 2, 0);
   const r2 = ssTot === 0 ? 1 : 1 - ssRes / ssTot;
-  const rmse = Math.sqrt(ssRes / n);
+  // Erreur résiduelle standard (S) : degrés de liberté n-2 (pente + ordonnée)
+  const rmse = n > 2 ? Math.sqrt(ssRes / (n - 2)) : Math.sqrt(ssRes / n);
   return { a, b, r2, rmse };
 }
 

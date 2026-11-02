@@ -25,6 +25,82 @@ function scoreDesc(value: number, t1: number, t2: number): 1 | 2 | 3 {
   return 3;
 }
 
+/* ── P-value computation (F-distribution) ───────────────── */
+/*
+ * Implémentation autonome sans dépendance externe.
+ * Algorithmes : approximation de Lanczos pour logGamma,
+ * fraction continue de Lentz pour la fonction bêta incomplète régularisée.
+ * Précision ~1e-9 pour les paramètres typiques d'une ANOVA à faible N.
+ */
+
+function logGamma(z: number): number {
+  if (z < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * z)) - logGamma(1 - z);
+  const n = z - 1;
+  const c = [
+    0.99999999999980993,
+    676.5203681218851,
+    -1259.1392167224028,
+    771.32342877765313,
+    -176.61502916214059,
+    12.507343278686905,
+    -0.13857109526572012,
+    9.9843695780195716e-6,
+    1.5056327351493116e-7,
+  ];
+  let x = c[0]!;
+  for (let i = 1; i <= 8; i++) x += c[i]! / (n + i);
+  const t = n + 7.5;
+  return 0.5 * Math.log(2 * Math.PI) + (n + 0.5) * Math.log(t) - t + Math.log(x);
+}
+
+/**
+ * Fonction bêta incomplète régularisée I(x ; a, b) par la méthode de Lentz.
+ * Retourne P(X ≤ x) pour X ~ Beta(a, b).
+ */
+function incompleteBeta(x: number, a: number, b: number): number {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  if (x > (a + 1) / (a + b + 2)) return 1 - incompleteBeta(1 - x, b, a);
+
+  const lbeta = logGamma(a) + logGamma(b) - logGamma(a + b);
+  const front = Math.exp(a * Math.log(x) + b * Math.log(1 - x) - lbeta) / a;
+
+  const EPS = 3e-10;
+  const TINY = 1e-30;
+  let f = 1.0;
+  let C = f;
+  let D = 1 - (a + b) * x / (a + 1);
+  if (Math.abs(D) < TINY) D = TINY;
+  D = 1 / D;
+  f = D;
+
+  for (let m = 1; m <= 300; m++) {
+    // Étape paire
+    let num = m * (b - m) * x / ((a + 2 * m - 1) * (a + 2 * m));
+    D = 1 + num * D; if (Math.abs(D) < TINY) D = TINY;
+    C = 1 + num / C; if (Math.abs(C) < TINY) C = TINY;
+    D = 1 / D; f *= C * D;
+    // Étape impaire
+    num = -(a + m) * (a + b + m) * x / ((a + 2 * m) * (a + 2 * m + 1));
+    D = 1 + num * D; if (Math.abs(D) < TINY) D = TINY;
+    C = 1 + num / C; if (Math.abs(C) < TINY) C = TINY;
+    D = 1 / D;
+    const delta = C * D;
+    f *= delta;
+    if (Math.abs(delta - 1) < EPS) break;
+  }
+  return front * f;
+}
+
+/**
+ * Valeur p unilatérale supérieure : P(F_{df1,df2} ≥ fStat).
+ * Utilisée pour l'ANOVA à un facteur (test du rapport de variances).
+ */
+function fPValue(fStat: number, df1: number, df2: number): number {
+  if (fStat <= 0 || df1 <= 0 || df2 <= 0) return 1;
+  return incompleteBeta(df2 / (df2 + df1 * fStat), df2 / 2, df1 / 2);
+}
+
 /* ── Types ───────────────────────────────────────────────── */
 
 export interface RFMEntry {
@@ -43,6 +119,8 @@ export interface SegmentStats {
   name: string;
   count: number;
   avgRevenue: number;
+  /** Écart-type intra-segment (corrigé de Bessel, n-1). Requis pour le d de Cohen. */
+  stdDevRevenue: number;
 }
 
 /* ── computeRFM ──────────────────────────────────────────── */
@@ -122,7 +200,19 @@ export async function computeRFM(
 export function compareSegments(rfmData: RFMEntry[]): {
   segments: SegmentStats[];
   fStat: number;
+  dfBetween: number;
+  dfWithin: number;
+  /** P(F ≥ fStat) calculée par la fonction bêta incomplète (Lanczos + Lentz). */
+  pValue: number;
+  /** true si p < 0.05 (seuil conventionnel α = 5 %). */
   hasDifference: boolean;
+  /**
+   * Avertissement de circularité : la dimension M (monétaire) du segment RFM
+   * est construite à partir de totalRevenue, qui est aussi la variable comparée ici.
+   * Cette ANOVA est exploratoire ; elle ne constitue pas une preuve prédictive.
+   * Pour une validation prospective, segmenter sur t0 et mesurer sur t1.
+   */
+  circularityNote: string;
 } {
   const segMap = new Map<string, number[]>();
   for (const r of rfmData) {
@@ -131,18 +221,30 @@ export function compareSegments(rfmData: RFMEntry[]): {
     segMap.set(r.segment, arr);
   }
 
-  const segments: SegmentStats[] = Array.from(segMap.entries()).map(([name, values]) => ({
-    name,
-    count: values.length,
-    avgRevenue:
-      values.length > 0
-        ? Math.round((values.reduce((s, v) => s + v, 0) / values.length) * 100) / 100
-        : 0,
-  }));
+  const segments: SegmentStats[] = Array.from(segMap.entries()).map(([name, values]) => {
+    const n = values.length;
+    const avg = n > 0 ? values.reduce((s, v) => s + v, 0) / n : 0;
+    // Écart-type corrigé de Bessel (n-1) — nécessaire pour le d de Cohen poolé
+    const variance = n > 1 ? values.reduce((s, v) => s + (v - avg) ** 2, 0) / (n - 1) : 0;
+    return {
+      name,
+      count: n,
+      avgRevenue: Math.round(avg * 100) / 100,
+      stdDevRevenue: Math.round(Math.sqrt(variance) * 100) / 100,
+    };
+  });
 
   const N = rfmData.length;
   const k = segments.length;
-  if (k < 2 || N <= k) return { segments, fStat: 0, hasDifference: false };
+
+  const circularityNote =
+    "ANOVA exploratoire — la variable monétaire (M) du segment RFM est construite " +
+    "à partir de totalRevenue, qui est aussi la variable comparée. " +
+    "Ne pas utiliser comme preuve prédictive sans séparation temporelle t0/t1.";
+
+  if (k < 2 || N <= k) {
+    return { segments, fStat: 0, dfBetween: 0, dfWithin: 0, pValue: 1, hasDifference: false, circularityNote };
+  }
 
   const grandMean = rfmData.reduce((s, r) => s + r.totalRevenue, 0) / N;
   const ssBetween = segments.reduce(
@@ -161,15 +263,30 @@ export function compareSegments(rfmData: RFMEntry[]): {
   const fStat =
     dfWithin <= 0 || ssWithin === 0 ? 0 : ssBetween / dfBetween / (ssWithin / dfWithin);
 
+  const pValue = Math.round(fPValue(fStat, dfBetween, dfWithin) * 10000) / 10000;
+
   return {
     segments,
     fStat: Math.round(fStat * 100) / 100,
-    hasDifference: fStat > 2.5,
+    dfBetween,
+    dfWithin,
+    pValue,
+    hasDifference: pValue < 0.05,
+    circularityNote,
   };
 }
 
 /* ── getTopSegmentPairs ──────────────────────────────────── */
 
+/**
+ * Comparaison paire-à-paire par le d de Cohen poolé.
+ *
+ * Formule correcte (Hedges 1981) :
+ *   s_poolé = sqrt( ((n1-1)*s1² + (n2-1)*s2²) / (n1+n2-2) )
+ *   d = (μ1 - μ2) / s_poolé
+ *
+ * Nécessite stdDevRevenue dans SegmentStats (écart-type intra-segment, corrigé de Bessel).
+ */
 export function getTopSegmentPairs(
   segments: SegmentStats[],
 ): { pair: [string, string]; cohenD: number; relative: string; detectable: boolean }[] {
@@ -179,13 +296,17 @@ export function getTopSegmentPairs(
       const s1 = segments[i];
       const s2 = segments[j];
       if (!s1 || !s2) continue;
+
+      const df = s1.count + s2.count - 2;
       const sPooled =
-        s1.count > 0 && s2.count > 0
+        df > 0 && (s1.count > 1 || s2.count > 1)
           ? Math.sqrt(
-              (s1.avgRevenue ** 2 * (s1.count - 1) + s2.avgRevenue ** 2 * (s2.count - 1)) /
-                (s1.count + s2.count - 2),
+              ((s1.count - 1) * s1.stdDevRevenue ** 2 +
+                (s2.count - 1) * s2.stdDevRevenue ** 2) /
+                df,
             )
           : 0;
+
       const cohenD = sPooled === 0 ? 0 : (s1.avgRevenue - s2.avgRevenue) / sPooled;
       const base = Math.max(s1.avgRevenue, s2.avgRevenue, 1);
       const relPct = Math.round((Math.abs(s1.avgRevenue - s2.avgRevenue) / base) * 100);

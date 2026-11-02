@@ -129,9 +129,9 @@ export default async function IntelligencePage() {
                   sub={forecast.r2 >= 0.3 ? "Modèle OLS" : "Moy. mobile pond."}
                 />
                 <KpiTile
-                  label="RMSE"
+                  label="S (erreur résiduelle)"
                   value={formatCA(forecast.rmse)}
-                  sub="Erreur quadratique"
+                  sub="Sur données d&apos;ajustement"
                 />
               </>
             )}
@@ -148,22 +148,32 @@ export default async function IntelligencePage() {
       <Section
         title="Segmentation clients RFM"
         subtitle="Recency · Frequency · Monetary"
-        badge={segmentAnalysis.hasDifference ? "Différence détectée" : undefined}
+        badge={segmentAnalysis.hasDifference ? "Différence détectée (p < 0,05)" : undefined}
       >
         {!segmentAnalysis.segments.length ? (
           <Empty text="Aucune transaction client." />
         ) : (
           <>
-            {segmentAnalysis.hasDifference && (
-              <p className="mb-3 text-sm text-success-600 dark:text-success-400">
-                F = {segmentAnalysis.fStat} — différence statistiquement significative entre les segments.
+            {/* Résultat ANOVA avec degrés de liberté et valeur p */}
+            {segmentAnalysis.fStat > 0 && (
+              <p className={`mb-2 text-sm font-medium ${segmentAnalysis.hasDifference ? "text-success-600 dark:text-success-400" : "text-gray-500"}`}>
+                ANOVA — F({segmentAnalysis.dfBetween}, {segmentAnalysis.dfWithin}) = {segmentAnalysis.fStat},
+                {" "}p = {segmentAnalysis.pValue < 0.0001 ? "< 0,0001" : segmentAnalysis.pValue.toFixed(4)}
+                {segmentAnalysis.hasDifference
+                  ? " — différence significative au seuil α = 5 %."
+                  : " — pas de différence significative au seuil α = 5 %."}
               </p>
             )}
+            {/* Avertissement de circularité */}
+            <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-700/40 dark:bg-amber-500/10 dark:text-amber-300">
+              Analyse exploratoire : la dimension monétaire (M) du segment est construite à partir du CA,
+              qui est aussi la variable comparée. Cette ANOVA ne constitue pas une preuve prédictive.
+            </p>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 dark:border-gray-800">
-                    {["Segment", "Clients", "CA moyen"].map((h) => (
+                    {["Segment", "Clients", "CA moyen", "Écart-type"].map((h) => (
                       <th key={h} className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                         {h}
                       </th>
@@ -177,6 +187,9 @@ export default async function IntelligencePage() {
                       <td className="px-4 py-2.5 text-gray-600 dark:text-gray-400">{seg.count}</td>
                       <td className="px-4 py-2.5 font-semibold text-brand-600 dark:text-brand-400">
                         {formatCA(seg.avgRevenue)}
+                      </td>
+                      <td className="px-4 py-2.5 text-gray-500 dark:text-gray-400">
+                        {formatCA(seg.stdDevRevenue)}
                       </td>
                     </tr>
                   ))}

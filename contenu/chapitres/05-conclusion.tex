@@ -1,0 +1,173 @@
+\chapter*{Conclusion générale}
+\addcontentsline{toc}{chapter}{Conclusion générale}
+\label{chap:conclusion}
+
+% ------------------------------------------------------------------
+\section*{Rappel de la démarche}
+
+Ce mémoire s'est donné pour objectif d'évaluer, par simulation, la conformité et la
+robustesse du module RFM de la plateforme SaaS ELMES-TEKA, conçue pour répondre aux besoins
+de gestion commerciale des petits commerçants congolais formels et informels. L'artefact
+évalué — la fonction \texttt{computeRFM} au commit
+\texttt{b062a93a7be96d082dee9afe66b9f4f1f9ebecaa} — classe chaque client dans l'une des cinq
+catégories RFM par application d'une règle de tercilisation sur les dimensions Récence,
+Fréquence et Montant.
+
+La démarche adoptée relève de la \emph{Design Science Research} \citep{Hevner2004,
+Peffers2008}~: ELMES-TEKA est un artefact construit pour résoudre un problème réel, et la
+présente campagne constitue l'étape \emph{evaluate} du cycle de vie de cet artefact. Le
+raisonnement hypothético-déductif a guidé la formulation de deux hypothèses préalables à
+l'analyse, dont les critères de décision ont été fixés a priori. La simulation Monte-Carlo,
+structurée selon le cadre ADEMP \citep{Morris2019}, a été conduite sur 12\,000 essais
+produits par croisement de quatre tailles de corpus ($n \in \{3, 10, 50, 200\}$), trois
+profils de distribution (\texttt{regular}, \texttt{skewed}, \texttt{ties}) et dix scénarios
+de perturbation, avec 100 répétitions par cellule et graines explicitement consignées pour
+assurer la reproductibilité complète des résultats.
+
+% ------------------------------------------------------------------
+\section*{Réponse à l'hypothèse H1 — Conformité}
+
+La première hypothèse portait sur la conformité du moteur TypeScript à une implémentation
+de référence en Python calculant les sommes monétaires en centimes entiers. Sur les
+12\,000 essais de la campagne, 200 présentent au moins un écart~: le taux de non-conformité
+est de $1{,}667\,\%$ (intervalle de confiance Monte-Carlo à $95\,\%$ : $[1{,}448\,\% ;\,
+1{,}904\,\%]$). Ce résultat est inférieur au seuil de tolérance de $2\,\%$ retenu pour le
+contexte de PME informelles congolaises, dont les données d'entrée sont elles-mêmes soumises
+à des imprécisions de saisie~: la décision retenue pour H1 est donc \textbf{conforme sous
+réserve}.
+
+La cause des non-conformités est identifiée avec précision~: l'addition des montants de
+commandes est effectuée en virgule flottante IEEE\,754 double précision dans le moteur
+TypeScript, alors que la référence Python additionne les mêmes montants convertis en centimes
+entiers \citep{Haissinsky2012, Ribatet_nd}. Lorsque plusieurs commandes sont agrégées,
+l'erreur d'arrondi cumulée peut modifier la relation d'ordre entre deux clients dont les
+sommes affichées sont identiques, déplaçant ainsi le score $M$ et, dans deux cas sur 12\,000
+essais, l'étiquette de segment. Ce mécanisme est systématique et reproductible~; il ne
+relève pas du bruit aléatoire mais d'une fragilité structurelle corrigible.
+
+La mention «~conforme sous réserve~» traduit la prudence épistémologique qui s'impose ici~:
+la conformité est établie dans les limites du périmètre testé et sous la cause identifiée.
+Elle ne pourra être portée à «~conforme sans réserve~» qu'après application d'un correctif
+arithmétique — arrondi au centime avant comparaison de quantiles, ou adoption d'une
+bibliothèque de calcul monétaire en entiers telle que \texttt{dinero.js} — suivi d'une
+réévaluation ciblée sur les essais ayant produit des écarts. Cette conformité algorithmique
+n'implique par ailleurs pas la pertinence prédictive des segments~: la question de savoir
+si la tercilisation RFM constitue le meilleur modèle pour anticiper les comportements de
+réachat des clients congolais \citep{Fader2005} reste entière et relève d'une validation
+de contenu distincte \citep{Salminen2023}.
+
+% ------------------------------------------------------------------
+\section*{Réponse à l'hypothèse H2 — Robustesse}
+
+La seconde hypothèse portait sur la robustesse des affectations de segment face à un bruit
+monétaire de $\pm1\,\%$, pour les clients suffisamment éloignés des six seuils de tercile
+initiaux selon une règle à $5\,\%$. Les quatre cellules admissibles — tailles
+$n \in \{50, 200\}$, profils \texttt{regular} et \texttt{skewed} — présentent toutes un
+taux de changement moyen de $0{,}000\,\%$ avec des intervalles de confiance de largeur
+nulle $[0\,\% ;\, 0\,\%]$. La borne supérieure de chaque intervalle est strictement
+inférieure au seuil de $5\,\%$ fixé par le protocole~: la décision retenue pour H2 est
+\textbf{compatible}.
+
+Ce résultat s'explique par la construction même du critère d'éloignement~: un client dont
+la distance normalisée à chacun des six seuils initiaux est supérieure à $5\,\%$ dispose
+d'une marge de sécurité qui absorbe mécaniquement un bruit monétaire de $\pm1\,\%$ sans
+franchir le seuil le plus proche. La campagne confirme empiriquement cette garantie
+théorique sur 100 répétitions par cellule, sans jamais l'observer mise en défaut dans les
+conditions testées.
+
+Deux nuances s'imposent. D'une part, l'intervalle $[0\,\% ;\, 0\,\%]$ traduit une absence
+de variation observée et non une démonstration formelle qu'aucun changement ne peut se
+produire dans l'ensemble des configurations d'usage possibles~; la robustesse mesurée est
+conditionnelle au niveau de bruit ($\pm1\,\%$), aux tailles de corpus ($n \geq 50$) et aux
+profils non-ties. D'autre part, le profil \texttt{ties} — tous les clients identiques sur
+les trois dimensions RFM — constitue un cas hors domaine exclu du critère H2 par décision
+protocolaire antérieure à l'analyse~; sous perturbation de dates, ce profil produit des
+taux de changement de 42 à 63\,\% qui reflètent l'indétermination mathématique des
+quantiles sur des valeurs identiques, et non un défaut de l'algorithme.
+
+% ------------------------------------------------------------------
+\section*{Limites de l'évaluation}
+
+Quatre limites principales bornent la portée des résultats présentés dans ce mémoire.
+
+Premièrement, les corpus utilisés dans la simulation sont synthétiques et non calibrés sur
+des données de transactions réelles de petits commerçants congolais. Les distributions de
+montants, les fréquences d'achat et les horizons temporels générés peuvent s'éloigner
+sensiblement des distributions observées en production~; les résultats décrivent le
+comportement de la fonction sur ces mécanismes générateurs spécifiques et ne constituent
+pas une évaluation de son comportement en conditions réelles.
+
+Deuxièmement, la référence Python n'a pas été certifiée par une tierce partie indépendante.
+Elle a été construite pour les besoins de la campagne à partir de la spécification de
+\texttt{computeRFM} et vérifiée sur neuf cas manuels couvrant les configurations limites
+critiques~; cette vérification ne couvre cependant pas l'ensemble de l'espace des entrées.
+Une erreur propre de la référence non détectée par comparaison avec le moteur TypeScript
+ne peut être exclue.
+
+Troisièmement, l'évaluation porte sur la fonction \texttt{computeRFM} de façon isolée,
+hors des couches MongoDB, des routes HTTP, du système d'authentification multi-tenant et
+des mécanismes de conversion de devises d'ELMES-TEKA. Les effets économiques de la
+segmentation sur les décisions commerciales des commerçants n'ont pas été évalués~; ces
+dimensions font partie de l'artefact complet mais dépassent le périmètre défini par H1
+et H2.
+
+Quatrièmement, les résultats sont valables pour la logique de segmentation telle que codée
+au commit \texttt{b062a93a}~: toute modification du code — changement du nombre de groupes,
+remplacement des terciles par d'autres quantiles, ajout d'une couche d'arrondi monétaire —
+invaliderait les mesures obtenues et nécessiterait une nouvelle campagne de validation.
+
+% ------------------------------------------------------------------
+\section*{Perspectives}
+
+Plusieurs directions de travail permettraient d'étendre et de consolider la présente
+évaluation.
+
+\paragraph{Validation sur données réelles.}
+La priorité la plus directe est la validation du module sur des données de transactions
+réelles anonymisées, extraites de la base de production d'ELMES-TEKA. Une telle validation
+permettrait de calibrer les mécanismes générateurs de la simulation sur les distributions
+effectives et de mesurer la sensibilité du module dans les conditions d'usage réel
+\citep{Salminen2023}. Elle soulèverait toutefois des contraintes de confidentialité liées
+à la nature multi-tenant de la plateforme, qui devront être traitées avec soin.
+
+\paragraph{Extension multi-devises.}
+La cohabitation du dollar américain et du franc congolais dans le commerce kinois constitue
+une priorité métier. Le comportement hors domaine observé lors du mélange de devises
+(montants additionnés sans séparation~: $10 + 28\,000 = 28\,010$) montre que la fonction
+traite actuellement toutes les valeurs comme commensurables, produisant des montants agrégés
+économiquement incohérents. L'extension multi-devises nécessiterait de définir une unité de
+compte commune et d'intégrer la conversion dans le pipeline de calcul, avec ses implications
+sur la robustesse de la segmentation face aux fluctuations de taux.
+
+\paragraph{Validation prospective des segments.}
+Une validation prospective comparerait les segments produits par \texttt{computeRFM} aux
+comportements de réachat ultérieurs des clients, testant ainsi la validité prédictive des
+cinq étiquettes \citep{Fader2005}. Ce type de validation excède la portée d'une évaluation
+de conformité algorithmique~; il est néanmoins indispensable pour établir la valeur
+décisionnelle des segments dans le contexte opérationnel. Des modèles stochastiques de
+valeur client tels que Pareto/NBD \citep{Fader2005} pourraient fournir une référence externe
+pour juger de la qualité discriminante des catégories retenues.
+
+\paragraph{Analyses de sensibilité globale et stabilité temporelle.}
+L'incorporation d'analyses de sensibilité globale \citep{Lakens2013} permettrait d'estimer
+la contribution relative des dimensions $R$, $F$ et $M$ à la variabilité inter-sessions de
+la segmentation, au-delà de l'analyse par scénario conduite dans la présente campagne. De
+même, une étude de la stabilité temporelle des segments — mesure dans laquelle un client
+conserve la même étiquette d'une période à l'autre en l'absence de changement réel de
+comportement — constituerait un indicateur pratique directement exploitable par les
+commerçants \citep{Mingmongkhol2023}.
+
+\paragraph{Correction arithmétique et réévaluation.}
+À court terme, la correction du mécanisme de virgule flottante identifié par H1 devrait
+être suivie d'une réévaluation ciblée sur les 200 essais ayant produit des écarts, afin de
+confirmer que le taux de non-conformité est bien ramené à zéro et que la décision peut être
+portée à «~conforme sans réserve~».
+
+\bigskip
+
+En définitive, ce mémoire établit que le module RFM d'ELMES-TEKA est, dans les conditions
+testées, conforme à sa spécification dans $98{,}3\,\%$ des cas et robuste aux perturbations
+monétaires de $\pm1\,\%$ pour les clients éloignés des seuils de tercile. Ces deux résultats,
+obtenus par une démarche reproductible et traçable, constituent une base solide pour la
+prise de décision des développeurs et des responsables produit d'ELMES-TEKA, ainsi qu'un
+point de départ documenté pour les travaux de validation ultérieurs sur données réelles.

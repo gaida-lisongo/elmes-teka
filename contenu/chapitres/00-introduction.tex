@@ -1,0 +1,201 @@
+\chapter*{Introduction générale}
+\addcontentsline{toc}{chapter}{Introduction générale}
+\label{chap:introduction}
+
+% ------------------------------------------------------------------
+\section*{Contexte général}
+
+L'économie de la République démocratique du Congo est portée, dans une large mesure, par le
+commerce de détail et les activités de négoce exercées par des micro et petites entreprises,
+formelles ou informelles. À Kinshasa comme dans les grandes agglomérations provinciales, une
+fraction considérable des transactions quotidiennes passe par des boutiques, étals de marché
+et points de vente qui n'emploient que quelques personnes et dont les données commerciales —
+lorsqu'elles existent — restent consignées sur des supports papier ou dans des classeurs
+non structurés. Cette situation limite la capacité des commerçants à analyser leur portefeuille
+clients, à identifier les acheteurs à fort potentiel ou à détecter les signes précoces d'un
+désengagement commercial.
+
+La littérature sur la numérisation des PME en Afrique subsaharienne souligne que l'adoption
+d'outils de gestion de la relation client (CRM) par les très petites entreprises se heurte à
+plusieurs obstacles conjugués~: coût des licences, exigences en infrastructure réseau, barrière
+linguistique des interfaces et inadaptation des modèles de données aux pratiques locales —
+notamment la coexistence du dollar américain (USD) et du franc congolais (CDF) dans les
+transactions \citep{Sobantu2025, Yoseph2023}. Ces obstacles ont motivé la conception
+d'ELMES-TEKA, un progiciel SaaS multi-tenant développé par ELMES pour répondre aux besoins
+spécifiques des entrepreneurs congolais formels et informels.
+
+ELMES-TEKA propose, parmi d'autres fonctionnalités, un module de segmentation de la clientèle
+fondé sur l'analyse RFM (Récence, Fréquence, Montant), technique largement documentée dans la
+littérature en marketing analytique \citep{Fader2005, Salminen2023}. Ce module, dont la
+fonction centrale est \texttt{computeRFM}, classe chaque client dans l'une des cinq catégories
+prédéfinies en appliquant une règle de tercilisation sur les trois dimensions : la date du
+dernier achat (Récence), le nombre de commandes (Fréquence) et la somme des montants
+(Montant). La segmentation ainsi produite est destinée à orienter des décisions commerciales —
+identifier les clients à fidéliser, ceux à réactiver, ceux qui risquent de partir — dans un
+contexte où les ressources humaines et financières consacrées au marketing sont généralement
+limitées.
+
+% ------------------------------------------------------------------
+\section*{Problématique}
+
+La mise en production d'un module de segmentation embarqué dans un SaaS commercial soulève
+une question de fiabilité qui, dans un contexte de ressources contraintes, ne peut être
+esquivée~: dans quelle mesure les sorties du module sont-elles conformes à sa spécification, et
+dans quelle mesure résistent-elles aux imprécisions ordinaires des données d'entrée~?
+
+Cette question est d'autant plus pertinente que les données collectées par les commerçants
+congolais sont susceptibles de présenter des erreurs de saisie, des doublons ou des valeurs
+manquantes dans une proportion non négligeable. Si le module de segmentation produit des
+résultats différents selon des artefacts numériques indépendants du comportement réel du
+client — tels que des erreurs d'arrondi cumulées ou de légères variations de date —, la
+valeur décisionnelle des segments s'en trouve directement affectée. Inversement, si le module
+s'avère robuste à ces imprécisions, son déploiement auprès de petits commerçants peut être
+justifié avec confiance, malgré la qualité imparfaite des données de saisie.
+
+La littérature sur la validation des méthodes RFM \citep{Rajendran2024, Mingmongkhol2023,
+Ray2023} ne propose pas de protocole unifié pour évaluer la conformité algorithmique et la
+robustesse aux perturbations d'une implémentation logicielle spécifique. Les études
+disponibles se concentrent davantage sur la pertinence prédictive des segments produits que
+sur la fidélité de l'exécution à une spécification formelle. Cette lacune justifie une
+approche expérimentale par simulation, qui permet de soumettre la fonction à des conditions
+contrôlées et reproductibles sans nécessiter l'accès à des données de production réelles.
+
+La question de recherche qui guide ce travail est donc la suivante~: \emph{le module RFM
+d'ELMES-TEKA, tel qu'implémenté au commit \texttt{b062a93a7be96d082dee9afe66b9f4f1f9ebecaa},
+est-il conforme à sa spécification de référence et robuste aux imprécisions courantes des
+données d'entrée, dans les conditions testées par simulation~?}
+
+% ------------------------------------------------------------------
+\section*{Objectifs de l'étude}
+
+Ce mémoire poursuit deux objectifs complémentaires, formalisés comme hypothèses de travail.
+
+\paragraph{H1 — Conformité à la référence indépendante.}
+L'objectif principal est de mesurer le taux de non-conformité entre les sorties du moteur
+TypeScript \texttt{computeRFM} et celles d'une implémentation de référence en Python
+calculant les sommes monétaires en centimes entiers. La conformité est évaluée sur
+12\,000 essais produits par croisement de tailles de corpus, de profils de distribution et
+de scénarios de perturbation. L'hypothèse H1 est formulée ainsi~: le taux de
+non-conformité est inférieur à un seuil de tolérance de $2\,\%$, jugé compatible avec
+un usage décisionnel dans le contexte de PME informelles congolaises.
+
+\paragraph{H2 — Robustesse aux perturbations.}
+L'objectif secondaire est d'évaluer la stabilité des affectations de segment lorsque les
+données d'entrée subissent des perturbations contrôlées~: bruit monétaire de $\pm1\,\%$,
+modification de dates, introduction de doublons ou suppression de commandes. La robustesse
+est mesurée par le taux de changement de segment parmi les clients éloignés des seuils de
+tercile, c'est-à-dire les clients dont la classification n'est pas, a priori, à la frontière
+d'une transition. L'hypothèse H2 est formulée ainsi~: ce taux de changement, mesuré dans
+les conditions du critère H2, a une borne supérieure d'intervalle de confiance Monte-Carlo
+à $95\,\%$ strictement inférieure ou égale à $5\,\%$.
+
+% ------------------------------------------------------------------
+\section*{Approche épistémologique et méthodologique}
+
+Ce travail s'inscrit dans la tradition de la \emph{Design Science Research} (DSR) telle que
+définie par \citet{Hevner2004} et opérationnalisée par \citet{Peffers2008}~: ELMES-TEKA
+constitue l'artefact construit pour résoudre un problème réel, et la présente étude se
+situe dans l'étape \emph{evaluate} du cycle de vie de cet artefact. La posture adoptée est
+pragmatique~: la connaissance produite est jugée à l'aune de son utilité pour les décideurs
+et les développeurs de la plateforme, non à l'aune d'une vérité absolue sur le comportement
+du marché congolais.
+
+Le raisonnement suivi est hypothético-déductif, conformément à la tradition post-positiviste~:
+des hypothèses précises sont formulées avant l'analyse, des critères de décision sont fixés
+a priori, et les résultats de la simulation permettent de conclure quant à la compatibilité
+ou l'incompatibilité des observations avec ces hypothèses. Ce cadre est cohérent avec
+l'approche ADEMP (\emph{Aims}, \emph{Data-generating mechanisms}, \emph{Estimands},
+\emph{Methods}, \emph{Performance measures}) proposée par \citet{Morris2019} pour structurer
+et rapporter les études de simulation en statistique et en informatique.
+
+La méthode de simulation retenue est Monte-Carlo~: pour chaque cellule du plan factoriel
+(taille de corpus × profil de distribution × scénario de perturbation), 100 répétitions
+indépendantes sont générées par tirage pseudo-aléatoire à graine fixée, ce qui garantit la
+reproductibilité complète des résultats. Les intervalles de confiance à $95\,\%$ sont
+construits par loi $t$ à partir des 100 répétitions, puis tronqués à $[0;1]$
+\citep{Lakens2013}. L'ensemble des données brutes, des scripts d'analyse et des empreintes
+SHA-256 de vérification d'intégrité est consigné dans une archive expérimentale \citep{ViannaFilho2026}.
+
+La comparaison de conformité s'appuie sur une implémentation de référence en Python calculant
+les sommes monétaires en centimes entiers, contrairement au moteur TypeScript qui opère en
+virgule flottante IEEE\,754 double précision \citep{Haissinsky2012, Ribatet_nd}. Cette
+différence arithmétique délibérée permet d'isoler la sensibilité de la tercilisation aux
+erreurs d'arrondi cumulées.
+
+% ------------------------------------------------------------------
+\section*{Délimitation du travail}
+
+La présente évaluation porte exclusivement sur la fonction \texttt{computeRFM} dans sa
+version au commit \texttt{b062a93a}, considérée de façon isolée~: les données de
+transactions lui sont soumises directement, sans passer par les couches d'authentification,
+la base de données MongoDB, les routes HTTP ou le système multi-tenant d'ELMES-TEKA. Ce
+périmètre est une simplification nécessaire pour rendre la campagne de simulation faisable
+et reproductible dans le cadre d'un mémoire de master, mais il implique que les résultats
+ne constituent pas une évaluation de l'ensemble du SaaS.
+
+Les corpus utilisés dans la simulation sont synthétiques. Ils couvrent quatre tailles
+($n \in \{3, 10, 50, 200\}$ clients), trois profils de distribution (\texttt{regular},
+\texttt{skewed}, \texttt{ties}) et dix scénarios de perturbation. Ces mécanismes générateurs
+n'ont pas été calibrés sur des données de transactions réelles de commerçants congolais. Les
+conclusions de conformité et de robustesse sont donc relatives aux distributions synthétiques
+testées~; leur transposabilité aux conditions de production réelles reste à établir par une
+validation terrain ultérieure.
+
+L'étude ne porte pas sur la pertinence prédictive ou la valeur économique des segments
+produits~: la question de savoir si la segmentation RFM en terciles constitue le meilleur
+modèle pour prédire les comportements de réachat des clients congolais \citep{Fader2005} est
+distincte de la question de conformité algorithmique étudiée ici.
+
+% ------------------------------------------------------------------
+\section*{Intérêt du travail}
+
+Ce mémoire apporte une contribution à plusieurs niveaux. Sur le plan pratique, il fournit
+aux développeurs d'ELMES-TEKA une mesure quantifiée des performances du module RFM et un
+diagnostic précis de la cause des non-conformités observées. Sur le plan méthodologique, il
+propose une application du cadre ADEMP à l'évaluation d'une fonction embarquée dans un SaaS
+africain, domaine pour lequel les protocoles de validation formelle sont peu documentés.
+Sur le plan académique, il illustre comment une posture DSR et une simulation Monte-Carlo
+peuvent être mobilisées conjointement pour évaluer un artefact logiciel à ressources
+limitées, dans un contexte de données synthétiques contrôlées.
+
+% ------------------------------------------------------------------
+\section*{Organisation du mémoire}
+
+Ce mémoire est organisé en quatre chapitres.
+
+\medskip
+
+Le \textbf{chapitre~1} présente les matériels et méthodes~: l'artefact ELMES-TEKA et la
+fonction \texttt{computeRFM}, la conception du banc de simulation, le plan factoriel de la
+campagne, les neuf cas de test manuels, et le cadre ADEMP appliqué à cette étude.
+
+\medskip
+
+Le \textbf{chapitre~2} est consacré à la revue de la littérature~: les fondements de la
+segmentation RFM \citep{Fader2005, Salminen2023}, les enjeux de la gestion commerciale
+dans les PME africaines et congolaises \citep{Sobantu2025, Yoseph2023}, les méthodes de
+simulation en informatique et en statistique \citep{Morris2019}, et les travaux récents sur
+la robustesse et la validation des modèles de segmentation \citep{Rajendran2024,
+Mingmongkhol2023, Ray2023}.
+
+\medskip
+
+Le \textbf{chapitre~3} présente les résultats de la campagne de façon factuelle~: le bilan
+de conformité sur 12\,000 essais, le premier contre-exemple identifié, les résultats du
+critère H2 sur les quatre cellules admissibles, la synthèse des taux de changement par taille
+et profil, le comportement particulier du profil \texttt{ties}, et les observations
+hors domaine.
+
+\medskip
+
+Le \textbf{chapitre~4} discute les résultats~: l'interprétation du taux de non-conformité de
+$1{,}667\,\%$, la cause arithmétique identifiée et les pistes de correction, la signification
+d'un intervalle de confiance de largeur nulle pour H2, la délimitation du domaine d'usage
+licite de la fonction, et les menaces à la validité interne et externe de l'étude.
+
+\medskip
+
+Une \textbf{conclusion générale} synthétise les réponses aux hypothèses H1 et H2, rappelle
+les limites de l'évaluation et propose des perspectives de travaux ultérieurs~: validation
+sur données réelles, extension multi-devises, et validation prospective de la pertinence
+prédictive des segments.

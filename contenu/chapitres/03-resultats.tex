@@ -1,0 +1,413 @@
+\chapter{Présentation des résultats}
+\label{chap:resultats}
+
+Ce chapitre présente les résultats de la campagne de simulation conduite sur la fonction
+\texttt{computeRFM} d'ELMES-TEKA. La présentation suit le cadre \emph{ADEMP} proposé par
+\citet{Morris2019} — objectifs, mécanismes générateurs, cibles, méthodes et mesures de
+performance — dont les éléments constitutifs sont décrits à l'Annexe~\ref{ann:protocole}.
+Le chapitre se limite à l'exposition factuelle des résultats ; leur interprétation est réservée
+au chapitre suivant.
+
+% ------------------------------------------------------------------
+\section{Cibles mesurées et indicateurs retenus}
+\label{sec:resultats-cibles}
+
+Deux objectifs distincts structurent la campagne.
+
+\paragraph{Conformité à la référence indépendante (H1).}
+La cible principale est l'accord entre les sorties du moteur JavaScript \texttt{computeRFM}
+et celles d'une implémentation de référence en Python, calculant les sommes monétaires en
+centimes entiers. L'unité d'analyse est l'essai ; un essai est dit non-conforme dès qu'au
+moins un client présente un écart, que ce soit sur un score ($s_R$, $s_F$ ou $s_M$) ou sur
+l'étiquette de segment. Le taux de non-conformité est le rapport entre le nombre d'essais
+non conformes et le nombre total d'essais.
+
+\paragraph{Robustesse aux perturbations (H2).}
+La cible secondaire est le taux de changement de segment parmi les clients communs à deux
+partitions appariées — la partition initiale d'un corpus et la partition obtenue après
+application d'une perturbation. Pour H2, la cellule d'intérêt primaire est définie par le
+bruit monétaire $\pm1\,\%$ appliqué aux corpus de taille 50 ou 200, avec profil régulier ou
+dissymétrique, en ne retenant que les clients éloignés des six seuils initiaux. Le critère
+de compatibilité est la borne supérieure de l'intervalle de confiance Monte-Carlo à $95\,\%$
+strictement inférieure ou égale à $5\,\%$.
+
+\paragraph{Indicateurs calculés.}
+Le dictionnaire complet des variables est fourni au tableau~\ref{tab:ann-dictionnaire}
+(Annexe~\ref{ann:protocole}). Les indicateurs retenus pour la synthèse sont :
+
+\begin{itemize}
+  \item \texttt{change\_rate} — proportion de clients communs changeant de segment ;
+  \item \texttt{far\_change\_rate} — même proportion, restreinte aux clients éloignés des
+    seuils initiaux selon la règle à $5\,\%$ ;
+  \item \texttt{lost\_rate} — proportion de clients présents dans le corpus initial mais
+    absents après perturbation ;
+  \item \texttt{oracle\_pass} — indicateur binaire d'absence de tout écart à la référence ;
+  \item \texttt{occupied\_segments} — nombre de catégories non vides après traitement ;
+  \item \texttt{ari} — indice de Rand ajusté entre les deux partitions des clients communs.
+\end{itemize}
+
+Les intervalles Monte-Carlo à $95\,\%$ sont calculés par loi $t$ à partir des 100 répétitions
+par cellule, puis tronqués à $[0;1]$. Un intervalle de largeur nulle traduit une absence de
+variation observée dans les répétitions de la cellule considérée ; il ne constitue pas une
+démonstration d'une probabilité véritable de changement exactement nulle.
+
+% ------------------------------------------------------------------
+\section{Résultats de conformité à la référence indépendante}
+\label{sec:resultats-conformite}
+
+\subsection{Cas manuels}
+\label{subsec:resultats-cas-manuels}
+
+Neuf cas manuels ont été enregistrés dans \texttt{conformity.json} avant l'exécution de
+la campagne. Ces cas couvrent les configurations limites suivantes : corpus vide, six clients
+avec cinq groupes distincts aux frontières de quantiles, client singleton, valeurs toutes
+identiques, filtrages par statut de commande (\texttt{CONFIRMED}, \texttt{PAID},
+\texttt{DELIVERED}), exclusion par tenant et exercice, client absent du répertoire des
+clients mais dont l'identifiant figure dans les commandes, montant nul, et traitement de la
+partie entière d'une fraction de journée.
+
+Les neuf cas sont satisfaits sans exception (tableau~\ref{tab:ann-cas-manuels},
+Annexe~\ref{ann:protocole}). Ce résultat ne supprime pas les écarts observés dans d'autres
+essais de la campagne principale.
+
+\subsection{Campagne complète et premier contre-exemple}
+\label{subsec:resultats-campagne}
+
+La campagne porte sur 12\,000 essais produits par le croisement de quatre tailles de corpus
+($n \in \{3, 10, 50, 200\}$ clients), trois profils de génération (\texttt{regular},
+\texttt{skewed}, \texttt{ties}), 100 répétitions par cellule et 10 scénarios de perturbation.
+Chaque perturbation est appariée au corpus initial correspondant ; les seuils de segmentation
+sont recalculés après chaque perturbation.
+
+\begin{table}[htb]
+  \centering
+  \caption{Bilan de conformité sur l'ensemble de la campagne.}
+  \label{tab:resultats-conformite-bilan}
+  \begin{tabular}{lr}
+    \toprule
+    Indicateur & Valeur \\
+    \midrule
+    Essais totaux                                       & 12\,000 \\
+    Essais avec au moins un écart (référence centimes)  & 200 \\
+    Taux de non-conformité                              & $1{,}667\,\%$ \\
+    Occurrences de score $M$ erroné                     & 489 \\
+    Occurrences d'étiquette de segment erronée          & 2 \\
+    Exceptions moteur dans le domaine principal         & 0 \\
+    Cas manuels satisfaits                              & 9 / 9 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Sur les 200 essais non conformes, tous les écarts portent sur la dimension monétaire.
+Les 489 occurrences de score $M$ erroné concernent des clients pour lesquels la somme des
+montants de commandes diffère selon le mode de calcul : addition en virgule flottante dans
+le moteur JavaScript contre addition exacte en centimes entiers dans la référence Python.
+Les deux occurrences d'étiquette de segment erronée découlent de ces écarts de score $M$.
+Aucun essai ne présente d'exception non gérée dans les scénarios appartenant au domaine
+principal de la campagne.
+
+Il est à noter que la référence de comparaison a été précisée en deux étapes : la première
+implémentation en virgule flottante relevait 189 essais avec écart ; la reformulation en
+centimes entiers en relève 200. Les diagnostics des deux étapes sont conservés dans l'archive.
+
+\paragraph{Premier contre-exemple.}
+Le premier essai non conforme enregistré est identifié par l'essai
+\texttt{n3\allowbreak-ties\allowbreak-r16\allowbreak-amount\_noise\_1pct}, avec la graine de
+corpus $20461118$ et la graine de perturbation $30461137$.
+
+\begin{table}[htb]
+  \centering
+  \caption{Premier écart de score conservé (montants en USD).}
+  \label{tab:resultats-contre-exemple}
+  \begin{tabular}{llrcc}
+    \toprule
+    Client & Tickets (USD) & Somme (USD) & $M$ attendu & $M$ obtenu \\
+    \midrule
+    00000 & $9{,}99$ ; $10{,}00$ ; $9{,}97$ & $29{,}96$ & 1 & 1 \\
+    00001 & $10{,}03$ ; $9{,}98$ ; $10{,}04$ & $30{,}05$ & 1 & 1 \\
+    00002 & $9{,}96$ ; $10{,}02$ ; $10{,}07$ & $30{,}05$ & 1 & 2 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Les clients 00001 et 00002 présentent des sommes affichées identiques ($30{,}05$~USD), mais
+la représentation interne en virgule flottante produit des résultats légèrement différents
+après addition successive des trois tickets. La référence en centimes considère les deux
+sommes comme égales et attribue à chaque client le score $M = 1$ ; le moteur JavaScript
+en obtient des valeurs distinctes et attribue le score $M = 2$ au client 00002. Les trois
+étiquettes de segment demeurent « À risque » dans cet essai.
+
+% ------------------------------------------------------------------
+\section{Résultats des mesures de performance par scénario}
+\label{sec:resultats-performance}
+
+\subsection{Critère principal de robustesse H2}
+\label{subsec:resultats-h2}
+
+Le critère H2 porte sur les cellules vérifiant les trois conditions suivantes : taille de
+corpus $n \in \{50, 200\}$, profil régulier ou dissymétrique, et scénario de bruit monétaire
+$\pm1\,\%$. Pour chaque client commun, six distances normalisées aux seuils initiaux sont
+calculées ; un client est dit éloigné si chacune de ces six distances est supérieure à
+$5\,\%$. Seules les répétitions conservant au moins dix clients éloignés communs aux deux
+partitions sont admissibles pour H2.
+
+\begin{table}[htb]
+  \centering
+  \caption{Résultats du critère H2 — bruit monétaire $\pm1\,\%$, clients éloignés des seuils.}
+  \label{tab:resultats-h2}
+  \begin{tabular}{rlrrrl}
+    \toprule
+    Taille & Profil & Rép. admissibles & Taux moyen (\%) & IC $95\,\%$ (\%) & Décision \\
+    \midrule
+    50  & \texttt{regular} & 100 & $0{,}000$ & $[0{,}000;\,0{,}000]$ & Compatible \\
+    50  & \texttt{skewed}  & 100 & $0{,}000$ & $[0{,}000;\,0{,}000]$ & Compatible \\
+    200 & \texttt{regular} & 100 & $0{,}000$ & $[0{,}000;\,0{,}000]$ & Compatible \\
+    200 & \texttt{skewed}  & 100 & $0{,}000$ & $[0{,}000;\,0{,}000]$ & Compatible \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Dans les quatre cellules admissibles pour H2, le taux de changement observé parmi les clients
+éloignés est nul dans la totalité des répétitions, ce qui produit des intervalles de confiance
+ponctuels $[0;0]$. La borne supérieure de ces intervalles est strictement inférieure au seuil
+de $5\,\%$ ; le critère H2 est déclaré compatible dans chacune de ces cellules. Les détails
+complets par répétition sont disponibles dans le fichier \texttt{hypothesis\_H2.csv} de
+l'archive expérimentale.
+
+\subsection{Taux de changement — synthèse par taille et profil}
+\label{subsec:resultats-synthese}
+
+Le tableau~\ref{tab:resultats-synthese} présente les taux moyens de changement de segment
+pour les profils \texttt{regular} et \texttt{skewed} à la taille $n = 200$, ainsi que pour
+le profil \texttt{ties} à la même taille. Les données complètes pour toutes les combinaisons
+taille/profil (120 lignes) figurent à l'Annexe~\ref{ann:reproduction}.
+
+\begin{table}[htb]
+  \centering
+  \caption{Synthèse des taux de changement, taille $n = 200$. Moyenne sur 100 répétitions.
+    IC : intervalle Monte-Carlo à $95\,\%$. Profils \texttt{regular} et \texttt{skewed}
+    présentés en plage ; profil \texttt{ties} séparé.}
+  \label{tab:resultats-synthese}
+  \small
+  \begin{tabular}{lcc}
+    \toprule
+    Scénario
+      & \texttt{regular} / \texttt{skewed} — changement (\%)
+      & \texttt{ties} — changement (\%) \\
+    \midrule
+    Initial
+      & $0{,}000$
+      & $0{,}000$ \\
+    Montants $\pm1\,\%$
+      & $0{,}035$ à $0{,}055$
+      & $0{,}000$ \\
+    Montants $\pm5\,\%$
+      & $0{,}150$ à $0{,}265$
+      & $0{,}000$ \\
+    Montants $\pm20\,\%$
+      & $0{,}640$ à $0{,}925$
+      & $0{,}000$ \\
+    Dates $\pm1$\,j
+      & $0{,}970$ à $1{,}035$
+      & $49{,}760$ \\
+    Dates $\pm7$\,j
+      & $4{,}660$ à $4{,}685$
+      & $63{,}375$ \\
+    Doublons $1\,\%$
+      & $1{,}000$ à $1{,}275$
+      & $0{,}000$ \\
+    Doublons $5\,\%$
+      & $3{,}655$ à $4{,}120$
+      & $0{,}000$ \\
+    Manquantes $1\,\%$
+      & $1{,}896$ à $1{,}921$
+      & $0{,}000$ \\
+    Manquantes $5\,\%$
+      & $6{,}661$ à $7{,}395$
+      & $0{,}000$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Pour les profils \texttt{regular} et \texttt{skewed}, les taux de changement augmentent avec
+l'intensité de la perturbation. Pour le profil \texttt{ties}, les taux demeurent nuls pour
+toutes les perturbations monétaires et nuls ou quasi-nuls pour les perturbations de doublons
+et de commandes manquantes, tandis qu'ils atteignent des valeurs élevées pour les perturbations
+de dates (voir section~\ref{subsec:resultats-ties}).
+
+La figure~\ref{fig:ann-sensibilite-montants} (Annexe~\ref{ann:reproduction}) présente les
+moyennes et intervalles Monte-Carlo à $95\,\%$ pour les perturbations monétaires, sur
+l'ensemble des quatre tailles et des trois profils. La figure~\ref{fig:ann-transitions}
+(Annexe~\ref{ann:reproduction}) illustre les transitions individuelles de segment pour
+$n = 200$, profil \texttt{regular}, bruit monétaire $\pm5\,\%$, agrégées sur 100 répétitions.
+
+\subsection{Taux de clients perdus}
+\label{subsec:resultats-perdus}
+
+Le taux de clients perdus (\texttt{lost\_rate}) mesure la proportion de clients présents
+dans le corpus initial mais absents après perturbation. Ce taux est nul pour toutes les
+perturbations monétaires et de dates, indépendamment de la taille et du profil. Des clients
+perdus apparaissent uniquement dans les scénarios de suppression de commandes (\emph{manquantes}).
+
+\begin{table}[htb]
+  \centering
+  \caption{Taux de clients perdus pour les scénarios de suppression de commandes,
+    sélection de cellules représentatives.}
+  \label{tab:resultats-perdus}
+  \begin{tabular}{rlcc}
+    \toprule
+    Taille & Profil & Manquantes $1\,\%$ (\%) & Manquantes $5\,\%$ (\%) \\
+    \midrule
+    3   & \texttt{regular}  & $0{,}000$ & $1{,}333$ \\
+    3   & \texttt{skewed}   & $0{,}333$ & $0{,}333$ \\
+    10  & \texttt{regular}  & $0{,}000$ & $0{,}200$ \\
+    10  & \texttt{skewed}   & $0{,}000$ & $0{,}400$ \\
+    50  & \texttt{regular}  & $0{,}100$ & $0{,}440$ \\
+    50  & \texttt{skewed}   & $0{,}100$ & $0{,}620$ \\
+    200 & \texttt{regular}  & $0{,}070$ & $0{,}475$ \\
+    200 & \texttt{skewed}   & $0{,}080$ & $0{,}495$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Pour le profil \texttt{ties}, le taux de clients perdus est nul dans les scénarios de
+suppression à $1\,\%$, et inférieur à $0{,}05\,\%$ pour la suppression à $5\,\%$ (tailles
+50 et 200). Les valeurs complètes figurent à l'Annexe~\ref{ann:reproduction}.
+
+\subsection{Comportement du profil identique (\emph{ex~æquo})}
+\label{subsec:resultats-ties}
+
+Le profil \texttt{ties} est construit de telle sorte que tous les clients présentent
+exactement le même nombre de commandes (trois), la même date de dernier achat (30~jours
+avant l'observation) et le même ticket (10~USD). Dans la situation initiale, une seule
+catégorie de segment est occupée.
+
+Ce profil produit deux comportements distincts selon le type de perturbation :
+
+\begin{enumerate}
+  \item \textbf{Perturbations monétaires et de doublons} : les taux de changement sont nuls
+    dans toutes les répétitions et pour toutes les tailles testées. La perturbation monétaire
+    ne modifie pas les relations d'ordre entre clients à valeurs identiques ; l'ajout de
+    commandes dupliquées ne rompt pas non plus les égalités de fréquence.
+
+  \item \textbf{Perturbations de dates} : les taux de changement sont élevés et présentent
+    des intervalles de confiance étroits du fait de leur faible variabilité entre répétitions.
+    Les valeurs observées pour les quatre tailles sont résumées dans le
+    tableau~\ref{tab:resultats-ties-dates}.
+\end{enumerate}
+
+\begin{table}[htb]
+  \centering
+  \caption{Taux de changement du profil \texttt{ties}, perturbations de dates.}
+  \label{tab:resultats-ties-dates}
+  \begin{tabular}{rcccc}
+    \toprule
+    & \multicolumn{2}{c}{Dates $\pm1$\,j} & \multicolumn{2}{c}{Dates $\pm7$\,j} \\
+    \cmidrule(lr){2-3}\cmidrule(lr){4-5}
+    $n$ & Moyen (\%) & IC $95\,\%$ (\%) & Moyen (\%) & IC $95\,\%$ (\%) \\
+    \midrule
+    3   & $48{,}333$ & $[43{,}887;\,52{,}780]$ & $63{,}333$ & $[61{,}129;\,65{,}538]$ \\
+    10  & $42{,}200$ & $[39{,}155;\,45{,}245]$ & $56{,}800$ & $[55{,}641;\,57{,}959]$ \\
+    50  & $48{,}640$ & $[46{,}055;\,51{,}225]$ & $62{,}500$ & $[61{,}871;\,63{,}129]$ \\
+    200 & $49{,}760$ & $[46{,}761;\,52{,}759]$ & $63{,}375$ & $[62{,}877;\,63{,}873]$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Le profil \texttt{ties} avec perturbation de dates constitue un cas de figure distinct des
+profils \texttt{regular} et \texttt{skewed}. Les données complètes par scénario et taille
+pour ce profil figurent à l'Annexe~\ref{ann:reproduction}.
+
+% ------------------------------------------------------------------
+\section{Observations hors domaine et limites du banc}
+\label{sec:resultats-hors-domaine}
+
+Cinq configurations situées hors du périmètre de la campagne principale ont été soumises à
+la fonction instrumentée. Ces configurations ne font pas partie des 12\,000 essais et ne
+contribuent pas aux mesures de performance.
+
+\begin{table}[htb]
+  \centering
+  \caption{Comportements observés dans cinq configurations hors domaine.}
+  \label{tab:resultats-hors-domaine}
+  \begin{tabular}{p{0.26\textwidth}p{0.32\textwidth}p{0.32\textwidth}}
+    \toprule
+    Entrée & Comportement observé & Portée de l'observation \\
+    \midrule
+    USD et CDF mélangés
+      & Valeurs additionnées sans séparation : $10 + 28\,000 = 28\,010$
+      & Absence de conversion ou de séparation de devise à ce niveau de la fonction \\
+    Identifiant client absent
+      & Exception \texttt{TypeError}
+      & Rejet métier contrôlé non démontré \\
+    Date invalide
+      & Exception \texttt{RangeError}
+      & Rejet métier contrôlé non démontré \\
+    Date future ($6$ oct. 2026, observation au $1$\textsuperscript{er} oct.)
+      & Acceptée sans erreur
+      & Cas hors domaine ; comportement dans d'autres couches du SaaS non vérifié ici \\
+    Montant négatif ($-10$)
+      & Accepté sans erreur
+      & Politique de remboursements non définie dans ce contrôle \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Les exceptions \texttt{TypeError} et \texttt{RangeError} signalent que la fonction réagit
+à ces entrées, mais elles ne démontrent pas l'existence d'un contrôle métier explicite en
+amont. Ces constats sont indépendants des vérifications effectuées dans les autres couches
+du SaaS ELMES-TEKA.
+
+\paragraph{Limites de la campagne.}
+Les points suivants délimitent la portée des résultats présentés dans ce chapitre :
+
+\begin{itemize}
+  \item Les corpus sont synthétiques et non calibrés sur des données de petites entreprises
+    congolaises réelles ; les résultats décrivent le comportement de la fonction sur ces
+    mécanismes générateurs, et non son comportement attendu en production.
+  \item Les intervalles Monte-Carlo de largeur nulle indiquent une absence de variation
+    dans les répétitions observées ; ils ne constituent pas une preuve d'une probabilité
+    de changement identiquement nulle.
+  \item L'intégration MongoDB, les routes HTTP et les effets économiques de l'application
+    n'ont pas été évalués dans cette campagne.
+  \item Aucune vérification MongoDB réelle ni reproduction indépendante n'ont été effectuées
+    pour préparer les présents résultats.
+\end{itemize}
+
+% ------------------------------------------------------------------
+\section{Traçabilité des résultats}
+\label{sec:resultats-tracabilite}
+
+L'ensemble des résultats présentés dans ce chapitre est dérivé de l'archive expérimentale
+\texttt{ELMES\_TEKA\_Resultats\_Mission\_RFM\_2026-11-02.zip}, dont l'intégrité a été
+vérifiée par empreinte SHA-256 pour 55~fichiers de livraison et 12~fichiers de données
+brutes. Les 12\,000~enregistrements JSON ont été relus et comptés.
+
+\begin{table}[htb]
+  \centering
+  \caption{Environnement d'exécution consigné dans l'archive expérimentale.}
+  \label{tab:resultats-versions}
+  \begin{tabular}{ll}
+    \toprule
+    Composant & Version \\
+    \midrule
+    Node.js               & 24.22.1 \\
+    TypeScript            & 5.9.3 \\
+    Python                & 3.12.14 \\
+    NumPy                 & 2.3.5 \\
+    pandas                & 2.2.3 \\
+    SciPy                 & 1.17.0 \\
+    Matplotlib            & 3.10.8 \\
+    Commit applicatif     & \texttt{\small b062a93a7be96d082dee9afe66b9f4f1f9ebecaa} \\
+    Révision du banc      & \texttt{\small a4dbbafba0724a269482706b94288bb28cd5db3d} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+La procédure de reproduction à partir d'une copie complète du dépôt au commit pertinent
+est documentée à l'Annexe~\ref{ann:reproduction}, section~«~Versions, intégrité et reproduction~». Le lien vers l'archive complète est soumis à l'accès au compte de stockage
+de l'auteur ; une solution de conservation accessible au jury reste à convenir.
+
+Le registre \texttt{PROVENANCE\_ANNEXES.md} (Annexe~\ref{ann:protocole}) précise la
+correspondance entre chaque donnée présentée dans ce chapitre et le fichier source dans
+l'archive expérimentale.

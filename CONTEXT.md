@@ -1,5 +1,8 @@
 # ELMES-TEKA — Contexte fonctionnel et technique
 
+> **Note pour les agents IA :** Ce projet comprend aussi un mémoire académique.
+> Lire **`MEMOIRE.md`** avant toute action liée à la rédaction, à la structure du mémoire, aux hypothèses, à la problématique ou aux chapitres LaTeX.
+
 ## 1. Présentation du produit
 
 ELMES-TEKA est un CRM de gestion commerciale conçu en République démocratique du Congo par l’entreprise ELMES.

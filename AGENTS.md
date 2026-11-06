@@ -6,8 +6,6 @@ Tu travailles sur ELMES-TEKA, un CRM de gestion commerciale conçu par ELMES pou
 
 Avant toute modification, lis `CONTEXT.md` afin de comprendre le contexte métier, les rôles, les workflows et les objectifs du produit.
 
-Si la tâche concerne le **mémoire académique** (rédaction, structure, hypothèses, chapitres LaTeX, bibliographie), lire **`MEMOIRE.md`** en priorité — il contient le plan officiel, les hypothèses, les variables, les indicateurs et les consignes rédactionnelles validés par le directeur.
-
 ## 2. Règle fondamentale : réutiliser avant de créer
 
 Ne jamais réinventer ce qui existe déjà dans la codebase.
